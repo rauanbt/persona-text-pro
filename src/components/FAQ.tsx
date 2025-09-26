@@ -8,24 +8,24 @@ import {
 export const FAQ = () => {
   const faqs = [
     {
-      question: "How does HumanCraft AI work?",
-      answer: "HumanCraft AI uses advanced natural language processing to rewrite AI-generated text, making it sound more human while applying your chosen tone (Regular, Funny, Sarcastic, or Smart). Our system analyzes patterns that AI detectors flag and replaces them with more natural alternatives."
+      question: "How does SapienWrite work?",
+      answer: "SapienWrite uses advanced natural language processing to rewrite AI-generated text, making it sound more human while applying your chosen tone (Regular, Funny, Sarcastic, or Smart). Our system analyzes patterns that AI detectors flag and replaces them with more natural alternatives."
     },
     {
-      question: "Does HumanCraft AI bypass Turnitin and other AI checkers?",
+      question: "Does SapienWrite bypass Turnitin and other AI checkers?",
       answer: "Yes! Our system is specifically designed to bypass all major AI detection tools including Turnitin, GPTZero, Copyleaks, ZeroGPT, and more. We test against these tools weekly and update our algorithms to maintain effectiveness."
     },
     {
-      question: "How much does HumanCraft AI cost?",
-      answer: "We offer a free plan with 500 words per month. Paid plans start at $8/month for 10,000 words. Our Pro plan at $19/month includes 50,000 words and API access, while Enterprise at $49/month provides 200,000 words and custom features."
+      question: "How much does SapienWrite cost?",
+      answer: "We offer a free plan with 500 words per month. Our Basic plan starts at $5.99/month for 5,000 words, Pro at $18.99/month for 15,000 words, and Ultra at $38.99/month for 30,000 words. Annual plans offer significant discounts."
     },
     {
       question: "What are the different tone options?",
       answer: "We offer 4 distinct tones: Regular (professional and natural), Funny (light-hearted and humorous), Sarcastic (witty and sharp), and Smart (sophisticated and intellectual). Each tone maintains the humanization while adding personality to your content."
     },
     {
-      question: "What languages does HumanCraft AI support?",
-      answer: "Currently, HumanCraft AI supports English content. We're working on adding support for Spanish, French, German, and other major languages. All tone options work across supported languages."
+      question: "What languages does SapienWrite support?",
+      answer: "Currently, SapienWrite supports English content. We're working on adding support for Spanish, French, German, and other major languages. All tone options work across supported languages."
     },
     {
       question: "I want to humanize a long essay. Is it possible?",
@@ -49,7 +49,7 @@ export const FAQ = () => {
             Frequently Asked Questions
           </h2>
           <p className="text-lg text-muted-foreground">
-            Everything you need to know about HumanCraft AI
+            Everything you need to know about SapienWrite
           </p>
         </div>
 

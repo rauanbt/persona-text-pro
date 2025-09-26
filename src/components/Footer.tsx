@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Sparkles } from "lucide-react";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/sapienwrite-logo.svg";
 
 export const Footer = () => {
   return (
@@ -12,7 +12,7 @@ export const Footer = () => {
             Make Your Text Sound Human — Instantly
           </h2>
           <p className="text-lg text-muted-foreground mb-8 max-w-3xl mx-auto">
-            Turn robotic, AI-generated content into clear, natural writing that sounds like a real person. Whether it's from ChatGPT or another tool, HumanCraft AI helps you bypass AI detectors and add personality with custom tones in just one click.
+            Turn robotic, AI-generated content into clear, natural writing that sounds like a real person. Whether it's from ChatGPT or another tool, SapienWrite helps you bypass AI detectors and add personality with custom tones in just one click.
           </p>
           <Button size="lg" className="bg-success hover:bg-success/90 text-success-foreground px-8 py-6 text-lg font-semibold shadow-lg">
             <Sparkles className="w-5 h-5 mr-2" />
@@ -29,8 +29,8 @@ export const Footer = () => {
         <div className="grid md:grid-cols-4 gap-8">
           <div className="col-span-1">
             <div className="flex items-center space-x-2 mb-4">
-              <img src={logo} alt="HumanCraft AI" className="w-8 h-8" />
-              <span className="text-xl font-bold text-foreground">HumanCraft AI</span>
+              <img src={logo} alt="SapienWrite" className="w-8 h-8" />
+              <span className="text-xl font-bold text-foreground">SapienWrite</span>
             </div>
             <p className="text-muted-foreground text-sm leading-relaxed">
               The most advanced AI text humanizer with custom tone options. Make your content undetectable and engaging.
@@ -69,7 +69,7 @@ export const Footer = () => {
         </div>
 
         <div className="border-t border-border mt-12 pt-8 text-center text-sm text-muted-foreground">
-          <p>&copy; 2024 HumanCraft AI. All rights reserved. Built with ❤️ for authentic content creators.</p>
+          <p>&copy; 2024 SapienWrite. All rights reserved. Built with ❤️ for authentic content creators.</p>
         </div>
       </div>
     </footer>

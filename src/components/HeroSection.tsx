@@ -69,7 +69,7 @@ export const HeroSection = () => {
 
         {/* Subheading */}
         <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-4xl mx-auto">
-          HumanCraft AI converts your AI-generated content into fully humanized, undetectable writing with custom tones — ensuring it passes every AI detection tool
+          SapienWrite converts your AI-generated content into fully humanized, undetectable writing with custom tones — ensuring it passes every AI detection tool
         </p>
 
         {/* CTA Button */}

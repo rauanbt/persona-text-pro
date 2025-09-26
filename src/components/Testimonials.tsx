@@ -4,17 +4,17 @@ import { Star } from "lucide-react";
 export const Testimonials = () => {
   const testimonials = [
     {
-      quote: "HumanCraft AI helped me humanize AI text from ChatGPT in seconds. The sarcastic tone option made my LinkedIn posts way more engaging. This tool saved my content strategy.",
+      quote: "SapienWrite helped me humanize AI text from ChatGPT in seconds. The sarcastic tone option made my LinkedIn posts way more engaging. This tool saved my content strategy.",
       author: "Julia K.",
       role: "Content Marketing Manager"
     },
     {
-      quote: "I've tried several tools to bypass AI detectors, but nothing compares to HumanCraft AI. The tone options are genius - I use 'Smart' for research papers and 'Funny' for social media.",
+      quote: "I've tried several tools to bypass AI detectors, but nothing compares to SapienWrite. The tone options are genius - I use 'Smart' for research papers and 'Funny' for social media.",
       author: "Liam R.",
       role: "Freelance Writer"
     },
     {
-      quote: "The best thing about HumanCraft AI? I can humanize my text and add personality with different tones. My emails now sound personal, not robotic. Game changer!",
+      quote: "The best thing about SapienWrite? I can humanize my text and add personality with different tones. My emails now sound personal, not robotic. Game changer!",
       author: "Sophie M.",
       role: "Sales Executive"
     }

@@ -1,25 +1,25 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Check } from "lucide-react";
 
 export const Pricing = () => {
+  const [isAnnual, setIsAnnual] = useState(false);
+
   const plans = [
     {
       name: "Basic",
-      price: "$5.99",
-      period: "per month",
+      monthlyPrice: "$5.99",
+      annualPrice: "Free", // Since no annual discount mentioned for Basic
+      period: isAnnual ? "per year" : "per month",
       description: "Great for students and casual writers",
       features: [
         "5,000 words per month",
         "500 words per request",
-        "All 4 tone options", 
-        "Bypass all AI detectors (incl. Turnitin & GPTZero)",
-        "Basic Humanization Engine",
+        "All 4 tone options",
+        "Bypass AI detectors",
         "Plagiarism-free",
-        "Error-free rewriting",
-        "Undetectable results",
-        "Unlimited AI detection",
         "20 languages supported"
       ],
       buttonText: "Choose Basic",
@@ -27,24 +27,17 @@ export const Pricing = () => {
     },
     {
       name: "Pro",
-      price: "$18.99",
-      period: "per month",
+      monthlyPrice: "$18.99",
+      annualPrice: "$13.99",
+      period: isAnnual ? "per year" : "per month",
       description: "Perfect for professionals and content creators",
       features: [
         "15,000 words per month",
         "1,500 words per request",
         "All 4 tone options",
         "My Writing Style",
-        "Bypass all AI detectors (incl. Turnitin & GPTZero)",
         "Advanced Humanization Engine",
-        "Plagiarism-free",
-        "Error-free rewriting",
-        "Undetectable results", 
-        "Unlimited AI detection",
         "50+ languages supported",
-        "Advanced Turnitin Bypass Engine",
-        "Human-like results",
-        "Unlimited grammar checks",
         "Fast mode",
         "Chrome Extension"
       ],
@@ -53,25 +46,16 @@ export const Pricing = () => {
     },
     {
       name: "Ultra",
-      price: "$38.99",
-      period: "per month",
+      monthlyPrice: "$38.99",
+      annualPrice: "$28.99",
+      period: isAnnual ? "per year" : "per month",
       description: "For teams and heavy users",
       features: [
         "30,000 words per month",
         "3,000 words per request",
         "All 4 tone options",
-        "My Writing Style", 
-        "Bypass all AI detectors (incl. Turnitin & GPTZero)",
+        "My Writing Style",
         "Advanced Humanization Engine",
-        "Plagiarism-free",
-        "Error-free rewriting",
-        "Undetectable results",
-        "Unlimited AI detection",
-        "50+ languages supported",
-        "Advanced Turnitin Bypass Engine",
-        "Human-like results",
-        "Unlimited grammar checks",
-        "Fast mode",
         "Ultra-human writing output",
         "Priority support",
         "Chrome Extension"
@@ -81,6 +65,18 @@ export const Pricing = () => {
     }
   ];
 
+  const getPrice = (plan: typeof plans[0]) => {
+    return isAnnual ? plan.annualPrice : plan.monthlyPrice;
+  };
+
+  const getSavingsText = (plan: typeof plans[0]) => {
+    if (!isAnnual || plan.name === "Basic") return null;
+    const monthlyCost = parseFloat(plan.monthlyPrice.replace('$', '')) * 12;
+    const annualCost = parseFloat(plan.annualPrice.replace('$', ''));
+    const savings = Math.round(((monthlyCost - annualCost) / monthlyCost) * 100);
+    return `Save ${savings}%`;
+  };
+
   return (
     <section id="pricing" className="py-16 bg-feature-bg">
       <div className="container mx-auto px-4">
@@ -88,12 +84,39 @@ export const Pricing = () => {
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
             Simple, Transparent Pricing
           </h2>
-          <p className="text-lg text-muted-foreground">
+          <p className="text-lg text-muted-foreground mb-8">
             Choose the plan that works best for you
           </p>
+          
+          {/* Billing Toggle */}
+          <div className="flex items-center justify-center space-x-4 mb-8">
+            <span className={`text-sm font-medium ${!isAnnual ? 'text-foreground' : 'text-muted-foreground'}`}>
+              Monthly
+            </span>
+            <button
+              onClick={() => setIsAnnual(!isAnnual)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+                isAnnual ? 'bg-primary' : 'bg-muted'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  isAnnual ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+            <span className={`text-sm font-medium ${isAnnual ? 'text-foreground' : 'text-muted-foreground'}`}>
+              Annual
+            </span>
+            {isAnnual && (
+              <Badge className="bg-success text-success-foreground ml-2">
+                Save up to 50%
+              </Badge>
+            )}
+          </div>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
           {plans.map((plan, index) => (
             <Card key={index} className={`relative ${plan.popular ? 'border-primary shadow-lg scale-105' : ''}`}>
               {plan.popular && (
@@ -101,12 +124,22 @@ export const Pricing = () => {
                   Most Popular
                 </Badge>
               )}
+              {getSavingsText(plan) && (
+                <Badge className="absolute -top-3 right-4 bg-success text-success-foreground">
+                  {getSavingsText(plan)}
+                </Badge>
+              )}
               <CardHeader className="text-center pb-4">
                 <CardTitle className="text-xl font-bold">{plan.name}</CardTitle>
                 <CardDescription className="text-sm">{plan.description}</CardDescription>
                 <div className="mt-4">
-                  <span className="text-3xl font-bold text-foreground">{plan.price}</span>
+                  <span className="text-3xl font-bold text-foreground">{getPrice(plan)}</span>
                   <span className="text-muted-foreground ml-1">/{plan.period}</span>
+                  {isAnnual && plan.name !== "Basic" && (
+                    <div className="text-sm text-muted-foreground line-through mt-1">
+                      {plan.monthlyPrice}/month
+                    </div>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
