@@ -17,7 +17,7 @@ export const Pricing = () => {
       features: [
         "1,500 words per month",
         "250 words per request",
-        "Regular & Funny tones",
+        "Regular tone",
         "Basic humanization",
         "AI detection bypass"
       ],
@@ -38,8 +38,7 @@ export const Pricing = () => {
         "My Writing Style",
         "Advanced Humanization Engine",
         "50+ languages supported",
-        "Fast mode",
-        "Chrome Extension"
+        "Fast mode"
       ],
       buttonText: "Choose Pro",
       popular: true,
@@ -58,8 +57,7 @@ export const Pricing = () => {
         "My Writing Style",
         "Advanced Humanization Engine",
         "Ultra-human writing output",
-        "Priority support",
-        "Chrome Extension"
+        "Priority support"
       ],
       buttonText: "Choose Ultra",
       popular: false,
@@ -92,22 +90,24 @@ export const Pricing = () => {
           
           {/* Billing Toggle */}
           <div className="flex items-center justify-center space-x-4 mb-8">
-            <span className={`text-sm font-medium ${!isAnnual ? 'text-foreground' : 'text-muted-foreground'}`}>
+            <span className={`text-sm font-medium transition-colors ${!isAnnual ? 'text-foreground' : 'text-muted-foreground'}`}>
               Monthly
             </span>
             <button
               onClick={() => setIsAnnual(!isAnnual)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
-                isAnnual ? 'bg-primary' : 'bg-muted'
+              className={`relative inline-flex h-7 w-12 items-center rounded-full border-2 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+                isAnnual ? 'bg-primary border-primary' : 'bg-background border-border'
               }`}
             >
               <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  isAnnual ? 'translate-x-6' : 'translate-x-1'
+                className={`inline-block h-5 w-5 transform rounded-full transition-transform ${
+                  isAnnual 
+                    ? 'translate-x-5 bg-primary-foreground' 
+                    : 'translate-x-0.5 bg-foreground'
                 }`}
               />
             </button>
-            <span className={`text-sm font-medium ${isAnnual ? 'text-foreground' : 'text-muted-foreground'}`}>
+            <span className={`text-sm font-medium transition-colors ${isAnnual ? 'text-foreground' : 'text-muted-foreground'}`}>
               Annual
             </span>
             {isAnnual && (
