@@ -14,7 +14,102 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      humanization_requests: {
+        Row: {
+          created_at: string
+          humanized_text: string | null
+          id: string
+          original_text: string
+          processing_status: string | null
+          tone: string
+          user_id: string
+          word_count: number
+        }
+        Insert: {
+          created_at?: string
+          humanized_text?: string | null
+          id?: string
+          original_text: string
+          processing_status?: string | null
+          tone: string
+          user_id: string
+          word_count: number
+        }
+        Update: {
+          created_at?: string
+          humanized_text?: string | null
+          id?: string
+          original_text?: string
+          processing_status?: string | null
+          tone?: string
+          user_id?: string
+          word_count?: number
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          current_plan: string | null
+          email: string
+          full_name: string | null
+          id: string
+          stripe_customer_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_plan?: string | null
+          email: string
+          full_name?: string | null
+          id?: string
+          stripe_customer_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_plan?: string | null
+          email?: string
+          full_name?: string | null
+          id?: string
+          stripe_customer_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      usage_tracking: {
+        Row: {
+          created_at: string
+          id: string
+          month_year: string
+          requests_count: number | null
+          updated_at: string
+          user_id: string
+          words_used: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          month_year: string
+          requests_count?: number | null
+          updated_at?: string
+          user_id: string
+          words_used?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          month_year?: string
+          requests_count?: number | null
+          updated_at?: string
+          user_id?: string
+          words_used?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
