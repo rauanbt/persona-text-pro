@@ -6,7 +6,7 @@ import { ToneSelector } from "./ToneSelector";
 import { AIDetectionResults } from "./AIDetectionResults";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { Sparkles, Shield } from "lucide-react";
+import { Sparkles, Shield, Brain } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export const HeroSection = () => {
