@@ -57,16 +57,6 @@ export const HeroSection = () => {
   };
 
   const handleCheckAI = () => {
-    if (!user) {
-      toast({
-        title: "Sign in required",  
-        description: "Please sign in to check for AI detection.",
-        variant: "destructive",
-      });
-      navigate('/auth');
-      return;
-    }
-
     if (!text.trim()) {
       toast({
         title: "Please enter some text",
