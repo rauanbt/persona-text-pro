@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { AlertTriangle, CheckCircle, Clock, Zap, Shield, Eye, Brain } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { analyzeText, calculateAIScore, getDetectorScore } from "@/lib/text-analysis";
 
 interface AIDetector {
   id: string;
@@ -61,10 +62,11 @@ export const AIDetectionResults = ({ text, onHumanize, status, onStatusChange }:
   const [overallScore, setOverallScore] = useState(0);
   const [analysisStartTime, setAnalysisStartTime] = useState<number | null>(null);
 
-  // Generate realistic AI detection scores
-  const generateRealisticScore = (baseScore: number, variation: number = 15) => {
-    const variance = (Math.random() - 0.5) * variation * 2;
-    return Math.max(0, Math.min(100, Math.floor(baseScore + variance)));
+  // Analyze text and calculate realistic AI scores
+  const analyzeAndScore = (text: string) => {
+    const analysis = analyzeText(text);
+    const baseScore = calculateAIScore(analysis);
+    return baseScore;
   };
 
   // Start analysis when status changes to 'checking'
@@ -79,9 +81,8 @@ export const AIDetectionResults = ({ text, onHumanize, status, onStatusChange }:
         status: 'pending' as const
       })));
 
-      // Generate base score for text (simulated analysis)
-      const textComplexity = text.length > 500 ? 0.8 : text.length > 200 ? 0.6 : 0.4;
-      const baseScore = 70 + Math.random() * 25 + textComplexity * 5;
+      // Analyze text for realistic scoring
+      const baseScore = analyzeAndScore(text);
 
       // Start each detector with staggered timing
       detectors.forEach((detector, index) => {
@@ -94,7 +95,7 @@ export const AIDetectionResults = ({ text, onHumanize, status, onStatusChange }:
 
           // Complete analysis after a short delay
           setTimeout(() => {
-            const score = generateRealisticScore(baseScore);
+            const score = getDetectorScore(baseScore, detector.id as keyof typeof import("@/lib/text-analysis").detectorProfiles);
             setDetectors(prev => prev.map(d => 
               d.id === detector.id 
                 ? { ...d, score, status: 'completed' as const }
@@ -113,9 +114,10 @@ export const AIDetectionResults = ({ text, onHumanize, status, onStatusChange }:
   }, [status, text, onStatusChange]);
 
   const getRiskLevel = (score: number) => {
-    if (score >= 80) return { level: 'High Risk', color: 'destructive', bgColor: 'bg-destructive/10' };
-    if (score >= 50) return { level: 'Medium Risk', color: 'warning', bgColor: 'bg-warning/10' };
-    return { level: 'Low Risk', color: 'success', bgColor: 'bg-success/10' };
+    // Lower scores = more human-like (better)
+    if (score >= 70) return { level: 'High AI Risk', color: 'destructive', bgColor: 'bg-destructive/10', description: 'Likely AI-generated' };
+    if (score >= 40) return { level: 'Medium Risk', color: 'warning', bgColor: 'bg-warning/10', description: 'Some AI patterns detected' };
+    return { level: 'Human-like', color: 'success', bgColor: 'bg-success/10', description: 'Appears human-written' };
   };
 
   const completedDetectors = detectors.filter(d => d.status === 'completed');
@@ -136,78 +138,81 @@ export const AIDetectionResults = ({ text, onHumanize, status, onStatusChange }:
         )}
       </div>
 
-      {/* Overall Score Card */}
+      {/* Overall Score Card - More Compact */}
       <Card className="border-2">
-        <CardHeader>
-          <CardTitle className="text-center">Overall Detection Score</CardTitle>
-        </CardHeader>
-        <CardContent className="text-center space-y-4">
-          {!allCompleted ? (
-            <div className="space-y-4">
-              <Skeleton className="h-20 w-20 rounded-full mx-auto" />
-              <Skeleton className="h-6 w-32 mx-auto" />
-              <Skeleton className="h-4 w-full" />
-            </div>
-          ) : (
-            <>
-              <div className={`w-24 h-24 rounded-full flex items-center justify-center mx-auto ${getRiskLevel(averageScore).bgColor}`}>
-                {averageScore >= 80 ? (
-                  <AlertTriangle className={`w-12 h-12 text-destructive`} />
-                ) : (
-                  <CheckCircle className={`w-12 h-12 text-${getRiskLevel(averageScore).color}`} />
-                )}
+        <CardContent className="pt-6">
+          <div className="text-center space-y-3">
+            <h3 className="text-lg font-semibold">AI Detection Score</h3>
+            {!allCompleted ? (
+              <div className="space-y-3">
+                <Skeleton className="h-16 w-16 rounded-full mx-auto" />
+                <Skeleton className="h-5 w-28 mx-auto" />
+                <Skeleton className="h-2 w-full" />
               </div>
-              <div>
-                <div className="text-4xl font-bold mb-1">{averageScore}%</div>
-                <div className={`text-lg font-medium text-${getRiskLevel(averageScore).color}`}>
-                  {getRiskLevel(averageScore).level}
+            ) : (
+              <>
+                <div className="flex items-center justify-center gap-4">
+                  <div className={`w-16 h-16 rounded-full flex items-center justify-center ${getRiskLevel(averageScore).bgColor}`}>
+                    {averageScore >= 70 ? (
+                      <AlertTriangle className={`w-8 h-8 text-destructive`} />
+                    ) : (
+                      <CheckCircle className={`w-8 h-8 text-${getRiskLevel(averageScore).color}`} />
+                    )}
+                  </div>
+                  <div className="text-left">
+                    <div className="text-3xl font-bold">{averageScore}%</div>
+                    <div className={`text-sm font-medium text-${getRiskLevel(averageScore).color}`}>
+                      {getRiskLevel(averageScore).level}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {getRiskLevel(averageScore).description}
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <Progress 
-                value={averageScore} 
-                className="h-3"
-              />
-            </>
-          )}
+                <Progress 
+                  value={averageScore} 
+                  className="h-2"
+                />
+              </>
+            )}
+          </div>
         </CardContent>
       </Card>
 
-      {/* Individual Detector Results */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Individual Detector Results - Compact Grid */}
+      <div className="grid grid-cols-2 gap-3">
         {detectors.map((detector) => (
           <Card key={detector.id} className="border">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  {detector.icon}
-                  <span className="font-medium">{detector.name}</span>
+            <CardContent className="p-3">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-4 h-4">{detector.icon}</div>
+                  <span className="text-sm font-medium truncate">{detector.name}</span>
                 </div>
                 {detector.status === 'analyzing' && (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary"></div>
                 )}
               </div>
               
               {detector.status === 'pending' ? (
-                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-6 w-full" />
               ) : detector.status === 'analyzing' ? (
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm text-muted-foreground">
-                    <span>Analyzing...</span>
-                  </div>
-                  <Progress value={Math.random() * 60 + 20} className="h-2" />
+                <div className="space-y-1">
+                  <div className="text-xs text-muted-foreground">Analyzing...</div>
+                  <Progress value={Math.random() * 60 + 20} className="h-1.5" />
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <div className="flex justify-between items-center">
-                    <span className="text-2xl font-bold">{detector.score}%</span>
+                    <span className="text-lg font-bold">{detector.score}%</span>
                     <Badge 
-                      variant={detector.score >= 80 ? 'destructive' : detector.score >= 50 ? 'secondary' : 'default'}
-                      className="text-xs"
+                      variant={detector.score >= 70 ? 'destructive' : detector.score >= 40 ? 'secondary' : 'default'}
+                      className="text-xs px-1 py-0"
                     >
-                      {getRiskLevel(detector.score).level}
+                      {detector.score >= 70 ? 'AI' : detector.score >= 40 ? 'Mixed' : 'Human'}
                     </Badge>
                   </div>
-                  <Progress value={detector.score} className="h-2" />
+                  <Progress value={detector.score} className="h-1.5" />
                 </div>
               )}
             </CardContent>
@@ -215,55 +220,56 @@ export const AIDetectionResults = ({ text, onHumanize, status, onStatusChange }:
         ))}
       </div>
 
-      {/* Recommendation Section */}
+      {/* Recommendation Section - Compact */}
       {allCompleted && (
-        <Card className={`border-2 ${getRiskLevel(averageScore).bgColor} border-${getRiskLevel(averageScore).color}/20`}>
-          <CardContent className="p-6">
-            <h4 className="font-semibold mb-3 flex items-center gap-2">
-              {averageScore >= 80 ? (
-                <AlertTriangle className="w-5 h-5 text-destructive" />
-              ) : (
-                <CheckCircle className="w-5 h-5 text-success" />
-              )}
-              Recommendation
-            </h4>
-            <p className="text-muted-foreground mb-4">
-              {averageScore >= 80 
-                ? 'Your text shows strong AI characteristics across multiple detectors. Humanization is highly recommended to avoid detection.' 
-                : averageScore >= 50 
-                  ? 'Your text shows some AI patterns. Consider humanization to improve authenticity and bypass AI detectors.' 
-                  : 'Your text appears natural and human-written. It should pass most AI detection systems successfully.'}
-            </p>
-            
-            <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground mb-4">
-              <div>
-                <span className="font-medium">Word Count:</span> {text.trim().split(/\s+/).length}
+        <Card className={`border ${getRiskLevel(averageScore).bgColor}`}>
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 mt-0.5">
+                {averageScore >= 70 ? (
+                  <AlertTriangle className="w-5 h-5 text-destructive" />
+                ) : (
+                  <CheckCircle className="w-5 h-5 text-success" />
+                )}
               </div>
-              <div>
-                <span className="font-medium">Detectors Checked:</span> {detectors.length}
+              <div className="flex-1 space-y-3">
+                <div>
+                  <h4 className="font-semibold text-sm mb-1">Recommendation</h4>
+                  <p className="text-sm text-muted-foreground">
+                    {averageScore >= 70 
+                      ? 'High AI probability detected. Humanization strongly recommended to avoid detection.' 
+                      : averageScore >= 40 
+                        ? 'Some AI patterns found. Consider humanization to improve authenticity.' 
+                        : 'Text appears human-written and should pass most AI detectors.'}
+                  </p>
+                </div>
+                
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Words: {text.trim().split(/\s+/).length}</span>
+                  <span>Detectors: {detectors.length}</span>
+                </div>
+
+                {averageScore >= 40 && (
+                  <Button 
+                    onClick={onHumanize}
+                    className="w-full bg-success hover:bg-success/90 text-success-foreground"
+                    size="sm"
+                  >
+                    <Brain className="w-4 h-4 mr-2" />
+                    Humanize This Text
+                  </Button>
+                )}
               </div>
             </div>
-
-            {averageScore >= 50 && (
-              <Button 
-                onClick={onHumanize}
-                className="w-full bg-success hover:bg-success/90 text-success-foreground"
-                size="lg"
-              >
-                <Brain className="w-4 h-4 mr-2" />
-                Humanize This Text
-              </Button>
-          )}
-          
-          {/* Disclaimer */}
-          <div className="mt-4 p-3 bg-muted/50 rounded-lg">
-            <p className="text-xs text-muted-foreground text-center">
-              <strong>Disclaimer:</strong> These are simulated AI detection scores for demonstration purposes. 
-              For production use, integrate with real AI detection APIs like GPTZero, Originality.AI, etc.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+            
+            {/* Disclaimer */}
+            <div className="mt-3 p-2 bg-muted/30 rounded text-center">
+              <p className="text-xs text-muted-foreground">
+                <strong>Note:</strong> Simulated scores for demo. Real APIs needed for production.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );
