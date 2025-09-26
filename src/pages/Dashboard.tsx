@@ -271,7 +271,7 @@ const Dashboard = () => {
                       value={inputText}
                       onChange={(e) => setInputText(e.target.value)}
                       placeholder="Paste your AI-generated text here..."
-                      className="min-h-[200px] resize-none"
+                      className="min-h-[350px] resize-none text-base"
                     />
                     <div className="flex justify-between items-center mt-2 text-sm text-muted-foreground">
                       <span>
@@ -308,7 +308,7 @@ const Dashboard = () => {
                       <Textarea
                         value={humanizedText}
                         readOnly
-                        className="min-h-[200px] resize-none bg-muted"
+                        className="min-h-[350px] resize-none bg-muted text-base"
                       />
                       <div className="flex space-x-2 mt-2">
                         <Button onClick={copyToClipboard} variant="outline" size="sm">
