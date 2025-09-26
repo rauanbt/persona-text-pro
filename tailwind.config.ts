@@ -51,6 +51,10 @@ export default {
           DEFAULT: "hsl(var(--success))",
           foreground: "hsl(var(--success-foreground))",
         },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
+        },
         "hero-bg": "hsl(var(--hero-bg))",
         "feature-bg": "hsl(var(--feature-bg))",
         "text-muted": "hsl(var(--text-muted))",

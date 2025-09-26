@@ -253,9 +253,17 @@ export const AIDetectionResults = ({ text, onHumanize, status, onStatusChange }:
                 <Brain className="w-4 h-4 mr-2" />
                 Humanize This Text
               </Button>
-            )}
-          </CardContent>
-        </Card>
+          )}
+          
+          {/* Disclaimer */}
+          <div className="mt-4 p-3 bg-muted/50 rounded-lg">
+            <p className="text-xs text-muted-foreground text-center">
+              <strong>Disclaimer:</strong> These are simulated AI detection scores for demonstration purposes. 
+              For production use, integrate with real AI detection APIs like GPTZero, Originality.AI, etc.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
       )}
     </div>
   );
