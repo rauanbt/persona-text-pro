@@ -1,11 +1,24 @@
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 import logo from "@/assets/sapienwrite-logo.svg";
 
 export const Header = () => {
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleAuthClick = () => {
+    if (user) {
+      navigate('/dashboard');
+    } else {
+      navigate('/auth');
+    }
+  };
+
   return (
     <header className="w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 cursor-pointer" onClick={() => navigate('/')}>
           <img src={logo} alt="SapienWrite" className="w-8 h-8" />
           <span className="text-xl font-bold text-foreground">SapienWrite</span>
         </div>
@@ -29,12 +42,28 @@ export const Header = () => {
         </nav>
 
         <div className="flex items-center space-x-3">
-          <Button variant="ghost" className="text-muted-foreground hover:text-foreground">
-            Log in
-          </Button>
-          <Button className="bg-success hover:bg-success/90 text-success-foreground">
-            Try for free
-          </Button>
+          {user ? (
+            <>
+              <Button variant="ghost" onClick={() => navigate('/dashboard')}>
+                Dashboard
+              </Button>
+              <Button variant="outline" onClick={signOut}>
+                Sign Out
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="ghost" onClick={() => navigate('/auth')}>
+                Log in
+              </Button>
+              <Button 
+                className="bg-success hover:bg-success/90 text-success-foreground"
+                onClick={() => navigate('/auth')}
+              >
+                Try for free
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </header>

@@ -3,19 +3,40 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ToneSelector } from "./ToneSelector";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 import { Sparkles, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export const HeroSection = () => {
   const [text, setText] = useState("");
   const [selectedTone, setSelectedTone] = useState("regular");
-  const [isProcessing, setIsProcessing] = useState(false);
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const { toast } = useToast();
 
   const wordCount = text.trim().split(/\s+/).filter(word => word.length > 0).length;
   const maxWords = 500;
 
-  const handleHumanize = async () => {
+  const handleTryForFree = () => {
+    if (user) {
+      navigate('/dashboard');
+    } else {
+      navigate('/auth');
+    }
+  };
+
+  const handleHumanize = () => {
+    if (!user) {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to use the AI humanizer tool.",
+        variant: "destructive",
+      });
+      navigate('/auth');
+      return;
+    }
+
     if (!text.trim()) {
       toast({
         title: "Please enter some text",
@@ -25,19 +46,21 @@ export const HeroSection = () => {
       return;
     }
 
-    setIsProcessing(true);
-    
-    // Simulate processing
-    setTimeout(() => {
-      toast({
-        title: "Text Humanized Successfully!",
-        description: `Applied ${selectedTone} tone and bypassed AI detection.`,
-      });
-      setIsProcessing(false);
-    }, 2000);
+    // Redirect to dashboard for full functionality
+    navigate('/dashboard');
   };
 
   const handleCheckAI = () => {
+    if (!user) {
+      toast({
+        title: "Sign in required",  
+        description: "Please sign in to check for AI detection.",
+        variant: "destructive",
+      });
+      navigate('/auth');
+      return;
+    }
+
     if (!text.trim()) {
       toast({
         title: "Please enter some text",
@@ -76,9 +99,10 @@ export const HeroSection = () => {
         <Button 
           size="lg" 
           className="mb-12 bg-success hover:bg-success/90 text-success-foreground px-8 py-6 text-lg font-semibold shadow-lg"
+          onClick={handleTryForFree}
         >
           <Sparkles className="w-5 h-5 mr-2" />
-          Try for free
+          {user ? 'Go to Dashboard' : 'Try for free'}
         </Button>
 
         <p className="text-sm text-muted-foreground mb-12">No credit card required</p>
@@ -105,7 +129,6 @@ export const HeroSection = () => {
               value={text}
               onChange={(e) => setText(e.target.value)}
               className="min-h-[200px] resize-none border-2 focus:border-primary/50 transition-colors"
-              disabled={isProcessing}
             />
           </div>
 
@@ -114,19 +137,24 @@ export const HeroSection = () => {
             <Button
               variant="outline"
               onClick={handleCheckAI}
-              disabled={isProcessing}
               className="border-2 hover:border-primary/50 transition-colors"
             >
               Check for AI
             </Button>
             <Button
               onClick={handleHumanize}
-              disabled={isProcessing || wordCount > maxWords}
+              disabled={wordCount > maxWords}
               className="bg-success hover:bg-success/90 text-success-foreground px-8"
             >
-              {isProcessing ? "Humanizing..." : "Humanize"}
+              Humanize
             </Button>
           </div>
+          
+          {!user && (
+            <p className="text-sm text-muted-foreground mt-4">
+              Sign in to access the full humanizer tool
+            </p>
+          )}
         </div>
       </div>
     </section>
