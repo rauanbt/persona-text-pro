@@ -9,27 +9,27 @@ export const Pricing = () => {
 
   const plans = [
     {
-      name: "Basic",
-      monthlyPrice: "$5.99",
-      annualPrice: "Free", // Since no annual discount mentioned for Basic
-      period: isAnnual ? "per year" : "per month",
-      description: "Great for students and casual writers",
+      name: "Free",
+      monthlyPrice: "Free",
+      annualPrice: "Free",
+      period: "",
+      description: "Perfect for trying out SapienWrite",
       features: [
-        "5,000 words per month",
-        "500 words per request",
-        "All 4 tone options",
-        "Bypass AI detectors",
-        "Plagiarism-free",
-        "20 languages supported"
+        "1,500 words per month",
+        "250 words per request",
+        "Regular & Funny tones",
+        "Basic humanization",
+        "AI detection bypass"
       ],
-      buttonText: "Choose Basic",
-      popular: false
+      buttonText: "Get Started Free",
+      popular: false,
+      isFree: true
     },
     {
       name: "Pro",
-      monthlyPrice: "$18.99",
+      monthlyPrice: "$27.98",
       annualPrice: "$13.99",
-      period: isAnnual ? "per year" : "per month",
+      period: isAnnual ? "per month (billed annually)" : "per month",
       description: "Perfect for professionals and content creators",
       features: [
         "15,000 words per month",
@@ -42,13 +42,14 @@ export const Pricing = () => {
         "Chrome Extension"
       ],
       buttonText: "Choose Pro",
-      popular: true
+      popular: true,
+      isFree: false
     },
     {
       name: "Ultra",
-      monthlyPrice: "$38.99",
+      monthlyPrice: "$57.98",
       annualPrice: "$28.99",
-      period: isAnnual ? "per year" : "per month",
+      period: isAnnual ? "per month (billed annually)" : "per month",
       description: "For teams and heavy users",
       features: [
         "30,000 words per month",
@@ -61,7 +62,8 @@ export const Pricing = () => {
         "Chrome Extension"
       ],
       buttonText: "Choose Ultra",
-      popular: false
+      popular: false,
+      isFree: false
     }
   ];
 
@@ -70,9 +72,9 @@ export const Pricing = () => {
   };
 
   const getSavingsText = (plan: typeof plans[0]) => {
-    if (!isAnnual || plan.name === "Basic") return null;
+    if (!isAnnual || plan.isFree) return null;
     const monthlyCost = parseFloat(plan.monthlyPrice.replace('$', '')) * 12;
-    const annualCost = parseFloat(plan.annualPrice.replace('$', ''));
+    const annualCost = parseFloat(plan.annualPrice.replace('$', '')) * 12;
     const savings = Math.round(((monthlyCost - annualCost) / monthlyCost) * 100);
     return `Save ${savings}%`;
   };
@@ -134,8 +136,8 @@ export const Pricing = () => {
                 <CardDescription className="text-sm">{plan.description}</CardDescription>
                 <div className="mt-4">
                   <span className="text-3xl font-bold text-foreground">{getPrice(plan)}</span>
-                  <span className="text-muted-foreground ml-1">/{plan.period}</span>
-                  {isAnnual && plan.name !== "Basic" && (
+                  {!plan.isFree && <span className="text-muted-foreground ml-1">/{plan.period}</span>}
+                  {isAnnual && !plan.isFree && (
                     <div className="text-sm text-muted-foreground line-through mt-1">
                       {plan.monthlyPrice}/month
                     </div>
