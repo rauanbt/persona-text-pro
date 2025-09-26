@@ -6,67 +6,77 @@ import { Check } from "lucide-react";
 export const Pricing = () => {
   const plans = [
     {
-      name: "Free",
-      price: "$0",
-      period: "forever",
-      description: "Perfect for trying out our service",
-      features: [
-        "500 words per month",
-        "All 4 tone options",
-        "Basic AI detection bypass",
-        "Email support"
-      ],
-      buttonText: "Start Free",
-      popular: false
-    },
-    {
       name: "Basic",
-      price: "$8",
-      period: "per month", 
+      price: "$5.99",
+      period: "per month",
       description: "Great for students and casual writers",
       features: [
-        "10,000 words per month",
-        "All 4 tone options",
-        "Advanced AI detection bypass",
-        "Priority email support",
-        "Export to multiple formats"
+        "5,000 words per month",
+        "500 words per request",
+        "All 4 tone options", 
+        "Bypass all AI detectors (incl. Turnitin & GPTZero)",
+        "Basic Humanization Engine",
+        "Plagiarism-free",
+        "Error-free rewriting",
+        "Undetectable results",
+        "Unlimited AI detection",
+        "20 languages supported"
       ],
       buttonText: "Choose Basic",
       popular: false
     },
     {
       name: "Pro",
-      price: "$19",
+      price: "$18.99",
       period: "per month",
       description: "Perfect for professionals and content creators",
       features: [
-        "50,000 words per month",
+        "15,000 words per month",
+        "1,500 words per request",
         "All 4 tone options",
-        "Premium AI detection bypass",
-        "24/7 chat support",
-        "Export to multiple formats",
-        "API access",
-        "Bulk processing"
+        "My Writing Style",
+        "Bypass all AI detectors (incl. Turnitin & GPTZero)",
+        "Advanced Humanization Engine",
+        "Plagiarism-free",
+        "Error-free rewriting",
+        "Undetectable results", 
+        "Unlimited AI detection",
+        "50+ languages supported",
+        "Advanced Turnitin Bypass Engine",
+        "Human-like results",
+        "Unlimited grammar checks",
+        "Fast mode",
+        "Chrome Extension"
       ],
       buttonText: "Choose Pro",
       popular: true
     },
     {
-      name: "Enterprise",
-      price: "$49",
+      name: "Ultra",
+      price: "$38.99",
       period: "per month",
       description: "For teams and heavy users",
       features: [
-        "200,000 words per month",
-        "All 4 tone options", 
-        "Enterprise AI detection bypass",
-        "Dedicated account manager",
-        "Custom integrations",
-        "Advanced API access",
-        "Team management",
-        "Custom tone training"
+        "30,000 words per month",
+        "3,000 words per request",
+        "All 4 tone options",
+        "My Writing Style", 
+        "Bypass all AI detectors (incl. Turnitin & GPTZero)",
+        "Advanced Humanization Engine",
+        "Plagiarism-free",
+        "Error-free rewriting",
+        "Undetectable results",
+        "Unlimited AI detection",
+        "50+ languages supported",
+        "Advanced Turnitin Bypass Engine",
+        "Human-like results",
+        "Unlimited grammar checks",
+        "Fast mode",
+        "Ultra-human writing output",
+        "Priority support",
+        "Chrome Extension"
       ],
-      buttonText: "Choose Enterprise",
+      buttonText: "Choose Ultra",
       popular: false
     }
   ];

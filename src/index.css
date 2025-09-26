@@ -17,7 +17,7 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 142 76% 36%;
+    --primary: 185 70% 40%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 210 40% 96.1%;
@@ -26,7 +26,7 @@ All colors MUST be HSL.
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
-    --accent: 142 76% 36%;
+    --accent: 185 70% 40%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84.2% 60.2%;
@@ -34,15 +34,15 @@ All colors MUST be HSL.
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 142 76% 36%;
+    --ring: 185 70% 40%;
 
     --radius: 0.5rem;
 
     /* Custom design tokens */
-    --hero-gradient: linear-gradient(135deg, 142 76% 36%, 142 69% 58%);
-    --success: 142 76% 36%;
+    --hero-gradient: linear-gradient(135deg, 185 70% 40%, 185 60% 60%);
+    --success: 185 70% 40%;
     --success-foreground: 0 0% 100%;
-    --hero-bg: 142 84% 93%;
+    --hero-bg: 185 60% 95%;
     --feature-bg: 220 14% 96%;
     --text-muted: 215.4 16.3% 46.9%;
     
@@ -81,7 +81,7 @@ All colors MUST be HSL.
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 142 76% 36%;
+    --primary: 185 70% 40%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 217.2 32.6% 17.5%;
@@ -90,7 +90,7 @@ All colors MUST be HSL.
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
 
-    --accent: 142 76% 36%;
+    --accent: 185 70% 40%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 62.8% 30.6%;
@@ -98,13 +98,13 @@ All colors MUST be HSL.
 
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 142 76% 36%;
+    --ring: 185 70% 40%;
     
     /* Dark mode custom tokens */
-    --hero-gradient: linear-gradient(135deg, 142 76% 36%, 142 69% 58%);
-    --success: 142 76% 36%;
+    --hero-gradient: linear-gradient(135deg, 185 70% 40%, 185 60% 60%);
+    --success: 185 70% 40%;
     --success-foreground: 0 0% 100%;
-    --hero-bg: 142 84% 93%;
+    --hero-bg: 185 60% 95%;
     --feature-bg: 217.2 32.6% 17.5%;
     --text-muted: 215 20.2% 65.1%;
     --sidebar-background: 240 5.9% 10%;
