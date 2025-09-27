@@ -35,54 +35,70 @@ serve(async (req) => {
 
     console.log('[ZEROGPT] Text received, word count:', text.trim().split(/\s+/).length);
 
-    // ZeroGPT free API call (Note: This is a placeholder - ZeroGPT doesn't have a public API)
-    // In a real implementation, you'd need to check if ZeroGPT offers an API
-    // For now, we'll simulate the behavior
+    const zeroGptApiKey = Deno.env.get('ZEROGPT_API_KEY');
     
-    try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 1000));
-      
-      // Analyze text characteristics to provide realistic scoring
+    if (!zeroGptApiKey) {
+      console.log('[ZEROGPT] No API key found, using fallback analysis');
+      // Generate fallback analysis
       const words = text.trim().split(/\s+/);
-      const wordCount = words.length;
+      const simulatedScore = Math.floor(Math.random() * 50) + 25;
       
-      // Factors that might indicate AI generation
-      let aiIndicators = 0;
-      
-      // Check for repetitive patterns
-      const wordFreq = new Map<string, number>();
-      words.forEach((word: string) => {
-        const cleanWord = word.toLowerCase().replace(/[^\w]/g, '');
-        wordFreq.set(cleanWord, (wordFreq.get(cleanWord) || 0) + 1);
+      return new Response(JSON.stringify({
+        detector: 'zerogpt',
+        score: simulatedScore,
+        confidence: simulatedScore / 100,
+        simulated: true,
+        details: {
+          textLength: words.length,
+          analysis: 'Fallback analysis - no API key configured'
+        }
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+
+    try {
+      console.log('[ZEROGPT] Making API call to ZeroGPT');
       
-      const averageWordLength = words.reduce((sum: number, word: string) => sum + word.length, 0) / wordCount;
-      const longWords = words.filter((word: string) => word.length > 7).length;
+      // ZeroGPT API call - adjust endpoint and payload based on actual API documentation
+      const apiResponse = await fetch('https://api.zerogpt.com/api/detect/detectText', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${zeroGptApiKey}`,
+          'User-Agent': 'SapienWrite-API-Client/1.0'
+        },
+        body: JSON.stringify({
+          input_text: text,
+          // Add other parameters as needed by ZeroGPT API
+        })
+      });
+
+      if (!apiResponse.ok) {
+        console.error('[ZEROGPT] API response not OK:', apiResponse.status, apiResponse.statusText);
+        throw new Error(`ZeroGPT API error: ${apiResponse.status}`);
+      }
+
+      const apiData = await apiResponse.json();
+      console.log('[ZEROGPT] API response received:', JSON.stringify(apiData, null, 2));
+
+      // Parse ZeroGPT response - adjust based on actual API response format
+      const aiScore = apiData.fakePercentage || apiData.ai_percentage || apiData.score || 0;
+      const confidence = apiData.confidence || aiScore / 100;
+      const words = text.trim().split(/\s+/);
       
-      // Calculate AI probability based on text analysis
-      if (averageWordLength > 5.5) aiIndicators += 10;
-      if (longWords / wordCount > 0.3) aiIndicators += 15;
-      if (text.includes('Furthermore') || text.includes('Moreover') || text.includes('Additionally')) aiIndicators += 20;
-      if (text.split('.').length > wordCount / 15) aiIndicators += 10; // Too many short sentences
-      
-      // Add some randomness to make it realistic
-      const randomVariation = Math.random() * 30 - 15; // -15 to +15
-      const aiScore = Math.max(0, Math.min(100, aiIndicators + randomVariation));
-      
-      console.log('[ZEROGPT] Analysis complete, AI score:', aiScore);
+      console.log('[ZEROGPT] Real API analysis complete, AI score:', aiScore);
       
       return new Response(JSON.stringify({
         detector: 'zerogpt',
         score: Math.round(aiScore),
-        confidence: aiScore / 100,
+        confidence: confidence,
         details: {
-          textLength: wordCount,
-          avgWordLength: Math.round(averageWordLength * 10) / 10,
-          longWordRatio: Math.round((longWords / wordCount) * 100) / 100,
-          analysis: 'Free ZeroGPT-style analysis'
+          textLength: words.length,
+          analysis: 'Real ZeroGPT API analysis',
+          apiData: apiData.message || 'Analysis completed'
         },
-        simulated: true
+        simulated: false
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
