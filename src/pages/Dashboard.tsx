@@ -10,7 +10,9 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from '@/components/ui/use-toast';
 import { ExtraWordsPackages } from '@/components/ExtraWordsPackages';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Loader2, Copy, Download, ExternalLink, Crown, Zap, Plus } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { AIDetectionResults } from '@/components/AIDetectionResults';
+import { Loader2, Copy, Download, ExternalLink, Crown, Zap, Plus, Brain, Shield } from 'lucide-react';
 
 const PLAN_LIMITS = {
   free: 1500,
@@ -33,6 +35,10 @@ const Dashboard = () => {
   const [extraWords, setExtraWords] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showExtraWordsDialog, setShowExtraWordsDialog] = useState(false);
+  const [activeTab, setActiveTab] = useState('humanize');
+  const [aiDetectionStatus, setAiDetectionStatus] = useState<'checking' | 'completed' | null>(null);
+  const [aiDetectionResults, setAiDetectionResults] = useState<any>(null);
+  const [isCheckingAI, setIsCheckingAI] = useState(false);
 
   const currentPlan = subscriptionData.plan;
   const planLimit = PLAN_LIMITS[currentPlan as keyof typeof PLAN_LIMITS];
@@ -232,6 +238,56 @@ const Dashboard = () => {
     document.body.removeChild(element);
   };
 
+  const handleCheckAI = async () => {
+    if (!inputText.trim()) {
+      toast({
+        title: "Empty text",
+        description: "Please enter some text to check for AI detection.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsCheckingAI(true);
+    setAiDetectionStatus('checking');
+
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-detection-hybrid', {
+        body: { text: inputText },
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+      });
+
+      if (error) throw error;
+
+      setAiDetectionResults(data);
+      setAiDetectionStatus('completed');
+      
+      toast({
+        title: "AI Detection Complete",
+        description: `Overall AI score: ${data.overallScore}%. ${data.summary.successfulDetectors} detectors analyzed your text.`,
+      });
+    } catch (error: any) {
+      console.error('Error checking AI:', error);
+      
+      toast({
+        title: "AI Detection Error",
+        description: error.message || "Failed to analyze text. Please try again.",
+        variant: "destructive",
+      });
+      
+      setAiDetectionStatus(null);
+    } finally {
+      setIsCheckingAI(false);
+    }
+  };
+
+  const handleHumanizeFromDetection = () => {
+    setActiveTab('humanize');
+    handleHumanize();
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -301,107 +357,174 @@ const Dashboard = () => {
                     <span className="font-bold text-primary">{totalAvailableWords.toLocaleString()} words</span>
                   </div>
                 </div>
-                {totalAvailableWords < 1000 && (
-                  <Dialog open={showExtraWordsDialog} onOpenChange={setShowExtraWordsDialog}>
-                    <DialogTrigger asChild>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="w-full mt-3 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
-                      >
-                        <Plus className="w-4 h-4 mr-2" />
-                        Buy Extra Words
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-4xl">
-                      <DialogHeader>
-                        <DialogTitle>Extra Words Packages</DialogTitle>
-                      </DialogHeader>
-                      <ExtraWordsPackages onClose={() => setShowExtraWordsDialog(false)} />
-                    </DialogContent>
-                  </Dialog>
-                )}
+                <Dialog open={showExtraWordsDialog} onOpenChange={setShowExtraWordsDialog}>
+                  <DialogTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full mt-3 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Buy Extra Words
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-4xl">
+                    <DialogHeader>
+                      <DialogTitle>Extra Words Packages</DialogTitle>
+                    </DialogHeader>
+                    <ExtraWordsPackages onClose={() => setShowExtraWordsDialog(false)} />
+                  </DialogContent>
+                </Dialog>
               </CardContent>
             </Card>
 
-            {/* AI Humanizer Tool */}
+            {/* Tabbed Interface */}
             <Card>
               <CardHeader>
-                <CardTitle>AI Text Humanizer</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Brain className="w-5 h-5" />
+                  AI Tools
+                </CardTitle>
                 <CardDescription>
-                  Transform AI-generated text into natural, human-like content
+                  Check for AI detection and humanize your text
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <ToneSelector 
-                  selectedTone={selectedTone}
-                  onToneChange={setSelectedTone}
-                />
+              <CardContent>
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="humanize" className="flex items-center gap-2">
+                      <Zap className="w-4 h-4" />
+                      Humanize Text
+                    </TabsTrigger>
+                    <TabsTrigger value="detect" className="flex items-center gap-2">
+                      <Shield className="w-4 h-4" />
+                      Check AI Detection
+                    </TabsTrigger>
+                  </TabsList>
 
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">
-                      Original Text
-                    </label>
-                    <Textarea
-                      value={inputText}
-                      onChange={(e) => setInputText(e.target.value)}
-                      placeholder="Paste your AI-generated text here..."
-                      className="min-h-[350px] resize-none text-base"
+                  <TabsContent value="humanize" className="space-y-6">
+                    <ToneSelector 
+                      selectedTone={selectedTone}
+                      onToneChange={setSelectedTone}
                     />
-                    <div className="flex justify-between items-center mt-2 text-sm text-muted-foreground">
-                      <span>
-                        Words: {inputText.trim() ? inputText.trim().split(/\s+/).length : 0}
-                      </span>
-                      <span>
-                        Available: {totalAvailableWords.toLocaleString()} 
-                        {extraWords > 0 && <span className="text-primary"> (+{extraWords} extra)</span>}
-                      </span>
-                    </div>
-                  </div>
 
-                  <Button 
-                    onClick={handleHumanize}
-                    disabled={isProcessing || !inputText.trim() || totalAvailableWords <= 0}
-                    className="w-full"
-                    size="lg"
-                  >
-                    {isProcessing ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Humanizing Text...
-                      </>
-                    ) : (
-                      <>
-                        <Zap className="mr-2 h-4 w-4" />
-                        Humanize Text
-                      </>
-                    )}
-                  </Button>
-
-                  {humanizedText && (
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">
-                        Humanized Text
-                      </label>
-                      <Textarea
-                        value={humanizedText}
-                        readOnly
-                        className="min-h-[350px] resize-none bg-muted text-base"
-                      />
-                      <div className="flex space-x-2 mt-2">
-                        <Button onClick={copyToClipboard} variant="outline" size="sm">
-                          <Copy className="mr-2 h-4 w-4" />
-                          Copy
-                        </Button>
-                        <Button onClick={downloadText} variant="outline" size="sm">
-                          <Download className="mr-2 h-4 w-4" />
-                          Download
-                        </Button>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">
+                          Original Text
+                        </label>
+                        <Textarea
+                          value={inputText}
+                          onChange={(e) => setInputText(e.target.value)}
+                          placeholder="Paste your AI-generated text here..."
+                          className="min-h-[350px] resize-none text-base"
+                        />
+                        <div className="flex justify-between items-center mt-2 text-sm text-muted-foreground">
+                          <span>
+                            Words: {inputText.trim() ? inputText.trim().split(/\s+/).length : 0}
+                          </span>
+                          <span>
+                            Available: {totalAvailableWords.toLocaleString()} 
+                            {extraWords > 0 && <span className="text-primary"> (+{extraWords} extra)</span>}
+                          </span>
+                        </div>
                       </div>
+
+                      <Button 
+                        onClick={handleHumanize}
+                        disabled={isProcessing || !inputText.trim() || totalAvailableWords <= 0}
+                        className="w-full"
+                        size="lg"
+                      >
+                        {isProcessing ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Humanizing Text...
+                          </>
+                        ) : (
+                          <>
+                            <Zap className="mr-2 h-4 w-4" />
+                            Humanize Text
+                          </>
+                        )}
+                      </Button>
+
+                      {humanizedText && (
+                        <div>
+                          <label className="text-sm font-medium mb-2 block">
+                            Humanized Text
+                          </label>
+                          <Textarea
+                            value={humanizedText}
+                            readOnly
+                            className="min-h-[350px] resize-none bg-muted text-base"
+                          />
+                          <div className="flex space-x-2 mt-2">
+                            <Button onClick={copyToClipboard} variant="outline" size="sm">
+                              <Copy className="mr-2 h-4 w-4" />
+                              Copy
+                            </Button>
+                            <Button onClick={downloadText} variant="outline" size="sm">
+                              <Download className="mr-2 h-4 w-4" />
+                              Download
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
+                  </TabsContent>
+
+                  <TabsContent value="detect" className="space-y-6">
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">
+                          Text to Analyze
+                        </label>
+                        <Textarea
+                          value={inputText}
+                          onChange={(e) => setInputText(e.target.value)}
+                          placeholder="Paste your text here to check for AI detection..."
+                          className="min-h-[200px] resize-none text-base"
+                        />
+                        <div className="flex justify-between items-center mt-2 text-sm text-muted-foreground">
+                          <span>
+                            Words: {inputText.trim() ? inputText.trim().split(/\s+/).length : 0}
+                          </span>
+                          <span>Free for all users</span>
+                        </div>
+                      </div>
+
+                      <Button 
+                        onClick={handleCheckAI}
+                        disabled={isCheckingAI || !inputText.trim()}
+                        className="w-full"
+                        size="lg"
+                        variant="outline"
+                      >
+                        {isCheckingAI ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Analyzing Text...
+                          </>
+                        ) : (
+                          <>
+                            <Shield className="mr-2 h-4 w-4" />
+                            Check for AI Detection
+                          </>
+                        )}
+                      </Button>
+
+                      {aiDetectionResults && (
+                        <AIDetectionResults
+                          text={inputText}
+                          onHumanize={handleHumanizeFromDetection}
+                          status={aiDetectionStatus}
+                          onStatusChange={setAiDetectionStatus}
+                        />
+                      )}
+                    </div>
+                  </TabsContent>
+                </Tabs>
               </CardContent>
             </Card>
           </div>
