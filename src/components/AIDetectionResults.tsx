@@ -26,33 +26,33 @@ interface AIDetectionResultsProps {
 export const AIDetectionResults = ({ text, onHumanize, status, onStatusChange }: AIDetectionResultsProps) => {
   const [detectors, setDetectors] = useState<AIDetector[]>([
     {
-      id: 'gptzero',
-      name: 'GPTZero',
-      icon: <Brain className="w-5 h-5" />,
-      score: 0,
-      status: 'pending',
-      delay: 800
-    },
-    {
-      id: 'originality',
-      name: 'Originality.AI',
-      icon: <Shield className="w-5 h-5" />,
-      score: 0,
-      status: 'pending',
-      delay: 1200
-    },
-    {
       id: 'copyleaks',
       name: 'Copyleaks',
       icon: <Eye className="w-5 h-5" />,
       score: 0,
       status: 'pending',
+      delay: 800
+    },
+    {
+      id: 'zerogpt',
+      name: 'ZeroGPT',
+      icon: <Zap className="w-5 h-5" />,
+      score: 0,
+      status: 'pending',
+      delay: 1200
+    },
+    {
+      id: 'gptzero',
+      name: 'GPTZero',
+      icon: <Brain className="w-5 h-5" />,
+      score: 0,
+      status: 'pending',
       delay: 1600
     },
     {
-      id: 'writer',
-      name: 'Writer.com',
-      icon: <Zap className="w-5 h-5" />,
+      id: 'originality',
+      name: 'Originality.AI',
+      icon: <Shield className="w-5 h-5" />,
       score: 0,
       status: 'pending',
       delay: 2000
@@ -220,56 +220,13 @@ export const AIDetectionResults = ({ text, onHumanize, status, onStatusChange }:
         ))}
       </div>
 
-      {/* Recommendation Section - Compact */}
+      {/* Disclaimer */}
       {allCompleted && (
-        <Card className={`border ${getRiskLevel(averageScore).bgColor}`}>
-          <CardContent className="p-4">
-            <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 mt-0.5">
-                {averageScore >= 70 ? (
-                  <AlertTriangle className="w-5 h-5 text-destructive" />
-                ) : (
-                  <CheckCircle className="w-5 h-5 text-success" />
-                )}
-              </div>
-              <div className="flex-1 space-y-3">
-                <div>
-                  <h4 className="font-semibold text-sm mb-1">Recommendation</h4>
-                  <p className="text-sm text-muted-foreground">
-                    {averageScore >= 70 
-                      ? 'High AI probability detected. Humanization strongly recommended to avoid detection.' 
-                      : averageScore >= 40 
-                        ? 'Some AI patterns found. Consider humanization to improve authenticity.' 
-                        : 'Text appears human-written and should pass most AI detectors.'}
-                  </p>
-                </div>
-                
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Words: {text.trim().split(/\s+/).length}</span>
-                  <span>Detectors: {detectors.length}</span>
-                </div>
-
-                {averageScore >= 40 && (
-                  <Button 
-                    onClick={onHumanize}
-                    className="w-full bg-success hover:bg-success/90 text-success-foreground"
-                    size="sm"
-                  >
-                    <Brain className="w-4 h-4 mr-2" />
-                    Humanize This Text
-                  </Button>
-                )}
-              </div>
-            </div>
-            
-            {/* Disclaimer */}
-            <div className="mt-3 p-2 bg-muted/30 rounded text-center">
-              <p className="text-xs text-muted-foreground">
-                <strong>Note:</strong> Simulated scores for demo. Real APIs needed for production.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="text-center p-3 bg-muted/30 rounded">
+          <p className="text-xs text-muted-foreground">
+            <strong>Note:</strong> Results are simulated for demonstration. For accurate detection from Copyleaks, ZeroGPT, GPTZero, and Originality.AI, upgrade to a premium plan.
+          </p>
+        </div>
       )}
     </div>
   );
