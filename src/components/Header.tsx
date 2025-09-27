@@ -19,7 +19,7 @@ export const Header = () => {
     <header className="w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
         <div className="flex items-center space-x-2 cursor-pointer" onClick={() => navigate('/')}>
-          <img src={logo} alt="SapienWrite" className="w-8 h-8" />
+          <img src={logo} alt="SapienWrite" className="w-8 h-8 object-contain" />
           <span className="text-xl font-bold text-foreground">SapienWrite</span>
         </div>
         

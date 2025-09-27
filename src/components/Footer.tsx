@@ -29,7 +29,7 @@ export const Footer = () => {
         <div className="grid md:grid-cols-4 gap-8">
           <div className="col-span-1">
             <div className="flex items-center space-x-2 mb-4">
-              <img src={logo} alt="SapienWrite" className="w-8 h-8" />
+              <img src={logo} alt="SapienWrite" className="w-8 h-8 object-contain" />
               <span className="text-xl font-bold text-foreground">SapienWrite</span>
             </div>
             <p className="text-muted-foreground text-sm leading-relaxed">
