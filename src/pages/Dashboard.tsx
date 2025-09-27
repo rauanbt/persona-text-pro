@@ -8,7 +8,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { ToneSelector } from '@/components/ToneSelector';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/components/ui/use-toast';
-import { Loader2, Copy, Download, ExternalLink, Crown, Zap } from 'lucide-react';
+import { ExtraWordsPackages } from '@/components/ExtraWordsPackages';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Loader2, Copy, Download, ExternalLink, Crown, Zap, Plus } from 'lucide-react';
 
 const PLAN_LIMITS = {
   free: 1500,
@@ -28,15 +30,35 @@ const Dashboard = () => {
   const [selectedTone, setSelectedTone] = useState('regular');
   const [isProcessing, setIsProcessing] = useState(false);
   const [usage, setUsage] = useState({ words_used: 0, requests_count: 0 });
+  const [extraWords, setExtraWords] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [showExtraWordsDialog, setShowExtraWordsDialog] = useState(false);
 
   const currentPlan = subscriptionData.plan;
   const planLimit = PLAN_LIMITS[currentPlan as keyof typeof PLAN_LIMITS];
-  const remainingWords = planLimit - usage.words_used;
-  const usagePercentage = (usage.words_used / planLimit) * 100;
+  const remainingWords = Math.max(0, planLimit - usage.words_used);
+  const totalAvailableWords = remainingWords + extraWords;
+  const usagePercentage = Math.min((usage.words_used / planLimit) * 100, 100);
 
   useEffect(() => {
     fetchUsage();
+  }, []);
+
+  useEffect(() => {
+    // Check for purchase success in URL params
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('word_purchase') === 'success') {
+      const words = urlParams.get('words');
+      toast({
+        title: "Purchase Successful!",
+        description: `${words} extra words have been added to your account.`,
+        variant: "default"
+      });
+      // Clean up URL
+      window.history.replaceState({}, '', window.location.pathname);
+      // Refresh usage to show updated extra words
+      setTimeout(() => fetchUsage(), 2000);
+    }
   }, []);
 
   const fetchUsage = async () => {
@@ -44,18 +66,32 @@ const Dashboard = () => {
 
     try {
       const currentMonth = new Date().toISOString().slice(0, 7);
-      const { data, error } = await supabase
-        .from('usage_tracking')
-        .select('words_used, requests_count')
-        .eq('user_id', user.id)
-        .eq('month_year', currentMonth)
-        .single();
+      
+      // Fetch both usage and extra words balance in parallel
+      const [usageResult, profileResult] = await Promise.all([
+        supabase
+          .from('usage_tracking')
+          .select('words_used, requests_count')
+          .eq('user_id', user.id)
+          .eq('month_year', currentMonth)
+          .single(),
+        supabase
+          .from('profiles')
+          .select('extra_words_balance')
+          .eq('user_id', user.id)
+          .single()
+      ]);
 
-      if (error && error.code !== 'PGRST116') {
-        throw error;
+      if (usageResult.error && usageResult.error.code !== 'PGRST116') {
+        throw usageResult.error;
       }
 
-      setUsage(data || { words_used: 0, requests_count: 0 });
+      if (profileResult.error) {
+        throw profileResult.error;
+      }
+
+      setUsage(usageResult.data || { words_used: 0, requests_count: 0 });
+      setExtraWords(profileResult.data?.extra_words_balance || 0);
     } catch (error) {
       console.error('Error fetching usage:', error);
     } finally {
@@ -74,10 +110,12 @@ const Dashboard = () => {
     }
 
     const wordCount = inputText.trim().split(/\s+/).length;
-    if (wordCount > remainingWords) {
+    if (wordCount > totalAvailableWords) {
       toast({
         title: "Word limit exceeded",
-        description: `You have ${remainingWords} words remaining. Upgrade your plan for more words.`,
+        description: extraWords > 0 
+          ? `You have ${totalAvailableWords} words remaining (${remainingWords} monthly + ${extraWords} extra words).`
+          : `You have ${remainingWords} words remaining. Purchase extra words to continue.`,
         variant: "destructive",
       });
       return;
@@ -100,10 +138,15 @@ const Dashboard = () => {
         words_used: prev.words_used + wordCount,
         requests_count: prev.requests_count + 1
       }));
+      
+      // Update extra words if they were used
+      if (data.extra_words_remaining !== undefined) {
+        setExtraWords(data.extra_words_remaining);
+      }
 
       toast({
         title: "Text humanized successfully!",
-        description: `Used ${wordCount} words. ${data.remaining_words} words remaining.`,
+        description: `Used ${wordCount} words. ${data.total_remaining || data.remaining_words} words remaining.`,
       });
     } catch (error: any) {
       console.error('Error humanizing text:', error);
@@ -242,9 +285,42 @@ const Dashboard = () => {
               <CardContent>
                 <Progress value={usagePercentage} className="mb-2" />
                 <div className="flex justify-between text-sm text-muted-foreground">
-                  <span>{remainingWords.toLocaleString()} words remaining</span>
+                  <div>
+                    <div>{remainingWords.toLocaleString()} monthly words remaining</div>
+                    {extraWords > 0 && (
+                      <div className="text-primary font-medium">
+                        + {extraWords.toLocaleString()} extra words
+                      </div>
+                    )}
+                  </div>
                   <span>{usage.requests_count} requests made</span>
                 </div>
+                <div className="mt-2 pt-2 border-t">
+                  <div className="flex justify-between text-sm">
+                    <span className="font-medium">Total Available:</span>
+                    <span className="font-bold text-primary">{totalAvailableWords.toLocaleString()} words</span>
+                  </div>
+                </div>
+                {totalAvailableWords < 1000 && (
+                  <Dialog open={showExtraWordsDialog} onOpenChange={setShowExtraWordsDialog}>
+                    <DialogTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="w-full mt-3 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Buy Extra Words
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-4xl">
+                      <DialogHeader>
+                        <DialogTitle>Extra Words Packages</DialogTitle>
+                      </DialogHeader>
+                      <ExtraWordsPackages onClose={() => setShowExtraWordsDialog(false)} />
+                    </DialogContent>
+                  </Dialog>
+                )}
               </CardContent>
             </Card>
 
@@ -277,13 +353,16 @@ const Dashboard = () => {
                       <span>
                         Words: {inputText.trim() ? inputText.trim().split(/\s+/).length : 0}
                       </span>
-                      <span>Remaining: {remainingWords.toLocaleString()}</span>
+                      <span>
+                        Available: {totalAvailableWords.toLocaleString()} 
+                        {extraWords > 0 && <span className="text-primary"> (+{extraWords} extra)</span>}
+                      </span>
                     </div>
                   </div>
 
                   <Button 
                     onClick={handleHumanize}
-                    disabled={isProcessing || !inputText.trim() || remainingWords <= 0}
+                    disabled={isProcessing || !inputText.trim() || totalAvailableWords <= 0}
                     className="w-full"
                     size="lg"
                   >

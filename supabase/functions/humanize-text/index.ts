@@ -42,14 +42,15 @@ serve(async (req) => {
     const wordCount = text.trim().split(/\s+/).length;
     const currentMonth = new Date().toISOString().slice(0, 7); // "2024-01"
 
-    // Get user profile to check plan
+    // Get user profile to check plan and extra words
     const { data: profile } = await supabase
       .from('profiles')
-      .select('current_plan')
+      .select('current_plan, extra_words_balance')
       .eq('user_id', userData.user.id)
       .single();
 
     const userPlan = profile?.current_plan || 'free';
+    const extraWords = profile?.extra_words_balance || 0;
     const planLimit = PLAN_LIMITS[userPlan as keyof typeof PLAN_LIMITS];
 
     // Get or create usage tracking for current month
@@ -61,13 +62,16 @@ serve(async (req) => {
       .single();
 
     const currentUsage = usage?.words_used || 0;
+    const totalAvailableWords = planLimit - currentUsage + extraWords;
     
-    // Check if user would exceed their limit
-    if (currentUsage + wordCount > planLimit) {
+    // Check if user would exceed their total available words (plan + extra)
+    if (wordCount > totalAvailableWords) {
       return new Response(JSON.stringify({ 
         error: 'Word limit exceeded',
         current_usage: currentUsage,
-        limit: planLimit,
+        plan_limit: planLimit,
+        extra_words: extraWords,
+        total_available: totalAvailableWords,
         requested_words: wordCount
       }), {
         status: 429,
@@ -111,7 +115,10 @@ serve(async (req) => {
     const data = await response.json();
     const humanizedText = data.choices[0].message.content;
 
-    // Update usage tracking
+    // Update usage tracking and deduct from extra words if needed
+    const wordsToDeductFromExtra = Math.max(0, (currentUsage + wordCount) - planLimit);
+    const newExtraWordsBalance = extraWords - wordsToDeductFromExtra;
+    
     if (usage) {
       await supabase
         .from('usage_tracking')
@@ -132,6 +139,16 @@ serve(async (req) => {
         });
     }
 
+    // Update extra words balance if we used any extra words
+    if (wordsToDeductFromExtra > 0) {
+      await supabase
+        .from('profiles')
+        .update({
+          extra_words_balance: newExtraWordsBalance
+        })
+        .eq('user_id', userData.user.id);
+    }
+
     // Log the humanization request
     await supabase
       .from('humanization_requests')
@@ -146,14 +163,17 @@ serve(async (req) => {
     return new Response(JSON.stringify({ 
       humanized_text: humanizedText,
       word_count: wordCount,
-      remaining_words: planLimit - (currentUsage + wordCount)
+      remaining_words: Math.max(0, planLimit - (currentUsage + wordCount)),
+      extra_words_remaining: newExtraWordsBalance,
+      total_remaining: Math.max(0, planLimit - (currentUsage + wordCount)) + newExtraWordsBalance
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     console.error('Error in humanize-text function:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

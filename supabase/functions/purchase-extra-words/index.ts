@@ -7,6 +7,13 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Word packages mapping
+const WORD_PACKAGES = {
+  'price_1SBtTmH8HT0u8xphU5GJdqWx': { words: 5000, product: 'prod_T89ncgVFrjrNpw' },
+  'price_1SBtTzH8HT0u8xphnmDKFThW': { words: 10000, product: 'prod_T89nBIgYrVyrH6' },
+  'price_1SBtUhH8HT0u8xph7PlBMQQ2': { words: 25000, product: 'prod_T89o5p42i30Z0D' }
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -14,7 +21,7 @@ serve(async (req) => {
 
   const supabaseClient = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
   );
 
   try {
@@ -25,8 +32,12 @@ serve(async (req) => {
     if (!user?.email) throw new Error("User not authenticated or email not available");
 
     const { priceId } = await req.json();
-    if (!priceId) throw new Error("Price ID is required");
+    if (!priceId || !WORD_PACKAGES[priceId as keyof typeof WORD_PACKAGES]) {
+      throw new Error("Invalid price ID");
+    }
 
+    const wordPackage = WORD_PACKAGES[priceId as keyof typeof WORD_PACKAGES];
+    
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", { 
       apiVersion: "2025-08-27.basil" 
     });
@@ -46,9 +57,14 @@ serve(async (req) => {
           quantity: 1,
         },
       ],
-      mode: "subscription",
-      success_url: `${req.headers.get("origin")}/dashboard?success=true`,
-      cancel_url: `${req.headers.get("origin")}/dashboard?canceled=true`,
+      mode: "payment",
+      success_url: `${req.headers.get("origin")}/dashboard?word_purchase=success&words=${wordPackage.words}`,
+      cancel_url: `${req.headers.get("origin")}/dashboard?word_purchase=canceled`,
+      metadata: {
+        user_id: user.id,
+        word_amount: wordPackage.words.toString(),
+        product_id: wordPackage.product
+      }
     });
 
     return new Response(JSON.stringify({ url: session.url }), {
@@ -57,6 +73,7 @@ serve(async (req) => {
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    console.error("Error in purchase-extra-words function:", error);
     return new Response(JSON.stringify({ error: errorMessage }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,

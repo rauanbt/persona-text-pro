@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      extra_word_purchases: {
+        Row: {
+          amount_paid: number
+          created_at: string
+          id: string
+          price_id: string
+          product_id: string
+          stripe_payment_intent_id: string | null
+          user_id: string
+          word_amount: number
+        }
+        Insert: {
+          amount_paid: number
+          created_at?: string
+          id?: string
+          price_id: string
+          product_id: string
+          stripe_payment_intent_id?: string | null
+          user_id: string
+          word_amount: number
+        }
+        Update: {
+          amount_paid?: number
+          created_at?: string
+          id?: string
+          price_id?: string
+          product_id?: string
+          stripe_payment_intent_id?: string | null
+          user_id?: string
+          word_amount?: number
+        }
+        Relationships: []
+      }
       humanization_requests: {
         Row: {
           created_at: string
@@ -52,6 +85,7 @@ export type Database = {
           created_at: string
           current_plan: string | null
           email: string
+          extra_words_balance: number | null
           full_name: string | null
           id: string
           stripe_customer_id: string | null
@@ -62,6 +96,7 @@ export type Database = {
           created_at?: string
           current_plan?: string | null
           email: string
+          extra_words_balance?: number | null
           full_name?: string | null
           id?: string
           stripe_customer_id?: string | null
@@ -72,6 +107,7 @@ export type Database = {
           created_at?: string
           current_plan?: string | null
           email?: string
+          extra_words_balance?: number | null
           full_name?: string | null
           id?: string
           stripe_customer_id?: string | null

@@ -11,3 +11,9 @@ verify_jwt = true
 
 [functions.customer-portal]
 verify_jwt = true
+
+[functions.purchase-extra-words]
+verify_jwt = true
+
+[functions.process-word-purchase]
+verify_jwt = true
