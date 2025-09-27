@@ -80,6 +80,11 @@ export const detectorProfiles = {
     bias: -3, // Tends to score lower
     variance: 12
   },
+  zerogpt: {
+    sensitivity: 1.1, // Slightly sensitive
+    bias: 3, // Tends to score higher
+    variance: 12
+  },
   writer: {
     sensitivity: 0.9, // Focus on professional writing
     bias: 2,

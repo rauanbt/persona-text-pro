@@ -84,25 +84,33 @@ export const AIDetectionResults = ({ text, onHumanize, status, onStatusChange }:
       // Analyze text for realistic scoring
       const baseScore = analyzeAndScore(text);
 
+      // Define detector configs to avoid closure issues
+      const detectorConfigs = [
+        { id: 'copyleaks', delay: 800 },
+        { id: 'zerogpt', delay: 1200 },
+        { id: 'gptzero', delay: 1600 },
+        { id: 'originality', delay: 2000 }
+      ];
+
       // Start each detector with staggered timing
-      detectors.forEach((detector, index) => {
+      detectorConfigs.forEach((config) => {
         setTimeout(() => {
           setDetectors(prev => prev.map(d => 
-            d.id === detector.id 
+            d.id === config.id 
               ? { ...d, status: 'analyzing' as const }
               : d
           ));
 
           // Complete analysis after a short delay
           setTimeout(() => {
-            const score = getDetectorScore(baseScore, detector.id as keyof typeof import("@/lib/text-analysis").detectorProfiles);
+            const score = getDetectorScore(baseScore, config.id as keyof typeof import("@/lib/text-analysis").detectorProfiles);
             setDetectors(prev => prev.map(d => 
-              d.id === detector.id 
+              d.id === config.id 
                 ? { ...d, score, status: 'completed' as const }
                 : d
             ));
           }, 800);
-        }, detector.delay);
+        }, config.delay);
       });
 
       // Calculate overall score when all detectors are done
@@ -110,6 +118,17 @@ export const AIDetectionResults = ({ text, onHumanize, status, onStatusChange }:
         setOverallScore(Math.floor(baseScore));
         onStatusChange('completed');
       }, 3000);
+
+      // Safety timeout to prevent infinite loading
+      setTimeout(() => {
+        setDetectors(prev => prev.map(d => 
+          d.status !== 'completed' 
+            ? { ...d, score: Math.floor(baseScore + (Math.random() - 0.5) * 10), status: 'completed' as const }
+            : d
+        ));
+        setOverallScore(Math.floor(baseScore));
+        onStatusChange('completed');
+      }, 5000);
     }
   }, [status, text, onStatusChange]);
 
@@ -182,52 +201,52 @@ export const AIDetectionResults = ({ text, onHumanize, status, onStatusChange }:
       {/* Individual Detector Results - Compact Grid */}
       <div className="grid grid-cols-2 gap-3">
         {detectors.map((detector) => (
-          <Card key={detector.id} className="border">
-            <CardContent className="p-3">
+          <Card key={detector.id} className="border h-full">
+            <CardContent className="p-3 h-full flex flex-col">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-1.5">
-                  <div className="w-4 h-4">{detector.icon}</div>
+                  <div className="w-4 h-4 flex-shrink-0">{detector.icon}</div>
                   <span className="text-sm font-medium truncate">{detector.name}</span>
                 </div>
                 {detector.status === 'analyzing' && (
-                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary"></div>
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary flex-shrink-0"></div>
                 )}
               </div>
               
-              {detector.status === 'pending' ? (
-                <Skeleton className="h-6 w-full" />
-              ) : detector.status === 'analyzing' ? (
-                <div className="space-y-1">
-                  <div className="text-xs text-muted-foreground">Analyzing...</div>
-                  <Progress value={Math.random() * 60 + 20} className="h-1.5" />
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  <div className="flex justify-between items-center">
-                    <span className="text-lg font-bold">{detector.score}%</span>
-                    <Badge 
-                      variant={detector.score >= 70 ? 'destructive' : detector.score >= 40 ? 'secondary' : 'default'}
-                      className="text-xs px-1 py-0"
-                    >
-                      {detector.score >= 70 ? 'AI' : detector.score >= 40 ? 'Mixed' : 'Human'}
-                    </Badge>
+              <div className="flex-1 flex flex-col justify-end">
+                {detector.status === 'pending' ? (
+                  <Skeleton className="h-6 w-full" />
+                ) : detector.status === 'analyzing' ? (
+                  <div className="space-y-1">
+                    <div className="text-xs text-muted-foreground">Analyzing...</div>
+                    <Progress value={Math.random() * 60 + 20} className="h-1.5" />
                   </div>
-                  <Progress value={detector.score} className="h-1.5" />
-                </div>
-              )}
+                ) : (
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-center">
+                      <span className="text-lg font-bold">{detector.score}%</span>
+                      <Badge 
+                        variant={detector.score >= 70 ? 'destructive' : detector.score >= 40 ? 'secondary' : 'default'}
+                        className="text-xs px-1 py-0"
+                      >
+                        {detector.score >= 70 ? 'AI' : detector.score >= 40 ? 'Mixed' : 'Human'}
+                      </Badge>
+                    </div>
+                    <Progress value={detector.score} className="h-1.5" />
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      {/* Disclaimer */}
-      {allCompleted && (
-        <div className="text-center p-3 bg-muted/30 rounded">
-          <p className="text-xs text-muted-foreground">
-            <strong>Note:</strong> Results are simulated for demonstration. For accurate detection from Copyleaks, ZeroGPT, GPTZero, and Originality.AI, upgrade to a premium plan.
-          </p>
-        </div>
-      )}
+      {/* Disclaimer - Always Visible */}
+      <div className="text-center p-3 bg-muted/30 rounded">
+        <p className="text-xs text-muted-foreground">
+          <strong>Note:</strong> Results are simulated for demonstration. For accurate detection from Copyleaks, ZeroGPT, GPTZero, and Originality.AI, upgrade to a premium plan.
+        </p>
+      </div>
     </div>
   );
 };
