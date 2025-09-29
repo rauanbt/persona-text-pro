@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import logo from "@/assets/sapienwrite-logo.svg";
+import logo from "@/assets/logo.png";
 
 export const Header = () => {
   const { user, signOut } = useAuth();
@@ -12,6 +12,23 @@ export const Header = () => {
       navigate('/dashboard');
     } else {
       navigate('/auth');
+    }
+  };
+
+  const handlePricingClick = () => {
+    if (window.location.pathname === '/') {
+      const pricingElement = document.getElementById('pricing');
+      if (pricingElement) {
+        pricingElement.scrollIntoView({ behavior: 'smooth' });
+      }
+    } else {
+      navigate('/', { replace: true });
+      setTimeout(() => {
+        const pricingElement = document.getElementById('pricing');
+        if (pricingElement) {
+          pricingElement.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
     }
   };
 
@@ -44,13 +61,7 @@ export const Header = () => {
           </span>
           <span 
             className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-            onClick={() => {
-              if (window.location.pathname === '/') {
-                document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' });
-              } else {
-                navigate('/#pricing');
-              }
-            }}
+            onClick={handlePricingClick}
           >
             Pricing
           </span>
