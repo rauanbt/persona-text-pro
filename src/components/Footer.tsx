@@ -27,23 +27,36 @@ export const Footer = () => {
 
       {/* Footer Links */}
       <div className="container mx-auto px-4 py-12">
-        <div className="grid md:grid-cols-4 gap-8">
-          <div className="col-span-1">
-            <div className="flex items-center space-x-2 mb-4">
-              <img src={logo} alt="SapienWrite" className="w-8 h-8 object-contain" />
-              <span className="text-xl font-bold text-foreground">SapienWrite</span>
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="md:col-span-2 lg:col-span-1">
+            <div className="mb-4">
+              <span className="text-2xl font-cave font-bold" style={{ color: '#8B4513' }}>SapienWrite</span>
             </div>
             <p className="text-muted-foreground text-sm leading-relaxed">
               The most advanced AI text humanizer with custom tone options. Make your content undetectable and engaging.
             </p>
           </div>
 
-          <div className="col-span-3">
+          <div>
+            <h4 className="font-semibold text-foreground mb-4">Product</h4>
+            <ul className="space-y-3 text-sm text-muted-foreground">
+              <li><Link to="/" className="hover:text-foreground transition-colors">AI Humanizer</Link></li>
+              <li><span className="text-muted-foreground/60 cursor-not-allowed">Chrome Extension</span></li>
+            </ul>
+          </div>
+
+          <div>
             <h4 className="font-semibold text-foreground mb-4">Company</h4>
-            <ul className="space-y-2 text-sm text-muted-foreground">
+            <ul className="space-y-3 text-sm text-muted-foreground">
               <li><Link to="/about" className="hover:text-foreground transition-colors">About</Link></li>
               <li><Link to="/blog" className="hover:text-foreground transition-colors">Blog</Link></li>
               <li><Link to="/contact" className="hover:text-foreground transition-colors">Contact</Link></li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="font-semibold text-foreground mb-4">Legal</h4>
+            <ul className="space-y-3 text-sm text-muted-foreground">
               <li><Link to="/privacy-policy" className="hover:text-foreground transition-colors">Privacy Policy</Link></li>
               <li><Link to="/terms-of-service" className="hover:text-foreground transition-colors">Terms of Service</Link></li>
             </ul>
