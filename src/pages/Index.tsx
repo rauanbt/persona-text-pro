@@ -1,10 +1,11 @@
 import { Header } from "@/components/Header";
 import { HeroSection } from "@/components/HeroSection"; 
-import { DetectorLogos } from "@/components/DetectorLogos";
-import { HowItWorks } from "@/components/HowItWorks";
-import { Features } from "@/components/Features";
-import { Testimonials } from "@/components/Testimonials";
-import { Pricing } from "@/components/Pricing";
+import { CaveEvolutionStory } from "@/components/CaveEvolutionStory";
+import { WhySapienWriteWorks } from "@/components/WhySapienWriteWorks";
+import { InteractiveDemo } from "@/components/InteractiveDemo";
+import { SapienWriteDifference } from "@/components/SapienWriteDifference";
+import { SuccessStories } from "@/components/SuccessStories";
+import { WritingJourneyPricing } from "@/components/WritingJourneyPricing";
 import { FAQ } from "@/components/FAQ";
 import { Footer } from "@/components/Footer";
 
@@ -14,11 +15,12 @@ const Index = () => {
       <Header />
       <main>
         <HeroSection />
-        <DetectorLogos />
-        <HowItWorks />
-        <Features />
-        <Testimonials />
-        <Pricing />
+        <CaveEvolutionStory />
+        <WhySapienWriteWorks />
+        <InteractiveDemo />
+        <SapienWriteDifference />
+        <SuccessStories />
+        <WritingJourneyPricing />
         <FAQ />
       </main>
       <Footer />
