@@ -97,6 +97,12 @@ serve(async (req) => {
       } else if (productId === 'prod_T8xfimkR17s4fn' || productId === 'prod_T8xfxAmZCZ7NYv') {
         plan = 'ultra';
       }
+      // Updated product IDs for 40% off annual plans
+      else if (productId === 'prod_T8y7e3nrqQ6aOa') {
+        plan = 'pro';
+      } else if (productId === 'prod_T8y8LHh8jAESaK') {
+        plan = 'ultra';
+      }
       
       logStep("Determined subscription tier", { productId, plan });
       

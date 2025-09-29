@@ -49,7 +49,7 @@ export const Pricing = () => {
       popular: true,
       isFree: false,
       monthlyPriceId: "price_1SCfkBH8HT0u8xpho4UsDBf8",
-      annualPriceId: "price_1SCfkLH8HT0u8xphWTJgQMyM"
+      annualPriceId: "price_1SCgBNH8HT0u8xphoiFMa331"
     },
     {
       name: "Ultra",
@@ -70,7 +70,7 @@ export const Pricing = () => {
       popular: false,
       isFree: false,
       monthlyPriceId: "price_1SCfkUH8HT0u8xphj7aOiKux",
-      annualPriceId: "price_1SCfkcH8HT0u8xphBCYgOSeE"
+      annualPriceId: "price_1SCgCCH8HT0u8xphO8rBX20v"
     }
   ];
 
@@ -121,7 +121,7 @@ export const Pricing = () => {
             </span>
             {isAnnual && (
               <Badge className="bg-success text-success-foreground ml-2">
-                Save up to 50%
+                Save 40%
               </Badge>
             )}
           </div>
