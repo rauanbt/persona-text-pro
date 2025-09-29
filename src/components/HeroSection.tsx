@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Sparkles, Shield, Brain } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import caveIllustration from "@/assets/cave-writing-illustration.webp";
 
 export const HeroSection = () => {
   const [text, setText] = useState("");
@@ -67,37 +68,57 @@ export const HeroSection = () => {
 
   return (
     <section className="bg-hero-bg py-16 px-4">
-      <div className="container mx-auto max-w-6xl text-center">
-        {/* Trust Badge */}
-        <Badge variant="secondary" className="mb-8 px-4 py-2 text-sm font-medium bg-background/80 text-success border-success/20">
-          <Shield className="w-4 h-4 mr-2" />
-          Trusted by 350,000+ users
-        </Badge>
+      <div className="container mx-auto max-w-7xl">
+        {/* Trust Badge - Centered */}
+        <div className="text-center mb-12">
+          <Badge variant="secondary" className="px-4 py-2 text-sm font-medium bg-background/80 text-success border-success/20">
+            <Shield className="w-4 h-4 mr-2" />
+            Trusted by 1,000+ users
+          </Badge>
+        </div>
 
-        {/* Main Headline */}
-        <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6 leading-tight">
-          Humanize AI Text
-        </h1>
+        {/* Hero Content Grid */}
+        <div className="grid lg:grid-cols-2 gap-12 items-center">
+          {/* Left Column - Text Content */}
+          <div className="text-center lg:text-left">
+            {/* Main Headline */}
+            <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6 leading-tight">
+              Humanize AI Text
+            </h1>
 
-        {/* Subheading */}
-        <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-4xl mx-auto">
-          SapienWrite converts your AI-generated content into fully humanized, undetectable writing with custom tones — ensuring it passes every AI detection tool
-        </p>
+            {/* Subheading */}
+            <p className="text-lg md:text-xl text-muted-foreground mb-8">
+              SapienWrite converts your AI-generated content into fully humanized, undetectable writing with custom tones — ensuring it passes every AI detection tool
+            </p>
 
-        {/* CTA Button */}
-        <Button 
-          size="lg" 
-          className="mb-12 bg-success hover:bg-success/90 text-success-foreground px-8 py-6 text-lg font-semibold shadow-lg"
-          onClick={handleTryForFree}
-        >
-          <Sparkles className="w-5 h-5 mr-2" />
-          {user ? 'Go to Dashboard' : 'Try for free'}
-        </Button>
+            {/* CTA Button */}
+            <Button 
+              size="lg" 
+              className="mb-6 bg-success hover:bg-success/90 text-success-foreground px-8 py-6 text-lg font-semibold shadow-lg"
+              onClick={handleTryForFree}
+            >
+              <Sparkles className="w-5 h-5 mr-2" />
+              {user ? 'Go to Dashboard' : 'Try for free'}
+            </Button>
 
-        <p className="text-sm text-muted-foreground mb-12">No credit card required</p>
+            <p className="text-sm text-muted-foreground">No credit card required</p>
+          </div>
+
+          {/* Right Column - Cave Illustration */}
+          <div className="flex justify-center lg:justify-end">
+            <div className="relative">
+              <img 
+                src={caveIllustration} 
+                alt="Ancient cave people writing SapienWrite on stone wall - representing the return to authentic human writing"
+                className="w-full max-w-md lg:max-w-lg rounded-2xl shadow-2xl"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-background/20 to-transparent rounded-2xl"></div>
+            </div>
+          </div>
+        </div>
 
         {/* Main Tool Interface */}
-        <div className="bg-background rounded-2xl shadow-2xl p-8 max-w-7xl mx-auto">
+        <div className="bg-background rounded-2xl shadow-2xl p-8 max-w-7xl mx-auto mt-16">
           {/* Tone Selector */}
           <ToneSelector selectedTone={selectedTone} onToneChange={setSelectedTone} />
           
