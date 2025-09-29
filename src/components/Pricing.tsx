@@ -22,7 +22,7 @@ export const Pricing = () => {
       features: [
         "1,500 words per month",
         "250 words per request",
-        "Regular tone",
+        "All 4 tone options",
         "Basic humanization",
         "AI detection bypass"
       ],

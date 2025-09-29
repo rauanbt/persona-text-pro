@@ -12,12 +12,12 @@ export const FAQ = () => {
       answer: "SapienWrite uses advanced natural language processing to rewrite AI-generated text, making it sound more human while applying your chosen tone (Regular, Funny, Sarcastic, or Smart). Our system analyzes patterns that AI detectors flag and replaces them with more natural alternatives."
     },
     {
-      question: "Does SapienWrite bypass Turnitin and other AI checkers?",
-      answer: "Yes! Our system is specifically designed to bypass all major AI detection tools including Turnitin, GPTZero, Copyleaks, ZeroGPT, and more. We test against these tools weekly and update our algorithms to maintain effectiveness."
+      question: "Does SapienWrite bypass AI detection tools?",
+      answer: "Yes! Our system is specifically designed to bypass all major AI detection tools including GPTZero, Copyleaks, ZeroGPT, and many others. We continuously test against these tools and update our algorithms to maintain effectiveness."
     },
     {
       question: "How much does SapienWrite cost?",
-      answer: "We offer a free plan with 500 words per month. Our Basic plan starts at $5.99/month for 5,000 words, Pro at $18.99/month for 15,000 words, and Ultra at $38.99/month for 30,000 words. Annual plans offer significant discounts."
+      answer: "We offer a free plan with 1,500 words per month. Our Pro plan is $27.98/month for 15,000 words, and Ultra is $57.98/month for 30,000 words. Annual plans offer 40% savings - Pro at $201.48/year and Ultra at $417.48/year."
     },
     {
       question: "What are the different tone options?",
@@ -25,7 +25,7 @@ export const FAQ = () => {
     },
     {
       question: "What languages does SapienWrite support?",
-      answer: "Currently, SapienWrite supports English content. We're working on adding support for Spanish, French, German, and other major languages. All tone options work across supported languages."
+      answer: "SapienWrite supports over 50 languages for Pro and Ultra plans, while the free plan supports English. All tone options work across all supported languages for a truly global experience."
     },
     {
       question: "I want to humanize a long essay. Is it possible?",

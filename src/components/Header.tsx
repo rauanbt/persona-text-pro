@@ -24,18 +24,36 @@ export const Header = () => {
         </div>
         
         <nav className="hidden md:flex items-center space-x-6">
-          <a href="#humanizer" className="text-foreground hover:text-primary transition-colors">
+          <span 
+            className="text-foreground hover:text-primary transition-colors cursor-pointer"
+            onClick={() => navigate('/')}
+          >
             AI Humanizer
-          </a>
-          <a href="#blog" className="text-muted-foreground hover:text-foreground transition-colors">
+          </span>
+          <span 
+            className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            onClick={() => navigate('/blog')}
+          >
             Blog
-          </a>
-          <a href="#contact" className="text-muted-foreground hover:text-foreground transition-colors">
+          </span>
+          <span 
+            className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            onClick={() => navigate('/contact')}
+          >
             Contact
-          </a>
-          <a href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors">
+          </span>
+          <span 
+            className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            onClick={() => {
+              if (window.location.pathname === '/') {
+                document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' });
+              } else {
+                navigate('/#pricing');
+              }
+            }}
+          >
             Pricing
-          </a>
+          </span>
           <button className="text-muted-foreground hover:text-foreground transition-colors cursor-not-allowed opacity-60">
             Chrome Extension
           </button>

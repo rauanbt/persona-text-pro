@@ -67,7 +67,7 @@ const TermsOfService = () => {
                 <h2 className="text-2xl font-semibold mb-4 mt-8">11. Contact Information</h2>
                 <p>For questions about these Terms, please contact us:</p>
                 <ul className="list-disc pl-6 space-y-1">
-                  <li>By email: rauanberdali@gmail.com</li>
+                  <li>Through our contact form</li>
                   <li>At our address: 800 High School Way, #140, Mountain View, CA, 94041</li>
                 </ul>
                 

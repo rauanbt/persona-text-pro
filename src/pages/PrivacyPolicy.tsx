@@ -71,7 +71,7 @@ const PrivacyPolicy = () => {
                 <h2 className="text-2xl font-semibold mb-4 mt-8">Contact Us</h2>
                 <p>If you have any questions about this Privacy Policy, you can contact us:</p>
                 <ul className="list-disc pl-6 space-y-1">
-                  <li>By email: rauanberdali@gmail.com</li>
+                  <li>Through our contact form</li>
                   <li>At our address: 800 High School Way, #140, Mountain View, CA, 94041</li>
                 </ul>
               </div>

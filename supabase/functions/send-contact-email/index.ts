@@ -38,7 +38,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Send email to admin
     const emailResponse = await resend.emails.send({
       from: "SapienWrite <onboarding@resend.dev>",
-      to: ["rauanberdali@gmail.com"],
+      to: ["contact@sapienwrite.com"],
       subject: `Contact Form: ${subject || "New Message"}`,
       html: `
         <h2>New Contact Form Submission</h2>
