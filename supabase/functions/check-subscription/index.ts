@@ -85,9 +85,16 @@ serve(async (req) => {
       productId = subscription.items.data[0].price.product as string;
       
       // Map product IDs to plan names
+      // Legacy product IDs (keep for existing subscriptions)
       if (productId === 'prod_T7ntjXdJir4pJK') {
         plan = 'pro';
       } else if (productId === 'prod_T7ntTU0aXJOIQG') {
+        plan = 'ultra';
+      }
+      // New product IDs with proper monthly/annual billing
+      else if (productId === 'prod_T8xfT16dTSyc0w' || productId === 'prod_T8xfeFL87HWXEJ') {
+        plan = 'pro';
+      } else if (productId === 'prod_T8xfimkR17s4fn' || productId === 'prod_T8xfxAmZCZ7NYv') {
         plan = 'ultra';
       }
       

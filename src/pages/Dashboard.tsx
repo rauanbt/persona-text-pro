@@ -21,8 +21,14 @@ const PLAN_LIMITS = {
 };
 
 const PLAN_PRICES = {
-  pro: { monthly: 13.99, priceId: 'price_1SBYHPH8HT0u8xph5bQtZIqD' },
-  ultra: { monthly: 28.99, priceId: 'price_1SBYHfH8HT0u8xph7eYxypra' }
+  pro: { 
+    monthly: { price: 27.98, priceId: 'price_1SCfkBH8HT0u8xpho4UsDBf8' },
+    annual: { price: 13.99, priceId: 'price_1SCfkLH8HT0u8xphWTJgQMyM', yearlyPrice: 167.88 }
+  },
+  ultra: { 
+    monthly: { price: 57.98, priceId: 'price_1SCfkUH8HT0u8xphj7aOiKux' },
+    annual: { price: 28.99, priceId: 'price_1SCfkcH8HT0u8xphBCYgOSeE', yearlyPrice: 347.88 }
+  }
 };
 
 const Dashboard = () => {
@@ -37,6 +43,7 @@ const Dashboard = () => {
   const [showExtraWordsDialog, setShowExtraWordsDialog] = useState(false);
   const [activeTab, setActiveTab] = useState('humanize');
   const [aiDetectionStatus, setAiDetectionStatus] = useState<'checking' | 'completed' | null>(null);
+  const [isAnnualBilling, setIsAnnualBilling] = useState(false);
   const [aiDetectionResults, setAiDetectionResults] = useState<any>(null);
   const [isCheckingAI, setIsCheckingAI] = useState(false);
 
@@ -572,15 +579,51 @@ const Dashboard = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Billing Toggle */}
+                  <div className="flex items-center justify-center space-x-4 mb-6">
+                    <span className={`text-sm font-medium transition-colors ${!isAnnualBilling ? 'text-foreground' : 'text-muted-foreground'}`}>
+                      Monthly
+                    </span>
+                    <button
+                      onClick={() => setIsAnnualBilling(!isAnnualBilling)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full border-2 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+                        isAnnualBilling ? 'bg-primary border-primary' : 'bg-background border-border'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full transition-transform ${
+                          isAnnualBilling 
+                            ? 'translate-x-5 bg-primary-foreground' 
+                            : 'translate-x-0.5 bg-foreground'
+                        }`}
+                      />
+                    </button>
+                    <span className={`text-sm font-medium transition-colors ${isAnnualBilling ? 'text-foreground' : 'text-muted-foreground'}`}>
+                      Annual
+                    </span>
+                    {isAnnualBilling && (
+                      <Badge className="bg-success text-success-foreground ml-2 text-xs">
+                        Save 50%
+                      </Badge>
+                    )}
+                  </div>
+
                   {currentPlan === 'free' && (
                     <div className="border rounded-lg p-4">
                       <div className="font-semibold">Pro Plan</div>
-                      <div className="text-2xl font-bold">${PLAN_PRICES.pro.monthly}/mo</div>
+                      <div className="text-2xl font-bold">
+                        ${isAnnualBilling ? PLAN_PRICES.pro.annual.price : PLAN_PRICES.pro.monthly.price}/mo
+                      </div>
+                      {isAnnualBilling && (
+                        <div className="text-sm text-muted-foreground">
+                          ${PLAN_PRICES.pro.annual.yearlyPrice}/year (billed annually)
+                        </div>
+                      )}
                       <div className="text-sm text-muted-foreground mb-3">
                         15,000 words/month
                       </div>
                       <Button 
-                        onClick={() => handleUpgrade(PLAN_PRICES.pro.priceId)}
+                        onClick={() => handleUpgrade(isAnnualBilling ? PLAN_PRICES.pro.annual.priceId : PLAN_PRICES.pro.monthly.priceId)}
                         className="w-full"
                       >
                         Upgrade to Pro
@@ -590,12 +633,19 @@ const Dashboard = () => {
                   
                   <div className="border rounded-lg p-4">
                     <div className="font-semibold">Ultra Plan</div>
-                    <div className="text-2xl font-bold">${PLAN_PRICES.ultra.monthly}/mo</div>
+                    <div className="text-2xl font-bold">
+                      ${isAnnualBilling ? PLAN_PRICES.ultra.annual.price : PLAN_PRICES.ultra.monthly.price}/mo
+                    </div>
+                    {isAnnualBilling && (
+                      <div className="text-sm text-muted-foreground">
+                        ${PLAN_PRICES.ultra.annual.yearlyPrice}/year (billed annually)
+                      </div>
+                    )}
                     <div className="text-sm text-muted-foreground mb-3">
                       30,000 words/month
                     </div>
                     <Button 
-                      onClick={() => handleUpgrade(PLAN_PRICES.ultra.priceId)}
+                      onClick={() => handleUpgrade(isAnnualBilling ? PLAN_PRICES.ultra.annual.priceId : PLAN_PRICES.ultra.monthly.priceId)}
                       className="w-full"
                       variant={currentPlan === 'pro' ? 'default' : 'secondary'}
                     >

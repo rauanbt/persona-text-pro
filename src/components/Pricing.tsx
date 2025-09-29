@@ -7,6 +7,11 @@ import { Check } from "lucide-react";
 export const Pricing = () => {
   const [isAnnual, setIsAnnual] = useState(false);
 
+  const handleUpgrade = async (priceId: string) => {
+    // For now, redirect to sign up - this could be enhanced to handle authenticated users
+    window.location.href = '/auth';
+  };
+
   const plans = [
     {
       name: "Free",
@@ -42,7 +47,9 @@ export const Pricing = () => {
       ],
       buttonText: "Choose Pro",
       popular: true,
-      isFree: false
+      isFree: false,
+      monthlyPriceId: "price_1SCfkBH8HT0u8xpho4UsDBf8",
+      annualPriceId: "price_1SCfkLH8HT0u8xphWTJgQMyM"
     },
     {
       name: "Ultra",
@@ -61,7 +68,9 @@ export const Pricing = () => {
       ],
       buttonText: "Choose Ultra",
       popular: false,
-      isFree: false
+      isFree: false,
+      monthlyPriceId: "price_1SCfkUH8HT0u8xphj7aOiKux",
+      annualPriceId: "price_1SCfkcH8HT0u8xphBCYgOSeE"
     }
   ];
 
@@ -158,6 +167,14 @@ export const Pricing = () => {
                 <Button 
                   className={`w-full ${plan.popular ? 'bg-primary hover:bg-primary/90' : ''}`}
                   variant={plan.popular ? "default" : "outline"}
+                  onClick={() => {
+                    if (plan.isFree) {
+                      window.location.href = '/auth';
+                    } else {
+                      const priceId = isAnnual ? plan.annualPriceId : plan.monthlyPriceId;
+                      handleUpgrade(priceId!);
+                    }
+                  }}
                 >
                   {plan.buttonText}
                 </Button>
