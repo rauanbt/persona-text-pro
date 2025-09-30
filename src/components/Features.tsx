@@ -14,7 +14,7 @@ export const Features = () => {
     },
     {
       icon: <Users className="w-16 h-16 text-primary mb-6" />,
-      title: "Trusted by 350,000+ Writers Worldwide",
+      title: "Trusted by 1,000+ Writers Worldwide",
       description: "Students polish their writing to sound more natural, marketers improve content for better engagement and SEO, and businesses send emails that feel personal — not robotic. SapienWrite adapts to each use case, delivering clear, human-sounding text that reads like it was written by you."
     }
   ];

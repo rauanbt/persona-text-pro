@@ -19,7 +19,7 @@ export const SapienWriteDifference = () => {
       icon: <Users className="w-16 h-16 text-primary mb-6" />,
       title: "Built by Writers, for Writers",
       description: "Created by people who understand that great writing isn't just about avoiding detection - it's about connecting with your audience.",
-      highlight: "350,000+ satisfied writers worldwide"
+      highlight: "1,000+ satisfied writers worldwide"
     },
     {
       icon: <Zap className="w-16 h-16 text-primary mb-6" />,

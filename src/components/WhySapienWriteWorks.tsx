@@ -36,15 +36,6 @@ export const WhySapienWriteWorks = () => {
   return (
     <section className="py-16 bg-background">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-6">
-            Built on Science, Powered by Precision
-          </h2>
-          <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-            SapienWrite isn't just another text rewriter. It's a sophisticated linguistic engine built on 
-            years of research and continuously improved through real-world testing.
-          </p>
-        </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
           {credentials.map((item, index) => (

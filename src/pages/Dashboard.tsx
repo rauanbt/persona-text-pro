@@ -603,7 +603,7 @@ const Dashboard = () => {
                     </span>
                     {isAnnualBilling && (
                       <Badge className="bg-success text-success-foreground ml-2 text-xs">
-                        Save 50%
+                        Save 40%
                       </Badge>
                     )}
                   </div>
