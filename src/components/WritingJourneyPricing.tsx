@@ -139,21 +139,21 @@ export const WritingJourneyPricing = () => {
           </div>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+        <div className="grid lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
           {journeys.map((journey, index) => (
-            <Card key={index} className={`relative overflow-hidden transition-all duration-300 hover:shadow-2xl ${journey.popular ? 'scale-105 shadow-xl' : 'hover:scale-102'} bg-gradient-to-br ${journey.bgGradient} border-2 ${journey.borderColor}`}>
+            <Card key={index} className={`relative overflow-hidden transition-all duration-300 hover:shadow-2xl ${journey.popular ? 'scale-105 shadow-xl' : 'hover:scale-102'} bg-gradient-to-br ${journey.bgGradient} border-2 ${journey.borderColor} flex flex-col h-full`}>
               {journey.popular && (
-                <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-primary text-primary-foreground px-4 py-1 font-cave">
+                <Badge className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-primary text-primary-foreground px-4 py-1 font-cave z-10">
                   Most Popular Journey ⭐
                 </Badge>
               )}
               {getSavingsText(journey) && (
-                <Badge className="absolute -top-3 right-4 bg-green-500 text-white font-cave">
+                <Badge className="absolute top-4 right-4 bg-green-500 text-white font-cave z-10">
                   {getSavingsText(journey)}
                 </Badge>
               )}
               
-              <CardHeader className="text-center pb-4 pt-8">
+              <CardHeader className="text-center pb-4 pt-12">
                 <div className="flex justify-center mb-4">
                   <div className="p-3 rounded-full bg-background/80 backdrop-blur-sm">
                     {journey.icon}
@@ -180,7 +180,7 @@ export const WritingJourneyPricing = () => {
                 </div>
               </CardHeader>
               
-              <CardContent className="px-6">
+              <CardContent className="px-6 flex-grow">
                 <ul className="space-y-3">
                   {journey.features.map((feature, featureIndex) => (
                     <li key={featureIndex} className="flex items-start text-sm">
@@ -191,9 +191,9 @@ export const WritingJourneyPricing = () => {
                 </ul>
               </CardContent>
               
-              <CardFooter className="p-6 pt-4">
+              <CardFooter className="p-6 pt-4 mt-auto">
                 <Button 
-                  className={`w-full py-3 font-semibold transition-all duration-300 ${
+                  className={`w-full py-3 font-semibold font-cave transition-all duration-300 ${
                     journey.popular 
                       ? 'bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl' 
                       : 'border-2 border-current hover:bg-current hover:text-background'

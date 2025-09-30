@@ -4,13 +4,6 @@ import { Card, CardContent } from "@/components/ui/card";
 export const WhySapienWriteWorks = () => {
   const credentials = [
     {
-      icon: <BookOpen className="w-12 h-12 text-primary" />,
-      title: "1.2M+ Training Samples",
-      description: "Our AI model is trained on over 1.2 million samples of academic writing, essays, and human-authored content across 50+ disciplines.",
-      stat: "1,200,000+",
-      label: "Text Samples"
-    },
-    {
       icon: <Brain className="w-12 h-12 text-primary" />,
       title: "Linguistic Research Backed",
       description: "Built on peer-reviewed research in computational linguistics, natural language processing, and human writing patterns.",
@@ -37,7 +30,7 @@ export const WhySapienWriteWorks = () => {
     <section className="py-16 bg-background">
       <div className="container mx-auto px-4">
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+        <div className="grid md:grid-cols-3 gap-6 mb-16">
           {credentials.map((item, index) => (
             <Card key={index} className="text-center border-none shadow-lg bg-gradient-to-b from-card/50 to-card hover:shadow-xl transition-shadow duration-300">
               <CardContent className="p-6">
