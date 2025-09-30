@@ -11,7 +11,7 @@ const WORD_PACKAGES = [
     id: 'price_1SBtTmH8HT0u8xphU5GJdqWx',
     name: '5,000 Extra Words',
     words: 5000,
-    price: '$9.99',
+    price: '$12.99',
     description: 'Perfect for small projects',
     icon: Package,
     popular: false
@@ -20,7 +20,7 @@ const WORD_PACKAGES = [
     id: 'price_1SBtTzH8HT0u8xphnmDKFThW',
     name: '10,000 Extra Words',
     words: 10000,
-    price: '$16.99',
+    price: '$22.99',
     description: 'Great value for regular users',
     icon: Sparkles,
     popular: true
@@ -29,7 +29,7 @@ const WORD_PACKAGES = [
     id: 'price_1SBtUhH8HT0u8xph7PlBMQQ2',
     name: '25,000 Extra Words',
     words: 25000,
-    price: '$34.99',
+    price: '$49.99',
     description: 'Best for heavy users',
     icon: Zap,
     popular: false

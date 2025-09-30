@@ -44,7 +44,7 @@ export const CaveEvolutionStory = () => {
     <section className="py-20 bg-gradient-to-br from-amber-50/30 to-orange-50/30 dark:from-amber-950/20 dark:to-orange-950/20">
       <div className="container mx-auto px-4">
         <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-6 font-cave" style={{ color: '#8B4513' }}>
+          <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-6" style={{ color: '#8B4513' }}>
             Every Great Leap in Writing Started with Humans
           </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
@@ -65,7 +65,7 @@ export const CaveEvolutionStory = () => {
                     <div className="text-sm font-medium text-primary mb-2 tracking-wide uppercase">
                       {step.era}
                     </div>
-                    <h3 className="text-2xl font-bold text-foreground mb-3 font-cave">
+                    <h3 className="text-2xl font-bold text-foreground mb-3">
                       {step.title}
                     </h3>
                     <p className="text-muted-foreground leading-relaxed max-w-md mx-auto md:mx-0">
@@ -87,7 +87,7 @@ export const CaveEvolutionStory = () => {
 
         <div className="text-center mt-16">
           <div className="inline-flex items-center gap-3 bg-background/80 backdrop-blur-sm border border-amber-200 dark:border-amber-800 rounded-full px-8 py-4 shadow-lg">
-            <span className="text-lg font-semibold text-foreground font-cave">
+            <span className="text-lg font-semibold text-foreground">
               Your Story Continues Here
             </span>
             <ArrowRight className="w-5 h-5 text-primary animate-pulse" />

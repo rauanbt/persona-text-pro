@@ -36,7 +36,7 @@ export const Header = () => {
     <header className="w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
         <div className="flex items-center cursor-pointer" onClick={() => navigate('/')}>
-          <span className="text-2xl font-cave font-bold" style={{ color: '#8B4513' }}>SapienWrite</span>
+          <span className="text-2xl font-bold" style={{ color: '#8B4513' }}>SapienWrite</span>
         </div>
         
         <nav className="hidden md:flex items-center space-x-6">

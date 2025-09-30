@@ -99,7 +99,7 @@ export const SapienWriteDifference = () => {
         </div>
 
         <div className="text-center mt-16 bg-gradient-to-r from-amber-50/80 to-orange-50/80 dark:from-amber-950/20 dark:to-orange-950/20 rounded-2xl p-8 border border-amber-200/30 dark:border-amber-800/30">
-          <h3 className="text-2xl font-bold text-foreground mb-4 font-cave">
+          <h3 className="text-2xl font-bold text-foreground mb-4">
             The SapienWrite Promise
           </h3>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">

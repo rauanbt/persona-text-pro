@@ -30,7 +30,7 @@ export const Footer = () => {
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
           <div className="md:col-span-2 lg:col-span-1">
             <div className="mb-4">
-              <span className="text-2xl font-cave font-bold" style={{ color: '#8B4513' }}>SapienWrite</span>
+              <span className="text-2xl font-bold" style={{ color: '#8B4513' }}>SapienWrite</span>
             </div>
             <p className="text-muted-foreground text-sm leading-relaxed">
               The most advanced AI text humanizer with custom tone options. Make your content undetectable and engaging.
