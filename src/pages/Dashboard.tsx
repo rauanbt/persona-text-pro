@@ -22,12 +22,12 @@ const PLAN_LIMITS = {
 
 const PLAN_PRICES = {
   pro: {
-    monthly: { price: 24.95, priceId: 'price_1SCfkBH8HT0u8xpho4UsDBf8' },
-    annual: { price: 14.97, priceId: 'price_1SCgBNH8HT0u8xphoiFMa331', yearlyPrice: 179.64 }
+    monthly: { price: 24.95, priceId: 'price_1SD818H8HT0u8xph48V9GxXG' },
+    annual: { price: 14.97, priceId: 'price_1SD81lH8HT0u8xph8dYBxkqi', yearlyPrice: 179.64 }
   },
   ultra: { 
-    monthly: { price: 54.95, priceId: 'price_1SCfkUH8HT0u8xphj7aOiKux' },
-    annual: { price: 32.97, priceId: 'price_1SCgCCH8HT0u8xphO8rBX20v', yearlyPrice: 395.64 }
+    monthly: { price: 54.95, priceId: 'price_1SD81xH8HT0u8xphuqiq8xet' },
+    annual: { price: 32.97, priceId: 'price_1SD828H8HT0u8xphUaDaMTDV', yearlyPrice: 395.64 }
   }
 };
 
@@ -556,14 +556,23 @@ const Dashboard = () => {
                   </div>
                   
                   {subscriptionData.subscribed && (
-                    <Button 
-                      onClick={handleManageSubscription}
-                      variant="outline"
-                      className="w-full"
-                    >
-                      <ExternalLink className="mr-2 h-4 w-4" />
-                      Manage Subscription
-                    </Button>
+                    <>
+                      <Button 
+                        onClick={handleManageSubscription}
+                        variant="outline"
+                        className="w-full"
+                      >
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        Manage Subscription
+                      </Button>
+                      <div className="mt-3 p-3 bg-muted/50 rounded-md border">
+                        <p className="text-xs text-muted-foreground">
+                          <strong className="text-foreground">Cancellation Policy:</strong> You can cancel anytime. 
+                          If you cancel, you'll keep full access until your current billing period ends. 
+                          No prorated refunds for mid-cycle cancellations.
+                        </p>
+                      </div>
+                    </>
                   )}
                 </div>
               </CardContent>

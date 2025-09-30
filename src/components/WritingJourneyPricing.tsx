@@ -53,8 +53,8 @@ export const WritingJourneyPricing = () => {
       buttonText: "Choose Wordsmith",
       popular: true,
       isFree: false,
-      monthlyPriceId: "price_1SCfkBH8HT0u8xpho4UsDBf8",
-      annualPriceId: "price_1SCgBNH8HT0u8xphoiFMa331",
+      monthlyPriceId: "price_1SD818H8HT0u8xph48V9GxXG",
+      annualPriceId: "price_1SD81lH8HT0u8xph8dYBxkqi",
       bgGradient: "from-blue-50/50 to-indigo-50/50 dark:from-blue-950/20 dark:to-indigo-950/20",
       borderColor: "border-blue-200 dark:border-blue-800"
     },
@@ -78,8 +78,8 @@ export const WritingJourneyPricing = () => {
       buttonText: "Become a Master",
       popular: false,
       isFree: false,
-      monthlyPriceId: "price_1SCfkUH8HT0u8xphj7aOiKux",
-      annualPriceId: "price_1SCgCCH8HT0u8xphO8rBX20v",
+      monthlyPriceId: "price_1SD81xH8HT0u8xphuqiq8xet",
+      annualPriceId: "price_1SD828H8HT0u8xphUaDaMTDV",
       bgGradient: "from-purple-50/50 to-indigo-50/50 dark:from-purple-950/20 dark:to-indigo-950/20",
       borderColor: "border-purple-200 dark:border-purple-800"
     }
