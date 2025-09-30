@@ -31,24 +31,24 @@ export const InteractiveDemo = () => {
 
   const toneExamples = [
     {
-      tone: "Professional",
-      text: "Our analysis indicates that implementing this strategy would significantly improve operational efficiency.",
+      tone: "Regular",
+      text: "The project deadline has been moved to next Friday. Please adjust your schedules accordingly and let me know if you have any concerns.",
       color: "bg-blue-500"
     },
     {
-      tone: "Casual", 
-      text: "Looking at the data, this approach would really help streamline how things work around here.",
-      color: "bg-green-500"
-    },
-    {
-      tone: "Academic",
-      text: "The empirical evidence suggests that adoption of this methodology could enhance procedural effectiveness.",
+      tone: "Sarcastic", 
+      text: "Oh wonderful, they've graciously moved our deadline to next Friday. Because clearly, we had nothing better to do than wait around for their decision.",
       color: "bg-purple-500"
     },
     {
-      tone: "Conversational",
-      text: "From what we can see, trying this new way of doing things might make everything run a lot smoother.",
+      tone: "Funny",
+      text: "Plot twist alert! The deadline has taken a spontaneous vacation and decided to show up next Friday instead. Our calendars are having an identity crisis right now!",
       color: "bg-orange-500"
+    },
+    {
+      tone: "Smart",
+      text: "Following a comprehensive review of project parameters and resource allocation, the submission timeline has been strategically recalibrated to optimize deliverable quality by next Friday.",
+      color: "bg-green-500"
     }
   ];
 

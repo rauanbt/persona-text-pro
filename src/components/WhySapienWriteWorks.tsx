@@ -70,22 +70,6 @@ export const WhySapienWriteWorks = () => {
           ))}
         </div>
 
-        <div className="bg-gradient-to-r from-amber-50/50 to-orange-50/50 dark:from-amber-950/20 dark:to-orange-950/20 rounded-2xl p-8 text-center border border-amber-200/30 dark:border-amber-800/30">
-          <h3 className="text-2xl font-bold text-foreground mb-4 font-cave">
-            The Technology Behind Human-Like Writing
-          </h3>
-          <div className="grid md:grid-cols-3 gap-6 text-sm text-muted-foreground">
-            <div>
-              <strong className="text-foreground">Perplexity Analysis:</strong> We analyze and adjust sentence complexity patterns that AI detectors flag as artificial.
-            </div>
-            <div>
-              <strong className="text-foreground">Burstiness Optimization:</strong> Our engine varies sentence lengths and structures to mimic natural human writing flow.
-            </div>
-            <div>
-              <strong className="text-foreground">Syntactic Naturalness:</strong> Advanced grammar models ensure rewritten text follows authentic human language patterns.
-            </div>
-          </div>
-        </div>
       </div>
     </section>
   );
