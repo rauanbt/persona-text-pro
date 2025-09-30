@@ -67,12 +67,8 @@ export const SapienWriteDifference = () => {
       <div className="container mx-auto px-4">
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-6">
-            Why 350,000+ Writers Choose SapienWrite
+            What Makes SapienWrite Different
           </h2>
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            It's not just about bypassing AI detection. It's about creating content that truly sounds human, 
-            resonates with your audience, and achieves your goals.
-          </p>
         </div>
 
         {/* Key Differences */}
@@ -100,37 +96,6 @@ export const SapienWriteDifference = () => {
               </CardContent>
             </Card>
           ))}
-        </div>
-
-        {/* Comparison Table */}
-        <div className="max-w-4xl mx-auto">
-          <h3 className="text-3xl font-bold text-foreground text-center mb-12">
-            How We Compare to Alternatives
-          </h3>
-          
-          <div className="bg-card rounded-2xl shadow-lg border overflow-hidden">
-            <div className="grid grid-cols-3 bg-primary text-primary-foreground p-4 font-semibold">
-              <div>Feature</div>
-              <div className="text-center">SapienWrite</div>
-              <div className="text-center">Other Tools</div>
-            </div>
-            
-            {comparisons.map((row, index) => (
-              <div key={index} className={`grid grid-cols-3 p-4 border-b border-border last:border-b-0 ${index % 2 === 0 ? 'bg-muted/20' : 'bg-background'}`}>
-                <div className="font-medium text-foreground">{row.feature}</div>
-                <div className="text-center">
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                    {row.sapienwrite}
-                  </span>
-                </div>
-                <div className="text-center">
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
-                    {row.others}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
 
         <div className="text-center mt-16 bg-gradient-to-r from-amber-50/80 to-orange-50/80 dark:from-amber-950/20 dark:to-orange-950/20 rounded-2xl p-8 border border-amber-200/30 dark:border-amber-800/30">

@@ -2,9 +2,8 @@ import { Header } from "@/components/Header";
 import { HeroSection } from "@/components/HeroSection"; 
 import { CaveEvolutionStory } from "@/components/CaveEvolutionStory";
 import { WhySapienWriteWorks } from "@/components/WhySapienWriteWorks";
-import { InteractiveDemo } from "@/components/InteractiveDemo";
+import { UseCasesDemo } from "@/components/UseCasesDemo";
 import { SapienWriteDifference } from "@/components/SapienWriteDifference";
-import { SuccessStories } from "@/components/SuccessStories";
 import { WritingJourneyPricing } from "@/components/WritingJourneyPricing";
 import { FAQ } from "@/components/FAQ";
 import { Footer } from "@/components/Footer";
@@ -17,9 +16,8 @@ const Index = () => {
         <HeroSection />
         <CaveEvolutionStory />
         <WhySapienWriteWorks />
-        <InteractiveDemo />
+        <UseCasesDemo />
         <SapienWriteDifference />
-        <SuccessStories />
         <WritingJourneyPricing />
         <FAQ />
       </main>
