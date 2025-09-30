@@ -1,7 +1,6 @@
 import { Header } from "@/components/Header";
 import { HeroSection } from "@/components/HeroSection"; 
 import { CaveEvolutionStory } from "@/components/CaveEvolutionStory";
-import { WhySapienWriteWorks } from "@/components/WhySapienWriteWorks";
 import { UseCasesDemo } from "@/components/UseCasesDemo";
 import { SapienWriteDifference } from "@/components/SapienWriteDifference";
 import { WritingJourneyPricing } from "@/components/WritingJourneyPricing";
@@ -15,7 +14,6 @@ const Index = () => {
       <main>
         <HeroSection />
         <CaveEvolutionStory />
-        <WhySapienWriteWorks />
         <UseCasesDemo />
         <SapienWriteDifference />
         <WritingJourneyPricing />
