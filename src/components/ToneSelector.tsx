@@ -37,7 +37,7 @@ export const ToneSelector = ({ selectedTone, onToneChange }: ToneSelectorProps) 
             <SelectItem 
               key={tone.value} 
               value={tone.value}
-              className="cursor-pointer hover:bg-muted focus:bg-muted"
+              className="cursor-pointer hover:bg-muted hover:text-foreground focus:bg-muted focus:text-foreground"
             >
               <div className="flex flex-col">
                 <span className="font-medium">{tone.label}</span>

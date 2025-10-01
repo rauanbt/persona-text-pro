@@ -8,6 +8,7 @@ const corsHeaders = {
 };
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
 const supabaseUrl = Deno.env.get('SUPABASE_URL');
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
@@ -37,11 +38,13 @@ serve(async (req) => {
       throw new Error('User not authenticated');
     }
 
-    const { text, tone } = await req.json();
+    const { text, tone, engineMode = 'standard' } = await req.json();
     
     if (!text || !tone) {
       throw new Error('Text and tone are required');
     }
+    
+    console.log(`[HYBRID-HUMANIZE] Engine mode: ${engineMode}`);
 
     const wordCount = text.trim().split(/\s+/).length;
     const currentMonth = new Date().toISOString().slice(0, 7);
@@ -162,15 +165,56 @@ ${pass1Result}`;
       console.error('[HYBRID-HUMANIZE] Pass 2 failed, using Pass 1 result');
       // If Pass 2 fails, use Pass 1 result
       const finalText = pass1Result;
-      return await finalizeResponse(supabase, userData.user.id, text, finalText, tone, wordCount, currentMonth, usage, currentUsage, planLimit, extraWords);
+      return await finalizeResponse(supabase, userData.user.id, text, finalText, tone, wordCount, currentMonth, usage, currentUsage, planLimit, extraWords, 1, 'openai-single-pass');
     }
 
     const pass2Data = await pass2Response.json();
-    const finalText = pass2Data.choices[0].message.content;
+    let finalText = pass2Data.choices[0].message.content;
+    let passesCompleted = 2;
+    let enginesUsed = 'openai-dual-pass';
     
     console.log('[HYBRID-HUMANIZE] Pass 2 completed successfully');
 
-    return await finalizeResponse(supabase, userData.user.id, text, finalText, tone, wordCount, currentMonth, usage, currentUsage, planLimit, extraWords);
+    // PREMIUM MODE: Pass 3 with Gemini for creative variation via Lovable AI
+    if (engineMode === 'premium' && lovableApiKey) {
+      console.log('[HYBRID-HUMANIZE] Starting Pass 3 with Gemini for creative variation');
+      
+      try {
+        const pass3Prompt = `Add natural creative variations to make this text even more human and authentic. Introduce subtle personality, varied phrasing, and organic flow while maintaining the ${tone} tone:\n\n${finalText}`;
+
+        const geminiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${lovableApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-2.5-flash',
+            messages: [
+              { role: 'system', content: 'You are an expert at adding natural creative variations and authentic human personality to text.' },
+              { role: 'user', content: pass3Prompt }
+            ],
+          }),
+        });
+
+        if (geminiResponse.ok) {
+          const geminiData = await geminiResponse.json();
+          const pass3Text = geminiData.choices?.[0]?.message?.content?.trim();
+          if (pass3Text) {
+            finalText = pass3Text;
+            passesCompleted = 3;
+            enginesUsed = 'openai+gemini-triple-pass';
+            console.log('[HYBRID-HUMANIZE] Pass 3 with Gemini completed successfully');
+          }
+        } else {
+          console.error('[HYBRID-HUMANIZE] Pass 3 Gemini failed, using Pass 2 result');
+        }
+      } catch (pass3Error) {
+        console.error('[HYBRID-HUMANIZE] Pass 3 error, using Pass 2 result:', pass3Error);
+      }
+    }
+
+    return await finalizeResponse(supabase, userData.user.id, text, finalText, tone, wordCount, currentMonth, usage, currentUsage, planLimit, extraWords, passesCompleted, enginesUsed);
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
@@ -193,7 +237,9 @@ async function finalizeResponse(
   usage: any,
   currentUsage: number,
   planLimit: number,
-  extraWords: number
+  extraWords: number,
+  passesCompleted: number = 2,
+  enginesUsed: string = 'openai-dual-pass'
 ) {
   // Update usage tracking and deduct from extra words if needed
   const wordsToDeductFromExtra = Math.max(0, (currentUsage + wordCount) - planLimit);
@@ -246,8 +292,8 @@ async function finalizeResponse(
     remaining_words: Math.max(0, planLimit - (currentUsage + wordCount)),
     extra_words_remaining: newExtraWordsBalance,
     total_remaining: Math.max(0, planLimit - (currentUsage + wordCount)) + newExtraWordsBalance,
-    passes_completed: 2,
-    engine: 'hybrid-dual-pass'
+    passes_completed: passesCompleted,
+    engine: enginesUsed
   }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
