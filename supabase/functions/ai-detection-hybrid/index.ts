@@ -38,7 +38,18 @@ serve(async (req) => {
     // Call multiple detection services in parallel
     const detectionPromises = [];
     
-    // Call Copyleaks (premium)
+    // Call GPTZero (recommended - most accurate)
+    detectionPromises.push(
+      supabase.functions.invoke('ai-detection-gptzero', {
+        body: { text },
+        headers: { Authorization: authHeader }
+      }).catch(error => {
+        console.error('[HYBRID] GPTZero failed:', error);
+        return { data: null, error: error.message };
+      })
+    );
+    
+    // Call Copyleaks (premium alternative)
     detectionPromises.push(
       supabase.functions.invoke('ai-detection-copyleaks', {
         body: { text },
@@ -49,7 +60,7 @@ serve(async (req) => {
       })
     );
     
-    // Call ZeroGPT (free alternative)
+    // Call ZeroGPT (additional validation)
     detectionPromises.push(
       supabase.functions.invoke('ai-detection-zerogpt', {
         body: { text },
@@ -146,35 +157,78 @@ serve(async (req) => {
 });
 
 async function generateFallbackResults(text: string) {
-  // Generate realistic fallback results based on text analysis
-  const wordCount = text.trim().split(/\s+/).length;
+  // Enhanced fallback with sophisticated text analysis
+  const words = text.toLowerCase().match(/\b\w+\b/g) || [];
+  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+  const wordCount = words.length;
   
-  // Simple text analysis for scoring
-  let baseScore = 40;
+  // Calculate linguistic metrics
+  const uniqueWords = new Set(words);
+  const lexicalDiversity = wordCount > 0 ? uniqueWords.size / wordCount : 0.5;
   
-  // Check for AI-like patterns
-  if (text.includes('Furthermore') || text.includes('Moreover') || text.includes('Additionally')) baseScore += 15;
-  if (text.includes('In conclusion') || text.includes('To summarize')) baseScore += 10;
-  if (wordCount > 500) baseScore += 5;
+  // AI-typical formal words and phrases
+  const aiIndicators = [
+    'furthermore', 'moreover', 'additionally', 'consequently', 'nevertheless',
+    'specifically', 'particularly', 'essentially', 'ultimately', 'delve',
+    'leverage', 'utilize', 'comprehensive', 'robust', 'seamless'
+  ];
   
-  // Add randomness
-  const variation = Math.random() * 20 - 10; // -10 to +10
-  baseScore = Math.max(10, Math.min(90, baseScore + variation));
+  const aiPhrases = [
+    'in conclusion', 'to summarize', 'it is important to note',
+    'in today\'s world', 'as a result', 'in other words'
+  ];
+  
+  const indicatorCount = words.filter(w => aiIndicators.includes(w)).length;
+  const phraseCount = aiPhrases.filter(phrase => text.toLowerCase().includes(phrase)).length;
+  
+  // Sentence uniformity analysis
+  const sentenceLengths = sentences.map(s => s.trim().split(/\s+/).length);
+  const avgLength = sentenceLengths.reduce((a, b) => a + b, 0) / (sentences.length || 1);
+  const lengthVariance = sentenceLengths.reduce((sum, len) => 
+    sum + Math.pow(len - avgLength, 2), 0) / (sentences.length || 1);
+  
+  // Calculate base score
+  let baseScore = 35;
+  baseScore += (indicatorCount / wordCount) * 100 * 15; // Formal indicators
+  baseScore += phraseCount * 8; // AI cliché phrases
+  baseScore += (1 - lexicalDiversity) * 20; // Low diversity
+  baseScore += (lengthVariance < 20 ? 15 : lengthVariance < 50 ? 8 : 0); // Uniformity
+  baseScore += (wordCount > 500 ? 5 : 0); // Length bias
+  
+  // Add controlled variance
+  const variance = (Math.random() - 0.5) * 18;
+  baseScore = Math.max(20, Math.min(85, baseScore + variance));
   
   return [
     {
-      detector: 'copyleaks',
-      score: Math.round(baseScore + Math.random() * 10 - 5),
-      confidence: 0.7,
+      detector: 'gptzero',
+      score: Math.round(baseScore + (Math.random() - 0.5) * 12),
+      confidence: 0.65,
       simulated: true,
-      details: { analysis: 'Fallback analysis - Copyleaks unavailable' }
+      details: { 
+        analysis: 'Enhanced fallback - GPTZero API unavailable',
+        note: 'Estimated based on linguistic patterns'
+      }
+    },
+    {
+      detector: 'copyleaks',
+      score: Math.round(baseScore * 0.85 + (Math.random() - 0.5) * 10),
+      confidence: 0.62,
+      simulated: true,
+      details: { 
+        analysis: 'Enhanced fallback - Copyleaks API unavailable',
+        note: 'Estimated based on text metrics'
+      }
     },
     {
       detector: 'zerogpt', 
-      score: Math.round(baseScore + Math.random() * 10 - 5),
-      confidence: 0.6,
+      score: Math.round(baseScore * 1.1 + (Math.random() - 0.5) * 14),
+      confidence: 0.58,
       simulated: true,
-      details: { analysis: 'Fallback analysis - ZeroGPT unavailable' }
+      details: { 
+        analysis: 'Enhanced fallback - ZeroGPT API unavailable',
+        note: 'Estimated using pattern analysis'
+      }
     }
   ];
 }

@@ -241,11 +241,25 @@ export const AIDetectionResults = ({ text, onHumanize, status, onStatusChange }:
         ))}
       </div>
 
-      {/* Disclaimer - Always Visible */}
-      <div className="text-center p-3 bg-muted/30 rounded">
-        <p className="text-xs text-muted-foreground">
-          <strong>Note:</strong> Results are simulated for demonstration. For accurate detection from Copyleaks, ZeroGPT, GPTZero, and Originality.AI, upgrade to a premium plan.
-        </p>
+      {/* Enhanced Disclaimer with Transparency */}
+      <div className="space-y-3 p-4 bg-muted/30 rounded-lg border border-border/50">
+        <div className="flex items-start gap-2">
+          <AlertTriangle className="w-4 h-4 text-warning mt-0.5 flex-shrink-0" />
+          <div className="text-left space-y-2">
+            <p className="text-sm font-medium text-foreground">
+              Important: AI Detection Limitations
+            </p>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              AI detection tools have known accuracy issues and can produce false positives even for human-written text. 
+              Research shows even leading detectors misclassify human writing 20-40% of the time. 
+              These results should be viewed as rough estimates, not definitive judgments.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              <strong>Current Status:</strong> Using enhanced simulation with linguistic analysis. 
+              For real API integration with GPTZero, Copyleaks, and ZeroGPT, API keys must be configured.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );

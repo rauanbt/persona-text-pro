@@ -27,5 +27,8 @@ verify_jwt = true
 [functions.ai-detection-zerogpt]
 verify_jwt = true
 
+[functions.ai-detection-gptzero]
+verify_jwt = true
+
 [functions.ai-detection-hybrid]
 verify_jwt = true
