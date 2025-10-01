@@ -24,8 +24,7 @@ export const WritingJourneyPricing = () => {
         "1,500 words per month",
         "250 words per request",
         "All 6 tone personalities",
-        "Basic AI humanization",
-        "Bypass all AI detectors"
+        "Basic AI humanization"
       ],
       buttonText: "Begin Your Journey",
       popular: false,
@@ -45,8 +44,7 @@ export const WritingJourneyPricing = () => {
         "15,000 words per month",
         "1,500 words per request",
         "All 6 tone personalities",
-        "Advanced dual-engine humanization",
-        "50+ languages supported"
+        "Advanced dual-engine humanization"
       ],
       buttonText: "Choose Wordsmith",
       popular: true,
