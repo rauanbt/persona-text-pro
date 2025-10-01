@@ -58,28 +58,63 @@ serve(async (req) => {
 
     // Language detection for free users (English only)
     if (userPlan === 'free') {
-      const languageDetectionPrompt = 'Is this text primarily in English? Answer only "yes" or "no".';
+      console.log('[HYBRID-HUMANIZE] Free plan detected - checking language (first 200 chars):', text.substring(0, 200));
       
-      const langCheckResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${lovableApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash-lite',
-          messages: [
-            { role: 'system', content: languageDetectionPrompt },
-            { role: 'user', content: text.substring(0, 500) } // Check first 500 chars
-          ],
-        }),
-      });
-
-      if (langCheckResponse.ok) {
-        const langData = await langCheckResponse.json();
-        const isEnglish = langData.choices[0].message.content.toLowerCase().includes('yes');
+      try {
+        const languageDetectionPrompt = 'You are a language detector. Analyze if the provided text is written in English. Respond with ONLY the word "YES" if the text is in English, or "NO" if it is in any other language. Do not provide explanations or translations.';
         
-        if (!isEnglish) {
+        const langCheckResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${lovableApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-2.5-flash-lite',
+            messages: [
+              { role: 'system', content: languageDetectionPrompt },
+              { role: 'user', content: text.substring(0, 500) } // Check first 500 chars
+            ],
+          }),
+        });
+
+        if (!langCheckResponse.ok) {
+          console.error('[HYBRID-HUMANIZE] Language detection API failed:', langCheckResponse.status, langCheckResponse.statusText);
+          // Default to rejecting if detection fails (safer approach)
+          return new Response(JSON.stringify({ 
+            error: 'Language detection unavailable. Please try again or upgrade to access all languages.',
+            upgrade_required: true
+          }), {
+            status: 503,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        const langData = await langCheckResponse.json();
+        const detectionResponse = langData.choices?.[0]?.message?.content || '';
+        console.log('[HYBRID-HUMANIZE] Language detection raw response:', detectionResponse);
+        
+        // Parse response more robustly - look for "yes" or "no" in the response
+        const normalizedResponse = detectionResponse.toLowerCase().trim();
+        const isEnglish = /^yes\b/.test(normalizedResponse) || normalizedResponse === 'yes';
+        const isNotEnglish = /^no\b/.test(normalizedResponse) || normalizedResponse === 'no';
+        
+        console.log('[HYBRID-HUMANIZE] Language detection result - isEnglish:', isEnglish, 'isNotEnglish:', isNotEnglish);
+        
+        // If we can't determine with confidence, reject (safer)
+        if (!isEnglish && !isNotEnglish) {
+          console.warn('[HYBRID-HUMANIZE] Ambiguous language detection response:', detectionResponse);
+          return new Response(JSON.stringify({ 
+            error: 'Unable to verify language. Free plan supports English only. Upgrade to Wordsmith or Master plan for 50+ languages.',
+            upgrade_required: true
+          }), {
+            status: 403,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        
+        if (isNotEnglish) {
+          console.log('[HYBRID-HUMANIZE] Non-English text detected - rejecting free user request');
           return new Response(JSON.stringify({ 
             error: 'Free plan supports English only. Upgrade to Wordsmith or Master plan for 50+ languages.',
             upgrade_required: true
@@ -88,6 +123,19 @@ serve(async (req) => {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
         }
+        
+        console.log('[HYBRID-HUMANIZE] English text confirmed - proceeding with humanization');
+        
+      } catch (langError) {
+        console.error('[HYBRID-HUMANIZE] Language detection error:', langError);
+        // Default to rejecting if detection crashes (safer approach)
+        return new Response(JSON.stringify({ 
+          error: 'Language detection failed. Please try again or upgrade to access all languages.',
+          upgrade_required: true
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
     }
 
