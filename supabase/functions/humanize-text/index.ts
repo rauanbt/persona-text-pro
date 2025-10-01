@@ -115,7 +115,10 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    const humanizedText = data.choices[0].message.content;
+    let humanizedText = data.choices[0].message.content;
+
+    // Replace long em dashes with regular dashes
+    humanizedText = humanizedText.replace(/—/g, '-');
 
     // Update usage tracking and deduct from extra words if needed
     const wordsToDeductFromExtra = Math.max(0, (currentUsage + wordCount) - planLimit);

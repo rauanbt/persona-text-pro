@@ -316,6 +316,9 @@ serve(async (req) => {
 
     console.log(`[HYBRID-HUMANIZE] Humanization complete - ${passesCompleted} passes using ${enginesUsed}`);
 
+    // Replace long em dashes with regular dashes
+    finalText = finalText.replace(/—/g, '-');
+
     return await finalizeResponse(supabase, userData.user.id, text, finalText, tone, wordCount, currentMonth, usage, currentUsage, planLimit, extraWords, passesCompleted, enginesUsed);
 
   } catch (error) {

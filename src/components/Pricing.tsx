@@ -121,7 +121,7 @@ export const Pricing = () => {
             </span>
             {isAnnual && (
               <Badge className="bg-success text-success-foreground ml-2">
-                Save 40%
+                Save 30%
               </Badge>
             )}
           </div>
