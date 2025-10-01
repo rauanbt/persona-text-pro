@@ -37,7 +37,7 @@ export const WritingJourneyPricing = () => {
       name: "Wordsmith",
       subtitle: "For professional creators",
       monthlyPrice: "$24.95",
-      annualPrice: "$14.97",
+      annualPrice: "$17.47",
       period: isAnnual ? "per month (billed annually)" : "per month",
       description: "Elevate your content with advanced writing intelligence",
       icon: <Zap className="w-8 h-8 text-blue-500" />,
@@ -60,7 +60,7 @@ export const WritingJourneyPricing = () => {
       name: "Master",
       subtitle: "For content powerhouses",
       monthlyPrice: "$54.95",
-      annualPrice: "$32.97",
+      annualPrice: "$38.47",
       period: isAnnual ? "per month (billed annually)" : "per month",
       description: "Unlimited creativity with our most advanced tools",
       icon: <Crown className="w-8 h-8 text-purple-500" />,
@@ -129,7 +129,7 @@ export const WritingJourneyPricing = () => {
             </span>
             {isAnnual && (
               <Badge className="bg-green-500 text-white ml-2">
-                Save 40% ✨
+                Save 30% ✨
               </Badge>
             )}
           </div>
