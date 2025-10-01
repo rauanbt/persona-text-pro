@@ -102,6 +102,23 @@ serve(async (req) => {
   }
 });
 
+// Deterministic hash function for consistent scoring
+function hashString(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return Math.abs(hash);
+}
+
+// Deterministic random based on text and seed
+function deterministicRandom(text: string, seed: number = 0): number {
+  const hash = hashString(text + seed.toString());
+  return ((hash % 10000) / 10000) * 2 - 1; // -1 to 1
+}
+
 function generateEnhancedFallback(text: string, wordCount: number) {
   console.log('[GPTZERO] Generating enhanced fallback analysis');
   
@@ -132,8 +149,8 @@ function generateEnhancedFallback(text: string, wordCount: number) {
   baseScore += (1 - lexicalDiversity) * 15; // Low diversity = more AI-like
   baseScore += (wordCount > 500 ? 5 : 0); // Longer texts slight bias
   
-  // Add realistic variance
-  const variance = (Math.random() - 0.5) * 18;
+  // Add deterministic variance
+  const variance = deterministicRandom(text, 1) * 18;
   const finalScore = Math.max(15, Math.min(85, Math.round(baseScore + variance)));
   
   return new Response(JSON.stringify({

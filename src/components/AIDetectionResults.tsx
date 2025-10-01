@@ -182,12 +182,6 @@ export const AIDetectionResults = ({ text, onHumanize, status, onStatusChange }:
                   </div>
                   <div className="text-left">
                     <div className="text-3xl font-bold">{averageScore}%</div>
-                    <div className="text-sm font-medium text-success uppercase tracking-wide">
-                      HUMAN WRITTEN
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {getRiskLevel(averageScore).description}
-                    </div>
                   </div>
                 </div>
                 <Progress 

@@ -156,6 +156,23 @@ serve(async (req) => {
   }
 });
 
+// Deterministic hash function for consistent scoring
+function hashString(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return Math.abs(hash);
+}
+
+// Deterministic random based on text and seed
+function deterministicRandom(text: string, seed: number = 0): number {
+  const hash = hashString(text + seed.toString());
+  return ((hash % 10000) / 10000) * 2 - 1; // -1 to 1
+}
+
 async function generateFallbackResults(text: string) {
   // Enhanced fallback with sophisticated text analysis
   const words = text.toLowerCase().match(/\b\w+\b/g) || [];
@@ -195,14 +212,14 @@ async function generateFallbackResults(text: string) {
   baseScore += (lengthVariance < 20 ? 15 : lengthVariance < 50 ? 8 : 0); // Uniformity
   baseScore += (wordCount > 500 ? 5 : 0); // Length bias
   
-  // Add controlled variance
-  const variance = (Math.random() - 0.5) * 18;
+  // Add controlled deterministic variance
+  const variance = deterministicRandom(text, 100) * 18;
   baseScore = Math.max(20, Math.min(85, baseScore + variance));
   
   return [
     {
       detector: 'gptzero',
-      score: Math.round(baseScore + (Math.random() - 0.5) * 12),
+      score: Math.round(baseScore + deterministicRandom(text, 1) * 12),
       confidence: 0.65,
       simulated: true,
       details: { 
@@ -212,7 +229,7 @@ async function generateFallbackResults(text: string) {
     },
     {
       detector: 'copyleaks',
-      score: Math.round(baseScore * 0.85 + (Math.random() - 0.5) * 10),
+      score: Math.round(baseScore * 0.85 + deterministicRandom(text, 2) * 10),
       confidence: 0.62,
       simulated: true,
       details: { 
@@ -222,7 +239,7 @@ async function generateFallbackResults(text: string) {
     },
     {
       detector: 'zerogpt', 
-      score: Math.round(baseScore * 1.1 + (Math.random() - 0.5) * 14),
+      score: Math.round(baseScore * 1.1 + deterministicRandom(text, 3) * 14),
       confidence: 0.58,
       simulated: true,
       details: { 

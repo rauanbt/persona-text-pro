@@ -10,6 +10,23 @@ const corsHeaders = {
 const supabaseUrl = Deno.env.get('SUPABASE_URL');
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
+// Deterministic hash function for consistent scoring
+function hashString(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return Math.abs(hash);
+}
+
+// Deterministic random based on text and seed
+function deterministicRandom(text: string, seed: number = 0): number {
+  const hash = hashString(text + seed.toString());
+  return ((hash % 10000) / 10000) * 2 - 1; // -1 to 1
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -39,9 +56,9 @@ serve(async (req) => {
     
     if (!zeroGptApiKey) {
       console.log('[ZEROGPT] No API key found, using fallback analysis');
-      // Generate fallback analysis
+      // Generate deterministic fallback analysis
       const words = text.trim().split(/\s+/);
-      const simulatedScore = Math.floor(Math.random() * 50) + 25;
+      const simulatedScore = Math.floor((deterministicRandom(text, 3) + 1) * 25) + 25; // 25-75% range
       
       return new Response(JSON.stringify({
         detector: 'zerogpt',
@@ -112,9 +129,9 @@ serve(async (req) => {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     console.error('[ZEROGPT] Error:', error);
     
-    // Return simulated results as fallback
-    console.log('[ZEROGPT] Returning simulated results as fallback');
-    const simulatedScore = Math.floor(Math.random() * 50) + 25; // 25-75% range
+    // Return deterministic results as fallback
+    console.log('[ZEROGPT] Returning deterministic results as fallback');
+    const simulatedScore = Math.floor((deterministicRandom(errorMessage, 3) + 1) * 25) + 25; // 25-75% range
     
     return new Response(JSON.stringify({
       detector: 'zerogpt',

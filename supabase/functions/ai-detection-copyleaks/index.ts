@@ -11,6 +11,23 @@ const copyleaksApiKey = Deno.env.get('COPYLEAKS_API_KEY');
 const supabaseUrl = Deno.env.get('SUPABASE_URL');
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
+// Deterministic hash function for consistent scoring
+function hashString(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return Math.abs(hash);
+}
+
+// Deterministic random based on text and seed
+function deterministicRandom(text: string, seed: number = 0): number {
+  const hash = hashString(text + seed.toString());
+  return ((hash % 10000) / 10000) * 2 - 1; // -1 to 1
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -58,7 +75,7 @@ serve(async (req) => {
     console.log('[COPYLEAKS] Access token obtained');
 
     // Submit text for AI detection
-    const scanId = `scan_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const scanId = `scan_${Date.now()}_${hashString(text)}`;
     
     const submitResponse = await fetch(`https://api.copyleaks.com/v3/education/submit/file/${scanId}/ai-detection`, {
       method: 'PUT',
@@ -131,9 +148,9 @@ serve(async (req) => {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     console.error('[COPYLEAKS] Error:', error);
     
-    // Return simulated results as fallback
-    console.log('[COPYLEAKS] Returning simulated results as fallback');
-    const simulatedScore = Math.floor(Math.random() * 40) + 30; // 30-70% range
+    // Return deterministic results as fallback
+    console.log('[COPYLEAKS] Returning deterministic results as fallback');
+    const simulatedScore = Math.floor((deterministicRandom(errorMessage, 2) + 1) * 20) + 30; // 30-70% range
     
     return new Response(JSON.stringify({
       detector: 'copyleaks',
