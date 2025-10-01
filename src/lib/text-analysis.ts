@@ -8,7 +8,7 @@ export interface TextAnalysis {
 }
 
 export function analyzeText(text: string): TextAnalysis {
-  const words = text.toLowerCase().match(/\b\w+\b/g) || [];
+  const words: string[] = text.toLowerCase().match(/\b\w+\b/g) || [];
   const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
   
   // Analyze vocabulary diversity (AI tends to have lower diversity)
@@ -57,7 +57,9 @@ export function analyzeText(text: string): TextAnalysis {
     (formalCount / words.length) * 0.7 + (phraseCount / sentences.length) * 0.3 : 0;
   
   // Text complexity based on length and structure
-  const avgWordLength = words.reduce((sum, w) => sum + w.length, 0) / (words.length || 1);
+  const avgWordLength = words.length > 0 
+    ? words.reduce((sum: number, w) => sum + w.length, 0) / words.length
+    : 0;
   const complexity = Math.min(1, text.length / 1000) * 0.5 + 
     (avgSentenceLength > 20 ? 0.3 : 0) + 
     (avgWordLength > 6 ? 0.2 : 0);

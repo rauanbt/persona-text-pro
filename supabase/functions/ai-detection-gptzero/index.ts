@@ -97,10 +97,8 @@ serve(async (req) => {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     console.error('[GPTZERO] Error:', error);
     
-    const { text } = await req.json().catch(() => ({ text: '' }));
-    const wordCount = text ? text.trim().split(/\s+/).length : 0;
-    
-    return generateEnhancedFallback(text || '', wordCount);
+    // Return fallback with empty text since we can't re-read request body
+    return generateEnhancedFallback('', 0);
   }
 });
 
