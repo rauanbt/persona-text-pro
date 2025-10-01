@@ -38,13 +38,11 @@ serve(async (req) => {
       throw new Error('User not authenticated');
     }
 
-    const { text, tone, engineMode = 'standard' } = await req.json();
+    const { text, tone } = await req.json();
     
     if (!text || !tone) {
       throw new Error('Text and tone are required');
     }
-    
-    console.log(`[HYBRID-HUMANIZE] Engine mode: ${engineMode}`);
 
     const wordCount = text.trim().split(/\s+/).length;
     const currentMonth = new Date().toISOString().slice(0, 7);
@@ -86,9 +84,7 @@ serve(async (req) => {
       });
     }
 
-    console.log('[HYBRID-HUMANIZE] Starting dual-pass processing');
-
-    // PASS 1: Initial humanization with tone-specific prompts
+    // Tone-specific system prompts
     const tonePrompts = {
       regular: "You are an expert at making AI-generated text sound authentically human. Rewrite this text to feel natural, conversational, and genuinely human-written while preserving the core message. Add subtle imperfections that make it feel real.",
       formal: "You are an expert at transforming AI text into sophisticated academic/professional writing. Rewrite this with scholarly precision and professional gravitas, but ensure it reads as if written by an experienced human expert. Include thoughtful transitions and nuanced arguments.",
@@ -98,121 +94,191 @@ serve(async (req) => {
       funny: "You are a comedy writer who makes AI text genuinely entertaining. Rewrite this with humor, wit, and levity that feels naturally human. Include clever wordplay, unexpected observations, and authentic comedic timing."
     };
 
-    const pass1Response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { 
-            role: 'system', 
-            content: tonePrompts[tone as keyof typeof tonePrompts] || tonePrompts.regular
-          },
-          { role: 'user', content: text }
-        ],
-        max_tokens: Math.min(Math.ceil(wordCount * 2), 4000),
-        temperature: 0.8,
-      }),
-    });
+    const systemPrompt = tonePrompts[tone as keyof typeof tonePrompts] || tonePrompts.regular;
+    let finalText = text;
+    let passesCompleted = 0;
+    let enginesUsed = '';
 
-    if (!pass1Response.ok) {
-      throw new Error(`OpenAI Pass 1 error: ${pass1Response.statusText}`);
-    }
-
-    const pass1Data = await pass1Response.json();
-    const pass1Result = pass1Data.choices[0].message.content;
-    
-    console.log('[HYBRID-HUMANIZE] Pass 1 completed, starting Pass 2');
-
-    // PASS 2: Add human quirks and variations
-    const pass2Prompt = `You are an expert at making text feel authentically human by adding natural imperfections and human quirks.
-
-Your task: Take this already-humanized text and make it even MORE human by:
-1. Varying sentence structures and lengths naturally
-2. Adding occasional contractions where appropriate
-3. Including natural transitions and filler phrases (sparingly)
-4. Introducing subtle vocabulary variations
-5. Adding personality through word choice
-6. Breaking some "perfect grammar" rules where humans naturally would
-7. Including natural emphasis and rhythm
-
-DO NOT change the core message or tone. Just make it feel like a real human wrote this off-the-cuff.
-
-Text to enhance:
-${pass1Result}`;
-
-    const pass2Response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: 'You are an expert at making text feel authentically human with natural imperfections.' },
-          { role: 'user', content: pass2Prompt }
-        ],
-        max_tokens: Math.min(Math.ceil(wordCount * 2), 4000),
-        temperature: 0.9, // Higher temperature for more variation
-      }),
-    });
-
-    if (!pass2Response.ok) {
-      console.error('[HYBRID-HUMANIZE] Pass 2 failed, using Pass 1 result');
-      // If Pass 2 fails, use Pass 1 result
-      const finalText = pass1Result;
-      return await finalizeResponse(supabase, userData.user.id, text, finalText, tone, wordCount, currentMonth, usage, currentUsage, planLimit, extraWords, 1, 'openai-single-pass');
-    }
-
-    const pass2Data = await pass2Response.json();
-    let finalText = pass2Data.choices[0].message.content;
-    let passesCompleted = 2;
-    let enginesUsed = 'openai-dual-pass';
-    
-    console.log('[HYBRID-HUMANIZE] Pass 2 completed successfully');
-
-    // PREMIUM MODE: Pass 3 with Gemini for creative variation via Lovable AI
-    if (engineMode === 'premium' && lovableApiKey) {
-      console.log('[HYBRID-HUMANIZE] Starting Pass 3 with Gemini for creative variation');
+    // Determine engine configuration based on user plan
+    if (userPlan === 'free') {
+      // FREE PLAN: Single Gemini pass only
+      console.log('[HYBRID-HUMANIZE] Free plan - Single Gemini pass');
       
-      try {
-        const pass3Prompt = `Add natural creative variations to make this text even more human and authentic. Introduce subtle personality, varied phrasing, and organic flow while maintaining the ${tone} tone:\n\n${finalText}`;
+      const geminiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${lovableApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: `Humanize this text:\n\n${text}` }
+          ],
+        }),
+      });
 
-        const geminiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      if (!geminiResponse.ok) {
+        throw new Error(`Gemini humanization failed: ${geminiResponse.statusText}`);
+      }
+
+      const geminiData = await geminiResponse.json();
+      finalText = geminiData.choices[0].message.content;
+      passesCompleted = 1;
+      enginesUsed = 'gemini';
+      console.log('[HYBRID-HUMANIZE] Free plan complete');
+
+    } else if (userPlan === 'pro' || userPlan === 'wordsmith') {
+      // WORDSMITH PLAN: Gemini + OpenAI (2 passes)
+      console.log('[HYBRID-HUMANIZE] Wordsmith plan - Dual-engine humanization');
+      
+      // Pass 1: Gemini for creative foundation
+      const pass1Response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${lovableApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: `Humanize this text with creative variation:\n\n${text}` }
+          ],
+        }),
+      });
+
+      if (!pass1Response.ok) {
+        throw new Error(`Gemini Pass 1 failed: ${pass1Response.statusText}`);
+      }
+
+      const pass1Data = await pass1Response.json();
+      const pass1Result = pass1Data.choices[0].message.content;
+      console.log('[HYBRID-HUMANIZE] Pass 1 (Gemini) complete');
+
+      // Pass 2: OpenAI for structural refinement
+      const pass2Response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openAIApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: `${systemPrompt}\n\nRefine for accuracy and natural flow.` },
+            { role: 'user', content: `Polish this humanized text:\n\n${pass1Result}` }
+          ],
+          max_tokens: Math.min(Math.ceil(wordCount * 2), 4000),
+          temperature: 0.8,
+        }),
+      });
+
+      if (!pass2Response.ok) {
+        // Use Pass 1 result if Pass 2 fails
+        finalText = pass1Result;
+        passesCompleted = 1;
+        enginesUsed = 'gemini';
+        console.log('[HYBRID-HUMANIZE] Pass 2 failed, using Pass 1 result');
+      } else {
+        const pass2Data = await pass2Response.json();
+        finalText = pass2Data.choices[0].message.content;
+        passesCompleted = 2;
+        enginesUsed = 'gemini-openai';
+        console.log('[HYBRID-HUMANIZE] Pass 2 (OpenAI) complete');
+      }
+
+    } else if (userPlan === 'ultra' || userPlan === 'master') {
+      // MASTER PLAN: Gemini + OpenAI + Claude (3 passes)
+      console.log('[HYBRID-HUMANIZE] Master plan - Triple-engine humanization');
+      
+      // Pass 1: Gemini for creative foundation
+      const pass1Response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${lovableApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: `Humanize this text with creative variation:\n\n${text}` }
+          ],
+        }),
+      });
+
+      if (!pass1Response.ok) {
+        throw new Error(`Gemini Pass 1 failed: ${pass1Response.statusText}`);
+      }
+
+      const pass1Data = await pass1Response.json();
+      const pass1Result = pass1Data.choices[0].message.content;
+      console.log('[HYBRID-HUMANIZE] Pass 1 (Gemini) complete');
+
+      // Pass 2: OpenAI for structural refinement
+      const pass2Response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openAIApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: `${systemPrompt}\n\nRefine for accuracy and clarity.` },
+            { role: 'user', content: `Enhance this humanized text:\n\n${pass1Result}` }
+          ],
+          max_tokens: Math.min(Math.ceil(wordCount * 2), 4000),
+          temperature: 0.8,
+        }),
+      });
+
+      if (!pass2Response.ok) {
+        // Use Pass 1 result if Pass 2 fails
+        finalText = pass1Result;
+        passesCompleted = 1;
+        enginesUsed = 'gemini';
+        console.log('[HYBRID-HUMANIZE] Pass 2 failed, using Pass 1 result');
+      } else {
+        const pass2Data = await pass2Response.json();
+        const pass2Result = pass2Data.choices[0].message.content;
+        console.log('[HYBRID-HUMANIZE] Pass 2 (OpenAI) complete');
+
+        // Pass 3: Claude for final tone mastery
+        const pass3Response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${lovableApiKey}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'google/gemini-2.5-flash',
+            model: 'anthropic/claude-sonnet-4-20250514',
             messages: [
-              { role: 'system', content: 'You are an expert at adding natural creative variations and authentic human personality to text.' },
-              { role: 'user', content: pass3Prompt }
+              { role: 'system', content: `${systemPrompt}\n\nYou are the final polishing layer. Perfect the tone, add nuanced personality, and ensure authentic human voice.` },
+              { role: 'user', content: `Apply final humanization mastery:\n\n${pass2Result}` }
             ],
           }),
         });
 
-        if (geminiResponse.ok) {
-          const geminiData = await geminiResponse.json();
-          const pass3Text = geminiData.choices?.[0]?.message?.content?.trim();
-          if (pass3Text) {
-            finalText = pass3Text;
-            passesCompleted = 3;
-            enginesUsed = 'openai+gemini-triple-pass';
-            console.log('[HYBRID-HUMANIZE] Pass 3 with Gemini completed successfully');
-          }
+        if (!pass3Response.ok) {
+          // Use Pass 2 result if Pass 3 fails
+          finalText = pass2Result;
+          passesCompleted = 2;
+          enginesUsed = 'gemini-openai';
+          console.log('[HYBRID-HUMANIZE] Pass 3 failed, using Pass 2 result');
         } else {
-          console.error('[HYBRID-HUMANIZE] Pass 3 Gemini failed, using Pass 2 result');
+          const pass3Data = await pass3Response.json();
+          finalText = pass3Data.choices[0].message.content;
+          passesCompleted = 3;
+          enginesUsed = 'gemini-openai-claude';
+          console.log('[HYBRID-HUMANIZE] Pass 3 (Claude) complete');
         }
-      } catch (pass3Error) {
-        console.error('[HYBRID-HUMANIZE] Pass 3 error, using Pass 2 result:', pass3Error);
       }
     }
+
+    console.log(`[HYBRID-HUMANIZE] Humanization complete - ${passesCompleted} passes using ${enginesUsed}`);
 
     return await finalizeResponse(supabase, userData.user.id, text, finalText, tone, wordCount, currentMonth, usage, currentUsage, planLimit, extraWords, passesCompleted, enginesUsed);
 

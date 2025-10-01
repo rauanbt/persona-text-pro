@@ -23,8 +23,8 @@ export const WritingJourneyPricing = () => {
       features: [
         "1,500 words per month",
         "250 words per request",
-        "All 4 tone personalities",
-        "Basic humanization magic",
+        "All 6 tone personalities",
+        "Basic AI humanization",
         "Bypass all AI detectors"
       ],
       buttonText: "Begin Your Journey",
@@ -44,11 +44,9 @@ export const WritingJourneyPricing = () => {
       features: [
         "15,000 words per month",
         "1,500 words per request",
-        "All 4 tone personalities",
-        "My Writing Style learning",
-        "Advanced humanization engine",
-        "50+ languages supported",
-        "Lightning-fast processing"
+        "All 6 tone personalities",
+        "Advanced dual-engine humanization",
+        "50+ languages supported"
       ],
       buttonText: "Choose Wordsmith",
       popular: true,
@@ -69,11 +67,9 @@ export const WritingJourneyPricing = () => {
       features: [
         "30,000 words per month",
         "3,000 words per request",
-        "All 4 tone personalities",
-        "My Writing Style mastery",
-        "Ultra-human writing output",
-        "Priority processing speed",
-        "Dedicated support team"
+        "All 6 tone personalities",
+        "Premium triple-engine humanization",
+        "Ultra-human writing output"
       ],
       buttonText: "Become a Master",
       popular: false,
@@ -226,7 +222,7 @@ export const WritingJourneyPricing = () => {
             </div>
             <div className="flex items-center justify-center gap-2">
               <Check className="w-4 h-4 text-green-500" />
-              <span>4 distinct tone personalities</span>
+              <span>6 distinct tone personalities</span>
             </div>
             <div className="flex items-center justify-center gap-2">
               <Check className="w-4 h-4 text-green-500" />

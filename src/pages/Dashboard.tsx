@@ -46,7 +46,6 @@ const Dashboard = () => {
   const [isAnnualBilling, setIsAnnualBilling] = useState(false);
   const [aiDetectionResults, setAiDetectionResults] = useState<any>(null);
   const [isCheckingAI, setIsCheckingAI] = useState(false);
-  const [engineMode, setEngineMode] = useState<'standard' | 'premium'>('standard');
 
   const currentPlan = subscriptionData.plan;
   const planLimit = PLAN_LIMITS[currentPlan as keyof typeof PLAN_LIMITS];
@@ -139,7 +138,7 @@ const Dashboard = () => {
 
     try {
       const { data, error } = await supabase.functions.invoke('humanize-text-hybrid', {
-        body: { text: inputText, tone: selectedTone, engineMode },
+        body: { text: inputText, tone: selectedTone },
         headers: {
           Authorization: `Bearer ${session?.access_token}`,
         },
@@ -415,47 +414,6 @@ const Dashboard = () => {
                       selectedTone={selectedTone}
                       onToneChange={setSelectedTone}
                     />
-
-                    {/* Engine Mode Selection */}
-                    <div className="mb-6">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center space-x-2">
-                          <Zap className="w-5 h-5 text-primary" />
-                          <span className="font-medium text-foreground">Humanization Engine</span>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <button
-                          onClick={() => setEngineMode('standard')}
-                          className={`p-4 rounded-lg border-2 transition-all ${
-                            engineMode === 'standard'
-                              ? 'border-primary bg-primary/10'
-                              : 'border-border hover:border-primary/50'
-                          }`}
-                        >
-                          <div className="text-left">
-                            <div className="font-semibold text-foreground mb-1">Standard</div>
-                            <div className="text-sm text-muted-foreground">2-pass OpenAI • Fast • Cost-effective</div>
-                          </div>
-                        </button>
-                        <button
-                          onClick={() => setEngineMode('premium')}
-                          className={`p-4 rounded-lg border-2 transition-all ${
-                            engineMode === 'premium'
-                              ? 'border-primary bg-primary/10'
-                              : 'border-border hover:border-primary/50'
-                          }`}
-                        >
-                          <div className="text-left">
-                            <div className="font-semibold text-foreground mb-1 flex items-center gap-2">
-                              Premium
-                              <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded">3x cost</span>
-                            </div>
-                            <div className="text-sm text-muted-foreground">3-pass OpenAI+Gemini • Superior quality</div>
-                          </div>
-                        </button>
-                      </div>
-                    </div>
 
                     <div className="space-y-4">
                       <div>
