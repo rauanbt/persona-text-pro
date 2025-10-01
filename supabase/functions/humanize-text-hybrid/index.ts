@@ -47,7 +47,7 @@ serve(async (req) => {
     const wordCount = text.trim().split(/\s+/).length;
     const currentMonth = new Date().toISOString().slice(0, 7);
 
-    // Get user profile to check plan and extra words
+    // Get user profile to check plan
     const { data: profile } = await supabase
       .from('profiles')
       .select('current_plan, extra_words_balance')
@@ -55,6 +55,42 @@ serve(async (req) => {
       .single();
 
     const userPlan = profile?.current_plan || 'free';
+
+    // Language detection for free users (English only)
+    if (userPlan === 'free') {
+      const languageDetectionPrompt = 'Is this text primarily in English? Answer only "yes" or "no".';
+      
+      const langCheckResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${lovableApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash-lite',
+          messages: [
+            { role: 'system', content: languageDetectionPrompt },
+            { role: 'user', content: text.substring(0, 500) } // Check first 500 chars
+          ],
+        }),
+      });
+
+      if (langCheckResponse.ok) {
+        const langData = await langCheckResponse.json();
+        const isEnglish = langData.choices[0].message.content.toLowerCase().includes('yes');
+        
+        if (!isEnglish) {
+          return new Response(JSON.stringify({ 
+            error: 'Free plan supports English only. Upgrade to Wordsmith or Master plan for 50+ languages.',
+            upgrade_required: true
+          }), {
+            status: 403,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      }
+    }
+
     const extraWords = profile?.extra_words_balance || 0;
     const planLimit = PLAN_LIMITS[userPlan as keyof typeof PLAN_LIMITS] || PLAN_LIMITS.free;
 
