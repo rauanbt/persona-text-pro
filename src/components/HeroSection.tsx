@@ -87,9 +87,9 @@ export const HeroSection = () => {
             </h1>
 
             {/* Subheading */}
-            <p className="text-lg md:text-xl text-muted-foreground mb-8">
-              SapienWrite converts your AI-generated content into fully humanized, undetectable writing with custom tones — ensuring it passes every AI detection tool
-            </p>
+          <p className="text-lg md:text-xl text-muted-foreground mb-8">
+            SapienWrite converts your AI-generated content into fully humanized, undetectable writing with custom tones - ensuring it passes every AI detection tool
+          </p>
 
             {/* CTA Button */}
             <Button 
