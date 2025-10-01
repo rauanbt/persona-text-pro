@@ -9,7 +9,7 @@ export const FAQ = () => {
   const faqs = [
     {
       question: "How does SapienWrite work?",
-      answer: "SapienWrite uses advanced natural language processing to rewrite AI-generated text, making it sound more human while applying your chosen tone (Regular, Funny, Sarcastic, or Smart). Our system analyzes patterns that AI detectors flag and replaces them with more natural alternatives."
+      answer: "SapienWrite uses advanced natural language processing to rewrite AI-generated text, making it sound more human while applying your chosen tone (Regular, Casual, Formal, Funny, Sarcastic, or Smart). Our system analyzes patterns that AI detectors flag and replaces them with more natural alternatives."
     },
     {
       question: "Does SapienWrite bypass AI detection tools?",
@@ -17,19 +17,19 @@ export const FAQ = () => {
     },
     {
       question: "How much does SapienWrite cost?",
-      answer: "We offer a free plan with 1,500 words per month. Our Pro plan is $27.98/month for 15,000 words, and Ultra is $57.98/month for 30,000 words. Annual plans offer 40% savings - Pro at $201.48/year and Ultra at $417.48/year."
+      answer: "We offer a free plan with 1,500 words per month (250 words per request). Our Wordsmith plan is $24.95/month (or $14.97/month annually) for 15,000 words, and Master is $54.95/month (or $32.97/month annually) for 30,000 words. Annual plans save you 40% - Wordsmith at $179.64/year and Master at $395.64/year."
     },
     {
       question: "What are the different tone options?",
-      answer: "We offer 4 distinct tones: Regular (professional and natural), Funny (light-hearted and humorous), Sarcastic (witty and sharp), and Smart (sophisticated and intellectual). Each tone maintains the humanization while adding personality to your content."
+      answer: "We offer 6 distinct tones: Regular (professional and natural), Casual (relaxed and conversational), Formal (structured and polished), Funny (light-hearted and humorous), Sarcastic (witty and sharp), and Smart (sophisticated and intellectual). Each tone maintains the humanization while adding personality to your content."
     },
     {
       question: "What languages does SapienWrite support?",
-      answer: "SapienWrite supports over 50 languages for Pro and Ultra plans, while the free plan supports English. All tone options work across all supported languages for a truly global experience."
+      answer: "SapienWrite supports over 50 languages for Wordsmith and Master plans, while the free plan supports English. All tone options work across all supported languages for a truly global experience."
     },
     {
       question: "I want to humanize a long essay. Is it possible?",
-      answer: "Yes! Depending on your plan, you can process anywhere from 500 words (free) to 200,000 words per month (Enterprise). For longer documents, you can process them in chunks or upgrade to a higher plan."
+      answer: "Yes! Depending on your plan, you can process from 1,500 words per month (free) to 30,000 words per month (Master). For longer documents, you can process them in chunks or upgrade to a higher plan. You can also purchase extra word packages (5,000 for $12.99, 10,000 for $22.99, or 25,000 for $49.99) that never expire."
     },
     {
       question: "Can I see my previous humanizations?",
@@ -37,7 +37,7 @@ export const FAQ = () => {
     },
     {
       question: "How do I cancel my subscription?",
-      answer: "You can cancel your subscription anytime from your account dashboard. There are no cancellation fees, and you'll retain access to your plan features until the end of your billing period."
+      answer: "You can cancel your subscription anytime through the Stripe Customer Portal accessible from your dashboard. There are no cancellation fees, and you'll retain full access to your plan features until the end of your current billing period. No prorated refunds for mid-cycle cancellations."
     }
   ];
 
