@@ -137,7 +137,7 @@ const Dashboard = () => {
     setIsProcessing(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('humanize-text', {
+      const { data, error } = await supabase.functions.invoke('humanize-text-hybrid', {
         body: { text: inputText, tone: selectedTone },
         headers: {
           Authorization: `Bearer ${session?.access_token}`,

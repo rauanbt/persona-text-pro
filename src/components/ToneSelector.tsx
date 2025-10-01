@@ -14,12 +14,12 @@ interface ToneSelectorProps {
 
 export const ToneSelector = ({ selectedTone, onToneChange }: ToneSelectorProps) => {
   const tones = [
-    { value: "regular", label: "Regular", description: "Natural, professional tone" },
-    { value: "casual", label: "Casual", description: "Relaxed, conversational tone" },
-    { value: "formal", label: "Formal", description: "Structured, professional tone" },
-    { value: "funny", label: "Funny", description: "Light-hearted, humorous tone" },
-    { value: "sarcastic", label: "Sarcastic", description: "Witty, sharp-tongued tone" },
-    { value: "smart", label: "Smart", description: "Sophisticated, intellectual tone" }
+    { value: "regular", label: "Regular", description: "Natural, balanced tone" },
+    { value: "formal", label: "Formal/Academic", description: "Professional, scholarly tone" },
+    { value: "persuasive", label: "Persuasive/Sales", description: "Compelling, convincing tone" },
+    { value: "empathetic", label: "Empathetic/Warm", description: "Understanding, caring tone" },
+    { value: "sarcastic", label: "Sarcastic", description: "Witty, ironic tone" },
+    { value: "funny", label: "Funny", description: "Humorous, entertaining tone" }
   ];
 
   return (

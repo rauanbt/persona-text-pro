@@ -3,6 +3,9 @@ project_id = "nycrxoppbsakpkkeiqzb"
 [functions.humanize-text]
 verify_jwt = true
 
+[functions.humanize-text-hybrid]
+verify_jwt = true
+
 [functions.check-subscription] 
 verify_jwt = true
 
