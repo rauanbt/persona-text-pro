@@ -23,11 +23,11 @@ const PLAN_LIMITS = {
 const PLAN_PRICES = {
   pro: {
     monthly: { price: 24.95, priceId: 'price_1SD818H8HT0u8xph48V9GxXG' },
-    annual: { price: 14.97, priceId: 'price_1SD81lH8HT0u8xph8dYBxkqi', yearlyPrice: 179.64 }
+    annual: { price: 17.47, priceId: 'price_1SD81lH8HT0u8xph8dYBxkqi', yearlyPrice: 209.64 }
   },
   ultra: { 
     monthly: { price: 54.95, priceId: 'price_1SD81xH8HT0u8xphuqiq8xet' },
-    annual: { price: 32.97, priceId: 'price_1SD828H8HT0u8xphUaDaMTDV', yearlyPrice: 395.64 }
+    annual: { price: 38.47, priceId: 'price_1SD828H8HT0u8xphUaDaMTDV', yearlyPrice: 461.64 }
   }
 };
 

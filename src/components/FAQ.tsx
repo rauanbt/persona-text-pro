@@ -17,7 +17,7 @@ export const FAQ = () => {
     },
     {
       question: "How much does SapienWrite cost?",
-      answer: "We offer a free plan with 1,500 words per month (250 words per request). Our Wordsmith plan is $24.95/month (or $14.97/month annually) for 15,000 words, and Master is $54.95/month (or $32.97/month annually) for 30,000 words. Annual plans save you 40% - Wordsmith at $179.64/year and Master at $395.64/year."
+      answer: "We offer a free plan with 1,500 words per month (250 words per request). Our Wordsmith plan is $24.95/month (or $17.47/month annually) for 15,000 words, and Master is $54.95/month (or $38.47/month annually) for 30,000 words. Annual plans save you 30% - Wordsmith at $209.64/year and Master at $461.64/year."
     },
     {
       question: "What are the different tone options?",

@@ -178,12 +178,21 @@ export const WritingJourneyPricing = () => {
               
               <CardContent className="px-6 flex-grow">
                 <ul className="space-y-3">
-                  {journey.features.map((feature, featureIndex) => (
-                    <li key={featureIndex} className="flex items-start text-sm">
-                      <Check className="w-4 h-4 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
-                      <span className="text-foreground">{feature}</span>
-                    </li>
-                  ))}
+                  {journey.features.map((feature, featureIndex) => {
+                    // Check if this is an engine feature that should be highlighted
+                    const isDualEngine = feature.includes('dual-engine');
+                    const isTripleEngine = feature.includes('triple-engine');
+                    const shouldHighlight = isDualEngine || isTripleEngine;
+                    
+                    return (
+                      <li key={featureIndex} className="flex items-start text-sm">
+                        <Check className="w-4 h-4 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
+                        <span className={`text-foreground ${shouldHighlight ? 'font-bold' : ''} ${isDualEngine ? 'text-blue-700 dark:text-blue-400' : ''} ${isTripleEngine ? 'text-purple-700 dark:text-purple-400' : ''}`}>
+                          {feature}
+                        </span>
+                      </li>
+                    );
+                  })}
                 </ul>
               </CardContent>
               
