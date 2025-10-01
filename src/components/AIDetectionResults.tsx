@@ -65,7 +65,7 @@ export const AIDetectionResults = ({ text, onHumanize, status, onStatusChange }:
   // Analyze text and calculate realistic AI scores
   const analyzeAndScore = (text: string) => {
     const analysis = analyzeText(text);
-    const baseScore = calculateAIScore(analysis);
+    const baseScore = calculateAIScore(analysis, text);
     return baseScore;
   };
 
@@ -103,7 +103,7 @@ export const AIDetectionResults = ({ text, onHumanize, status, onStatusChange }:
 
           // Complete analysis after a short delay
           setTimeout(() => {
-            const score = getDetectorScore(baseScore, config.id as keyof typeof import("@/lib/text-analysis").detectorProfiles);
+            const score = getDetectorScore(baseScore, config.id as keyof typeof import("@/lib/text-analysis").detectorProfiles, text);
             setDetectors(prev => prev.map(d => 
               d.id === config.id 
                 ? { ...d, score, status: 'completed' as const }
@@ -121,11 +121,13 @@ export const AIDetectionResults = ({ text, onHumanize, status, onStatusChange }:
 
       // Safety timeout to prevent infinite loading
       setTimeout(() => {
-        setDetectors(prev => prev.map(d => 
-          d.status !== 'completed' 
-            ? { ...d, score: Math.floor(baseScore + (Math.random() - 0.5) * 10), status: 'completed' as const }
-            : d
-        ));
+        setDetectors(prev => prev.map(d => {
+          if (d.status !== 'completed') {
+            const fallbackScore = getDetectorScore(baseScore, d.id as keyof typeof import("@/lib/text-analysis").detectorProfiles, text);
+            return { ...d, score: fallbackScore, status: 'completed' as const };
+          }
+          return d;
+        }));
         setOverallScore(Math.floor(baseScore));
         onStatusChange('completed');
       }, 5000);
@@ -219,7 +221,7 @@ export const AIDetectionResults = ({ text, onHumanize, status, onStatusChange }:
                 ) : detector.status === 'analyzing' ? (
                   <div className="space-y-1">
                     <div className="text-xs text-muted-foreground">Analyzing...</div>
-                    <Progress value={Math.random() * 60 + 20} className="h-1.5" />
+                    <Progress value={50} className="h-1.5" />
                   </div>
                 ) : (
                   <div className="space-y-1">
@@ -253,10 +255,6 @@ export const AIDetectionResults = ({ text, onHumanize, status, onStatusChange }:
               AI detection tools have known accuracy issues and can produce false positives even for human-written text. 
               Research shows even leading detectors misclassify human writing 20-40% of the time. 
               These results should be viewed as rough estimates, not definitive judgments.
-            </p>
-            <p className="text-xs text-muted-foreground">
-              <strong>Current Status:</strong> Using enhanced simulation with linguistic analysis. 
-              For real API integration with GPTZero, Copyleaks, and ZeroGPT, API keys must be configured.
             </p>
           </div>
         </div>

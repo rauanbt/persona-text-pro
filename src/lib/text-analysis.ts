@@ -7,6 +7,23 @@ export interface TextAnalysis {
   structure: number;
 }
 
+// Simple hash function for deterministic "randomness" based on text
+function hashString(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return Math.abs(hash);
+}
+
+// Generate deterministic pseudo-random value between -1 and 1 based on text and seed
+function deterministicRandom(text: string, seed: number = 0): number {
+  const hash = hashString(text + seed.toString());
+  return ((hash % 10000) / 10000) * 2 - 1; // Returns value between -1 and 1
+}
+
 export function analyzeText(text: string): TextAnalysis {
   const words: string[] = text.toLowerCase().match(/\b\w+\b/g) || [];
   const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
@@ -73,7 +90,7 @@ export function analyzeText(text: string): TextAnalysis {
   };
 }
 
-export function calculateAIScore(analysis: TextAnalysis): number {
+export function calculateAIScore(analysis: TextAnalysis, text: string): number {
   // More sophisticated base score calculation
   let score = 30; // Start with moderate baseline
   
@@ -84,8 +101,8 @@ export function calculateAIScore(analysis: TextAnalysis): number {
   score += (1 - analysis.diversity) * 18; // Low lexical diversity (strong indicator)
   score += analysis.complexity * 12; // Complexity can indicate AI polish
   
-  // Add controlled randomness (±10 points)
-  score += (Math.random() - 0.5) * 20;
+  // Add controlled deterministic variance (±10 points) based on text content
+  score += deterministicRandom(text, 0) * 10;
   
   // Human writing tends to be more chaotic - if metrics are too perfect, boost score
   const metricsVariance = Math.abs(analysis.structure - 0.5) + 
@@ -127,12 +144,13 @@ export const detectorProfiles = {
   }
 };
 
-export function getDetectorScore(baseScore: number, detectorId: keyof typeof detectorProfiles): number {
+export function getDetectorScore(baseScore: number, detectorId: keyof typeof detectorProfiles, text: string): number {
   const profile = detectorProfiles[detectorId];
   let score = baseScore * profile.sensitivity + profile.bias;
   
-  // Add detector-specific variance
-  score += (Math.random() - 0.5) * profile.variance;
+  // Add detector-specific deterministic variance based on text and detector ID
+  const detectorSeed = detectorId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  score += deterministicRandom(text, detectorSeed) * (profile.variance / 2);
   
   return Math.max(5, Math.min(98, Math.floor(score)));
 }
