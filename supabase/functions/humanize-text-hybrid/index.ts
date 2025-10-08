@@ -168,14 +168,14 @@ serve(async (req) => {
       });
     }
 
-    // Tone-specific system prompts
+    // Tone-specific system prompts with length preservation
     const tonePrompts = {
-      regular: "You are an expert at making AI-generated text sound authentically human. Rewrite this text to feel natural, conversational, and genuinely human-written while preserving the core message. Add subtle imperfections that make it feel real.",
-      formal: "You are an expert at transforming AI text into sophisticated academic/professional writing. Rewrite this with scholarly precision and professional gravitas, but ensure it reads as if written by an experienced human expert. Include thoughtful transitions and nuanced arguments.",
-      persuasive: "You are a master copywriter who makes AI text feel genuinely persuasive and human. Rewrite this to be compelling and sales-oriented, using authentic emotional appeals, power words, and conversational conviction that only a skilled human salesperson would use.",
-      empathetic: "You are an expert at making AI text feel warm, caring, and genuinely empathetic. Rewrite this with emotional intelligence, understanding, and human warmth. Make readers feel truly heard and supported, as if a compassionate friend is speaking.",
-      sarcastic: "You are a wit master who transforms AI text into clever, sarcastic commentary. Rewrite this with sharp irony, witty observations, and dry humor that feels authentically human. Use subtle sarcasm that lands naturally, not forced.",
-      funny: "You are a comedy writer who makes AI text genuinely entertaining. Rewrite this with humor, wit, and levity that feels naturally human. Include clever wordplay, unexpected observations, and authentic comedic timing."
+      regular: "You are an expert at making AI-generated text sound authentically human. Rewrite this text to feel natural, conversational, and genuinely human-written while preserving the core message and maintaining approximately the same length. Add subtle imperfections that make it feel real.",
+      formal: "You are an expert at transforming AI text into sophisticated academic/professional writing. Rewrite this with scholarly precision and professional gravitas, but ensure it reads as if written by an experienced human expert while keeping similar length. Include thoughtful transitions and nuanced arguments.",
+      persuasive: "You are a master copywriter who makes AI text feel genuinely persuasive and human. Rewrite this to be compelling and sales-oriented, using authentic emotional appeals, power words, and conversational conviction that only a skilled human salesperson would use, maintaining approximately the same word count.",
+      empathetic: "You are an expert at making AI text feel warm, caring, and genuinely empathetic. Rewrite this with emotional intelligence, understanding, and human warmth. Make readers feel truly heard and supported, as if a compassionate friend is speaking, keeping the output concise and similar in length.",
+      sarcastic: "You are a wit master who transforms AI text into clever, sarcastic commentary. Rewrite this with sharp irony, witty observations, and dry humor that feels authentically human. Use subtle sarcasm that lands naturally, not forced. Keep it punchy and approximately the same length as the original.",
+      funny: "You are a comedy writer who makes AI text genuinely entertaining. Rewrite this with humor, wit, and levity that feels naturally human. Include clever wordplay, unexpected observations, and authentic comedic timing, while maintaining similar brevity to the input."
     };
 
     const systemPrompt = tonePrompts[tone as keyof typeof tonePrompts] || tonePrompts.regular;
@@ -198,7 +198,7 @@ serve(async (req) => {
           model: 'google/gemini-2.5-flash',
           messages: [
             { role: 'system', content: systemPrompt },
-            { role: 'user', content: `Humanize this text:\n\n${text}` }
+            { role: 'user', content: `Humanize this text while keeping approximately ${wordCount} words:\n\n${text}` }
           ],
         }),
       });
@@ -228,7 +228,7 @@ serve(async (req) => {
           model: 'google/gemini-2.5-flash',
           messages: [
             { role: 'system', content: systemPrompt },
-            { role: 'user', content: `Humanize this text with creative variation:\n\n${text}` }
+            { role: 'user', content: `Humanize this text with creative variation while maintaining approximately ${wordCount} words:\n\n${text}` }
           ],
         }),
       });
@@ -252,7 +252,7 @@ serve(async (req) => {
           model: 'gpt-4o-mini',
           messages: [
             { role: 'system', content: `${systemPrompt}\n\nRefine for accuracy and natural flow.` },
-            { role: 'user', content: `Polish this humanized text:\n\n${pass1Result}` }
+            { role: 'user', content: `Polish this humanized text while keeping the length similar (target ~${wordCount} words):\n\n${pass1Result}` }
           ],
           max_tokens: Math.min(Math.ceil(wordCount * 2), 4000),
           temperature: 0.8,
@@ -288,7 +288,7 @@ serve(async (req) => {
           model: 'google/gemini-2.5-flash',
           messages: [
             { role: 'system', content: systemPrompt },
-            { role: 'user', content: `Humanize this text with creative variation:\n\n${text}` }
+            { role: 'user', content: `Humanize this text with creative variation while maintaining approximately ${wordCount} words:\n\n${text}` }
           ],
         }),
       });
@@ -312,7 +312,7 @@ serve(async (req) => {
           model: 'gpt-4o-mini',
           messages: [
             { role: 'system', content: `${systemPrompt}\n\nRefine for accuracy and clarity.` },
-            { role: 'user', content: `Enhance this humanized text:\n\n${pass1Result}` }
+            { role: 'user', content: `Enhance this humanized text while keeping the length similar (target ~${wordCount} words):\n\n${pass1Result}` }
           ],
           max_tokens: Math.min(Math.ceil(wordCount * 2), 4000),
           temperature: 0.8,
@@ -341,7 +341,7 @@ serve(async (req) => {
             model: 'anthropic/claude-sonnet-4-20250514',
             messages: [
               { role: 'system', content: `${systemPrompt}\n\nYou are the final polishing layer. Perfect the tone, add nuanced personality, and ensure authentic human voice.` },
-              { role: 'user', content: `Apply final humanization mastery:\n\n${pass2Result}` }
+              { role: 'user', content: `Apply final humanization mastery while maintaining approximately ${wordCount} words:\n\n${pass2Result}` }
             ],
           }),
         });
@@ -363,6 +363,39 @@ serve(async (req) => {
     }
 
     console.log(`[HYBRID-HUMANIZE] Humanization complete - ${passesCompleted} passes using ${enginesUsed}`);
+
+    // Check if output is too long and condense if needed
+    const outputWordCount = finalText.trim().split(/\s+/).length;
+    const lengthRatio = outputWordCount / wordCount;
+    
+    if (lengthRatio > 1.5) {
+      console.log(`[HYBRID-HUMANIZE] Output too long (${outputWordCount} vs ${wordCount}), condensing...`);
+      
+      try {
+        const condenseResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${lovableApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-2.5-flash',
+            messages: [
+              { role: 'system', content: 'Condense this text to match the target word count while preserving the tone and core message. Do not add commentary.' },
+              { role: 'user', content: `Target: approximately ${wordCount} words\n\nText to condense:\n\n${finalText}` }
+            ],
+          }),
+        });
+        
+        if (condenseResponse.ok) {
+          const condenseData = await condenseResponse.json();
+          finalText = condenseData.choices[0].message.content;
+          console.log('[HYBRID-HUMANIZE] Text condensed successfully');
+        }
+      } catch (condenseError) {
+        console.error('[HYBRID-HUMANIZE] Condense failed, using original:', condenseError);
+      }
+    }
 
     // Replace long em dashes with regular dashes
     finalText = finalText.replace(/—/g, '-');
