@@ -81,12 +81,12 @@ serve(async (req) => {
 
     // Create tone-specific system prompts
     const tonePrompts = {
-      regular: "You are an expert at making AI-generated text sound natural and human-written. Rewrite the following text to sound more authentic, conversational, and naturally human while preserving the original meaning and key information.",
-      casual: "You are an expert at making AI-generated text sound natural and human-written with a casual, relaxed tone. Rewrite the following text to be informal, friendly, and conversational, as if chatting with a friend. Keep the core message but make it feel effortless and approachable.",
-      formal: "You are an expert at making AI-generated text sound natural and human-written with a formal, professional tone. Rewrite the following text to be structured, polished, and appropriate for business or academic contexts. Maintain professionalism while keeping it naturally human and engaging.",
-      funny: "You are an expert at making AI-generated text sound natural and human-written with a humorous twist. Rewrite the following text to sound more authentic, conversational, and naturally human while adding appropriate humor and wit. Keep the original meaning intact but make it more entertaining.",
-      sarcastic: "You are an expert at making AI-generated text sound natural and human-written with a sarcastic tone. Rewrite the following text to sound more authentic, conversational, and naturally human while adding appropriate sarcasm and wit. Maintain the original message but deliver it with clever, sharp-tongued humor.",
-      smart: "You are an expert at making AI-generated text sound natural and human-written with sophisticated intelligence. Rewrite the following text to sound more authentic, conversational, and naturally human while elevating the language to be more intellectual and refined. Preserve the meaning but enhance it with thoughtful insights and elegant expression."
+      regular: "You are an expert at humanizing AI text. PRIMARY GOAL: Preserve the exact line breaks, paragraph spacing, and text structure from the original. SECONDARY GOAL: Make it sound naturally human. CRITICAL: Do not merge separate paragraphs. Do not merge separate lines. Keep each line break exactly where it is. Do not use markdown formatting (no **, *, _, ~~). Output plain text only.",
+      casual: "You are an expert at humanizing AI text with a casual tone. PRIMARY GOAL: Preserve the exact line breaks, paragraph spacing, and text structure from the original. SECONDARY GOAL: Make it informal and friendly. CRITICAL: Do not merge separate paragraphs. Do not merge separate lines. Keep each line break exactly where it is. Do not use markdown formatting (no **, *, _, ~~). Output plain text only.",
+      formal: "You are an expert at humanizing AI text with a formal tone. PRIMARY GOAL: Preserve the exact line breaks, paragraph spacing, and text structure from the original. SECONDARY GOAL: Make it professional and polished. CRITICAL: Do not merge separate paragraphs. Do not merge separate lines. Keep each line break exactly where it is. Do not use markdown formatting (no **, *, _, ~~). Output plain text only.",
+      funny: "You are an expert at humanizing AI text with humor. PRIMARY GOAL: Preserve the exact line breaks, paragraph spacing, and text structure from the original. SECONDARY GOAL: Add appropriate humor. CRITICAL: Do not merge separate paragraphs. Do not merge separate lines. Keep each line break exactly where it is. Do not use markdown formatting (no **, *, _, ~~). Output plain text only.",
+      sarcastic: "You are an expert at humanizing AI text with sarcasm. PRIMARY GOAL: Preserve the exact line breaks, paragraph spacing, and text structure from the original. SECONDARY GOAL: Add sarcasm and wit. CRITICAL: Do not merge separate paragraphs. Do not merge separate lines. Keep each line break exactly where it is. Do not use markdown formatting (no **, *, _, ~~). Output plain text only.",
+      smart: "You are an expert at humanizing AI text with intelligence. PRIMARY GOAL: Preserve the exact line breaks, paragraph spacing, and text structure from the original. SECONDARY GOAL: Elevate the language. CRITICAL: Do not merge separate paragraphs. Do not merge separate lines. Keep each line break exactly where it is. Do not use markdown formatting (no **, *, _, ~~). Output plain text only."
     };
 
     // Call OpenAI API
@@ -103,7 +103,7 @@ serve(async (req) => {
             role: 'system', 
             content: tonePrompts[tone as keyof typeof tonePrompts]
           },
-          { role: 'user', content: text }
+          { role: 'user', content: `CRITICAL: Keep every line break and paragraph exactly as shown. Do not merge lines:\n\n${text}` }
         ],
         max_tokens: Math.min(Math.ceil(wordCount * 1.5), 4000),
         temperature: 0.7,
@@ -116,6 +116,16 @@ serve(async (req) => {
 
     const data = await response.json();
     let humanizedText = data.choices[0].message.content;
+
+    // Remove markdown formatting more aggressively
+    humanizedText = humanizedText
+      .replace(/\*\*([^*]+)\*\*/g, '$1')    // Remove **bold**
+      .replace(/\*([^*\n]+)\*/g, '$1')       // Remove *italic* (not crossing lines)
+      .replace(/__([^_]+)__/g, '$1')         // Remove __bold__
+      .replace(/_([^_\n]+)_/g, '$1')         // Remove _italic_
+      .replace(/~~([^~]+)~~/g, '$1')         // Remove ~~strikethrough~~
+      .replace(/\*/g, '')                    // Remove any remaining lone asterisks
+      .replace(/_/g, '');                    // Remove any remaining lone underscores
 
     // Replace long em dashes with regular dashes
     humanizedText = humanizedText.replace(/—/g, '-');
