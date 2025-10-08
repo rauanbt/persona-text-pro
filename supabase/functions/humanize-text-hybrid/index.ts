@@ -170,12 +170,12 @@ serve(async (req) => {
 
     // Tone-specific system prompts with length preservation
     const tonePrompts = {
-      regular: "You are an expert at making AI-generated text sound authentically human. Rewrite this text to feel natural, conversational, and genuinely human-written while preserving the core message and maintaining approximately the same length. Add subtle imperfections that make it feel real.",
-      formal: "You are an expert at transforming AI text into sophisticated academic/professional writing. Rewrite this with scholarly precision and professional gravitas, but ensure it reads as if written by an experienced human expert while keeping similar length. Include thoughtful transitions and nuanced arguments.",
-      persuasive: "You are a master copywriter who makes AI text feel genuinely persuasive and human. Rewrite this to be compelling and sales-oriented, using authentic emotional appeals, power words, and conversational conviction that only a skilled human salesperson would use, maintaining approximately the same word count.",
-      empathetic: "You are an expert at making AI text feel warm, caring, and genuinely empathetic. Rewrite this with emotional intelligence, understanding, and human warmth. Make readers feel truly heard and supported, as if a compassionate friend is speaking, keeping the output concise and similar in length.",
-      sarcastic: "You are a wit master who transforms AI text into clever, sarcastic commentary. Rewrite this with sharp irony, witty observations, and dry humor that feels authentically human. Use subtle sarcasm that lands naturally, not forced. Keep it punchy and approximately the same length as the original.",
-      funny: "You are a comedy writer who makes AI text genuinely entertaining. Rewrite this with humor, wit, and levity that feels naturally human. Include clever wordplay, unexpected observations, and authentic comedic timing, while maintaining similar brevity to the input."
+      regular: "You are an expert at making AI-generated text sound authentically human. Rewrite this text to feel natural, conversational, and genuinely human-written while preserving the core message and maintaining approximately the same length. Add subtle imperfections that make it feel real. IMPORTANT: Do not use any markdown formatting (no asterisks, underscores, or emphasis markers). Preserve the exact paragraph structure, line breaks, and spacing from the original text.",
+      formal: "You are an expert at transforming AI text into sophisticated academic/professional writing. Rewrite this with scholarly precision and professional gravitas, but ensure it reads as if written by an experienced human expert while keeping similar length. Include thoughtful transitions and nuanced arguments. IMPORTANT: Do not use any markdown formatting (no asterisks, underscores, or emphasis markers). Preserve the exact paragraph structure, line breaks, and spacing from the original text.",
+      persuasive: "You are a master copywriter who makes AI text feel genuinely persuasive and human. Rewrite this to be compelling and sales-oriented, using authentic emotional appeals, power words, and conversational conviction that only a skilled human salesperson would use, maintaining approximately the same word count. IMPORTANT: Do not use any markdown formatting (no asterisks, underscores, or emphasis markers). Preserve the exact paragraph structure, line breaks, and spacing from the original text.",
+      empathetic: "You are an expert at making AI text feel warm, caring, and genuinely empathetic. Rewrite this with emotional intelligence, understanding, and human warmth. Make readers feel truly heard and supported, as if a compassionate friend is speaking, keeping the output concise and similar in length. IMPORTANT: Do not use any markdown formatting (no asterisks, underscores, or emphasis markers). Preserve the exact paragraph structure, line breaks, and spacing from the original text.",
+      sarcastic: "You are a wit master who transforms AI text into clever, sarcastic commentary. Rewrite this with sharp irony, witty observations, and dry humor that feels authentically human. Use subtle sarcasm that lands naturally, not forced. Keep it punchy and approximately the same length as the original. IMPORTANT: Do not use any markdown formatting (no asterisks, underscores, or emphasis markers). Preserve the exact paragraph structure, line breaks, and spacing from the original text.",
+      funny: "You are a comedy writer who makes AI text genuinely entertaining. Rewrite this with humor, wit, and levity that feels naturally human. Include clever wordplay, unexpected observations, and authentic comedic timing, while maintaining similar brevity to the input. IMPORTANT: Do not use any markdown formatting (no asterisks, underscores, or emphasis markers). Preserve the exact paragraph structure, line breaks, and spacing from the original text."
     };
 
     const systemPrompt = tonePrompts[tone as keyof typeof tonePrompts] || tonePrompts.regular;
@@ -198,7 +198,7 @@ serve(async (req) => {
           model: 'google/gemini-2.5-flash',
           messages: [
             { role: 'system', content: systemPrompt },
-            { role: 'user', content: `Humanize this text while keeping approximately ${wordCount} words:\n\n${text}` }
+            { role: 'user', content: `Humanize this text while keeping approximately ${wordCount} words. Preserve the exact line breaks and paragraph structure:\n\n${text}` }
           ],
         }),
       });
@@ -228,7 +228,7 @@ serve(async (req) => {
           model: 'google/gemini-2.5-flash',
           messages: [
             { role: 'system', content: systemPrompt },
-            { role: 'user', content: `Humanize this text with creative variation while maintaining approximately ${wordCount} words:\n\n${text}` }
+            { role: 'user', content: `Humanize this text with creative variation while maintaining approximately ${wordCount} words. Keep the same paragraph structure and line breaks:\n\n${text}` }
           ],
         }),
       });
@@ -252,7 +252,7 @@ serve(async (req) => {
           model: 'gpt-4o-mini',
           messages: [
             { role: 'system', content: `${systemPrompt}\n\nRefine for accuracy and natural flow.` },
-            { role: 'user', content: `Polish this humanized text while keeping the length similar (target ~${wordCount} words):\n\n${pass1Result}` }
+            { role: 'user', content: `Polish this humanized text while keeping the length similar (target ~${wordCount} words). Maintain the paragraph structure and do not add markdown formatting:\n\n${pass1Result}` }
           ],
           max_tokens: Math.min(Math.ceil(wordCount * 2), 4000),
           temperature: 0.8,
@@ -288,7 +288,7 @@ serve(async (req) => {
           model: 'google/gemini-2.5-flash',
           messages: [
             { role: 'system', content: systemPrompt },
-            { role: 'user', content: `Humanize this text with creative variation while maintaining approximately ${wordCount} words:\n\n${text}` }
+            { role: 'user', content: `Humanize this text with creative variation while maintaining approximately ${wordCount} words. Keep the same paragraph structure and line breaks:\n\n${text}` }
           ],
         }),
       });
@@ -312,7 +312,7 @@ serve(async (req) => {
           model: 'gpt-4o-mini',
           messages: [
             { role: 'system', content: `${systemPrompt}\n\nRefine for accuracy and clarity.` },
-            { role: 'user', content: `Enhance this humanized text while keeping the length similar (target ~${wordCount} words):\n\n${pass1Result}` }
+            { role: 'user', content: `Enhance this humanized text while keeping the length similar (target ~${wordCount} words). Maintain the paragraph structure and do not add markdown formatting:\n\n${pass1Result}` }
           ],
           max_tokens: Math.min(Math.ceil(wordCount * 2), 4000),
           temperature: 0.8,
@@ -341,7 +341,7 @@ serve(async (req) => {
             model: 'anthropic/claude-sonnet-4-20250514',
             messages: [
               { role: 'system', content: `${systemPrompt}\n\nYou are the final polishing layer. Perfect the tone, add nuanced personality, and ensure authentic human voice.` },
-              { role: 'user', content: `Apply final humanization mastery while maintaining approximately ${wordCount} words:\n\n${pass2Result}` }
+              { role: 'user', content: `Apply final humanization mastery while maintaining approximately ${wordCount} words. Maintain the paragraph structure and do not add markdown formatting:\n\n${pass2Result}` }
             ],
           }),
         });
@@ -396,6 +396,13 @@ serve(async (req) => {
         console.error('[HYBRID-HUMANIZE] Condense failed, using original:', condenseError);
       }
     }
+
+    // Remove markdown formatting that may have slipped through
+    finalText = finalText
+      .replace(/\*\*(.+?)\*\*/g, '$1')  // Remove **bold**
+      .replace(/\*(.+?)\*/g, '$1')       // Remove *italic*
+      .replace(/_(.+?)_/g, '$1')         // Remove _underscores_
+      .replace(/~~(.+?)~~/g, '$1');      // Remove ~~strikethrough~~
 
     // Replace long em dashes with regular dashes
     finalText = finalText.replace(/—/g, '-');
