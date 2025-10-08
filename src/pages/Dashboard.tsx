@@ -58,8 +58,22 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => {
-    // Check for purchase success in URL params
     const urlParams = new URLSearchParams(window.location.search);
+    
+    // Check for subscription success
+    if (urlParams.get('success') === 'true') {
+      // Immediately refresh subscription status
+      checkSubscription();
+      toast({
+        title: "Subscription Activated!",
+        description: "Your subscription has been successfully activated.",
+        variant: "default"
+      });
+      // Clean up URL
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+    
+    // Check for word purchase success
     if (urlParams.get('word_purchase') === 'success') {
       const words = urlParams.get('words');
       toast({
@@ -72,7 +86,7 @@ const Dashboard = () => {
       // Refresh usage to show updated extra words
       setTimeout(() => fetchUsage(), 2000);
     }
-  }, []);
+  }, [checkSubscription]);
 
   const fetchUsage = async () => {
     if (!user) return;

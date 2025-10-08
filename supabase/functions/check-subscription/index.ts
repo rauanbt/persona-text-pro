@@ -67,44 +67,85 @@ serve(async (req) => {
     const customerId = customers.data[0].id;
     logStep("Found Stripe customer", { customerId });
 
+    // Fetch all subscriptions and filter for valid statuses
     const subscriptions = await stripe.subscriptions.list({
       customer: customerId,
-      status: "active",
-      limit: 1,
+      limit: 10,
     });
-    const hasActiveSub = subscriptions.data.length > 0;
+    
+    // Filter for active, trialing, or past_due subscriptions
+    const validSubscriptions = subscriptions.data.filter(
+      (sub: Stripe.Subscription) => sub.status === 'active' || sub.status === 'trialing' || sub.status === 'past_due'
+    );
+    
+    const hasActiveSub = validSubscriptions.length > 0;
     let productId = null;
     let subscriptionEnd = null;
     let plan = 'free';
 
     if (hasActiveSub) {
-      const subscription = subscriptions.data[0];
-      subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
-      logStep("Active subscription found", { subscriptionId: subscription.id, endDate: subscriptionEnd });
+      const subscription = validSubscriptions[0];
       
+      // Safely handle current_period_end (may be null for some trial/discounted subs)
+      if (subscription.current_period_end) {
+        subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
+      } else {
+        subscriptionEnd = null;
+        logStep("Subscription end date not available", { subscriptionId: subscription.id, status: subscription.status });
+      }
+      
+      const priceId = subscription.items.data[0].price.id;
       productId = subscription.items.data[0].price.product as string;
       
-      // Map product IDs to plan names
-      // Legacy product IDs (keep for existing subscriptions)
-      if (productId === 'prod_T7ntjXdJir4pJK') {
+      logStep("Subscription found", { 
+        subscriptionId: subscription.id, 
+        status: subscription.status,
+        priceId,
+        productId,
+        endDate: subscriptionEnd 
+      });
+      
+      // Map both price IDs and product IDs to plan names
+      // Pro plan mappings
+      const proPriceIds = [
+        'price_1SD818H8HT0u8xph48V9GxXG',  // Pro monthly
+        'price_1SD81lH8HT0u8xph8dYBxkqi',  // Pro annual
+        'price_1SCfkBH8HT0u8xpho4UsDBf8',  // Pro monthly (40% off)
+        'price_1SCgBNH8HT0u8xphoiFMa331'   // Pro annual (40% off)
+      ];
+      const proProductIds = [
+        'prod_T7ntjXdJir4pJK',
+        'prod_T8xfT16dTSyc0w',
+        'prod_T8xfeFL87HWXEJ',
+        'prod_T8y7e3nrqQ6aOa'
+      ];
+      
+      // Ultra plan mappings
+      const ultraPriceIds = [
+        'price_1SD81xH8HT0u8xphuqiq8xet',  // Ultra monthly
+        'price_1SD828H8HT0u8xphUaDaMTDV',  // Ultra annual
+        'price_1SCfkUH8HT0u8xphj7aOiKux',  // Ultra monthly (40% off)
+        'price_1SCgCCH8HT0u8xphO8rBX20v'   // Ultra annual (40% off)
+      ];
+      const ultraProductIds = [
+        'prod_T7ntTU0aXJOIQG',
+        'prod_T8xfimkR17s4fn',
+        'prod_T8xfxAmZCZ7NYv',
+        'prod_T8y8LHh8jAESaK'
+      ];
+      
+      // Determine plan based on price_id or product_id
+      if (proPriceIds.includes(priceId) || proProductIds.includes(productId)) {
         plan = 'pro';
-      } else if (productId === 'prod_T7ntTU0aXJOIQG') {
+      } else if (ultraPriceIds.includes(priceId) || ultraProductIds.includes(productId)) {
         plan = 'ultra';
-      }
-      // New product IDs with proper monthly/annual billing
-      else if (productId === 'prod_T8xfT16dTSyc0w' || productId === 'prod_T8xfeFL87HWXEJ') {
+      } else {
+        // Default to pro if we have a subscription but don't recognize the IDs
         plan = 'pro';
-      } else if (productId === 'prod_T8xfimkR17s4fn' || productId === 'prod_T8xfxAmZCZ7NYv') {
-        plan = 'ultra';
-      }
-      // Updated product IDs for 40% off annual plans
-      else if (productId === 'prod_T8y7e3nrqQ6aOa') {
-        plan = 'pro';
-      } else if (productId === 'prod_T8y8LHh8jAESaK') {
-        plan = 'ultra';
+        logStep("Unknown price/product ID, defaulting to pro", { priceId, productId });
       }
       
-      logStep("Determined subscription tier", { productId, plan });
+      logStep("Determined subscription tier", { priceId, productId, plan });
       
       // Update user profile with current plan
       await supabaseClient
