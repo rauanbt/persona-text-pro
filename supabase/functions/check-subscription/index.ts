@@ -83,6 +83,16 @@ serve(async (req) => {
     let subscriptionEnd = null;
     let plan = 'free';
 
+    // Fetch current plan before updating
+    const { data: profileData } = await supabaseClient
+      .from('profiles')
+      .select('current_plan')
+      .eq('user_id', user.id)
+      .single();
+    
+    const oldPlan = profileData?.current_plan || 'free';
+    logStep("Current plan fetched", { oldPlan });
+
     if (hasActiveSub) {
       const subscription = validSubscriptions[0];
       
@@ -146,6 +156,31 @@ serve(async (req) => {
       }
       
       logStep("Determined subscription tier", { priceId, productId, plan });
+      
+      // Check if this is an upgrade
+      const planHierarchy = { 'free': 0, 'pro': 1, 'ultra': 2 };
+      const isUpgrade = planHierarchy[plan as keyof typeof planHierarchy] > planHierarchy[oldPlan as keyof typeof planHierarchy];
+      
+      if (isUpgrade) {
+        logStep("Plan upgrade detected, resetting word count", { oldPlan, newPlan: plan });
+        
+        // Get current month-year
+        const now = new Date();
+        const monthYear = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        
+        // Reset word count for current month
+        const { error: resetError } = await supabaseClient
+          .from('usage_tracking')
+          .update({ words_used: 0, updated_at: new Date().toISOString() })
+          .eq('user_id', user.id)
+          .eq('month_year', monthYear);
+        
+        if (resetError) {
+          logStep("Error resetting word count", { error: resetError.message });
+        } else {
+          logStep("Word count reset successfully");
+        }
+      }
       
       // Update user profile with current plan
       await supabaseClient
