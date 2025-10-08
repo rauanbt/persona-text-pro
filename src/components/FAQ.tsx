@@ -36,8 +36,12 @@ export const FAQ = () => {
       answer: "Yes, all paid plans include a dashboard where you can view your processing history, download previous results, and track your monthly usage across all tone options."
     },
     {
+      question: "What is your refund policy?",
+      answer: "We offer a 3-day money-back guarantee. You can request a full refund within 72 hours (3 days) of your initial purchase for any reason—no questions asked. Simply contact support at contact@sapienwrite.com. After the 3-day window, cancellations are allowed but are not eligible for refunds. You'll retain full access until your billing period ends."
+    },
+    {
       question: "How do I cancel my subscription?",
-      answer: "You can cancel your subscription anytime through the Stripe Customer Portal accessible from your dashboard. There are no cancellation fees, and you'll retain full access to your plan features until the end of your current billing period. No prorated refunds for mid-cycle cancellations."
+      answer: "You can cancel your subscription anytime through the Stripe Customer Portal accessible from your dashboard. There are no cancellation fees. If you cancel within 3 days of purchase, you'll receive a full refund. After 3 days, you'll retain full access to your plan features until the end of your current billing period with no prorated refunds."
     }
   ];
 

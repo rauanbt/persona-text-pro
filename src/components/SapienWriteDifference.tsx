@@ -103,8 +103,8 @@ export const SapienWriteDifference = () => {
             The SapienWrite Promise
           </h3>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Your writing will sound authentically human, bypass all AI detectors, and maintain the exact meaning you intended. 
-            If it doesn't work, we'll refund your subscription - no questions asked.
+            Your content will sound authentically human, bypass all AI detectors, and preserve your original meaning. 
+            <strong className="text-foreground"> Not satisfied within 3 days? Request a full refund—no questions asked.</strong>
           </p>
         </div>
       </div>

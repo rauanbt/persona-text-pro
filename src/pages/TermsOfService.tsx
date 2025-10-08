@@ -48,14 +48,28 @@ const TermsOfService = () => {
                   <li>We reserve the right to modify pricing with 30 days notice</li>
                 </ul>
 
-                <h3 className="text-xl font-semibold mb-3 mt-6">5.1 Cancellation & Refund Policy</h3>
-                <p>Our cancellation policy ensures transparency and fairness:</p>
+                <h3 className="text-xl font-semibold mb-3 mt-6">5.1 Refund & Cancellation Policy</h3>
+                
+                <h4 className="text-lg font-semibold mb-2 mt-4">3-Day Money-Back Guarantee</h4>
+                <p>We offer a 3-day satisfaction guarantee for all subscription purchases:</p>
                 <ul className="list-disc pl-6 space-y-1">
-                  <li><strong>Cancellation:</strong> You can cancel your subscription at any time through the Customer Portal or by contacting support</li>
-                  <li><strong>Access Continuation:</strong> Upon cancellation, you will retain full access to your plan features and word credits until the end of your current billing period (monthly or annual)</li>
-                  <li><strong>No Prorated Refunds:</strong> We do not provide prorated refunds for mid-cycle cancellations. Your subscription remains active until the period ends</li>
-                  <li><strong>Word Credits Expiration:</strong> Any unused word credits expire at the end of your billing period and do not carry over after cancellation</li>
-                  <li><strong>Reactivation:</strong> You may reactivate your subscription at any time, starting a new billing cycle with full benefits</li>
+                  <li><strong>Eligibility:</strong> You may request a full refund within 72 hours (3 days) of your initial purchase date</li>
+                  <li><strong>Coverage:</strong> This applies to both monthly and annual subscriptions</li>
+                  <li><strong>No Questions Asked:</strong> Simply contact support at contact@sapienwrite.com to process your refund</li>
+                  <li><strong>Processing Time:</strong> Refunds are processed within 5-7 business days to your original payment method</li>
+                  <li><strong>One-Time Guarantee:</strong> The 3-day money-back guarantee is available for your first purchase only</li>
+                </ul>
+
+                <h4 className="text-lg font-semibold mb-2 mt-4">Standard Cancellation Policy (After 3 Days)</h4>
+                <p>After the 3-day refund window, the following cancellation policy applies:</p>
+                <ul className="list-disc pl-6 space-y-1">
+                  <li><strong>Cancellation:</strong> You may cancel your subscription at any time via the Stripe Customer Portal or by contacting support</li>
+                  <li><strong>No Refunds:</strong> Cancellations after the 3-day window are not eligible for refunds or prorated credits</li>
+                  <li><strong>Access Continuation:</strong> Upon cancellation, you retain full access to all features until your current billing period ends</li>
+                  <li><strong>Monthly Plans:</strong> Access continues until the end of the month</li>
+                  <li><strong>Annual Plans:</strong> Access continues for the full 12-month period</li>
+                  <li><strong>Word Credits Expiration:</strong> Unused word credits expire at the end of your billing period and do not carry over</li>
+                  <li><strong>Reactivation:</strong> You may reactivate your subscription at any time, starting a new billing cycle</li>
                 </ul>
 
                 <h2 className="text-2xl font-semibold mb-4 mt-8">6. Service Availability</h2>
