@@ -46,9 +46,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   const checkSubscription = async () => {
-    if (!session) return;
-    
+    if (!session?.user) return;
+
     try {
+      console.log('[AuthContext] Checking subscription for user:', session.user.id);
+
+      // 1) Prime from DB so UI shows the best-known plan immediately
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('current_plan')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+
+      if (profileError) {
+        console.warn('[AuthContext] profiles query error:', profileError.message);
+      }
+
+      if (profileData?.current_plan) {
+        setSubscriptionData((prev) => ({
+          ...prev,
+          plan: profileData.current_plan || 'free',
+        }));
+      }
+
+      // 2) Then sync with Stripe via Edge Function
       const { data, error } = await supabase.functions.invoke('check-subscription', {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
@@ -57,54 +78,72 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (error) throw error;
 
+      console.log('[AuthContext] Subscription check result:', data);
+
       setSubscriptionData({
-        subscribed: data.subscribed || false,
-        plan: data.plan || 'free',
-        product_id: data.product_id || null,
-        subscription_end: data.subscription_end || null
+        subscribed: Boolean(data?.subscribed),
+        plan: data?.plan || profileData?.current_plan || 'free',
+        product_id: data?.product_id || null,
+        subscription_end: data?.subscription_end || null,
       });
     } catch (error) {
-      console.error('Error checking subscription:', error);
+      console.error('[AuthContext] Error checking subscription:', error);
+      // Fallback to DB value if Edge Function fails
+      try {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('current_plan')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+
+        if (profileData?.current_plan) {
+          setSubscriptionData((prev) => ({
+            ...prev,
+            plan: profileData.current_plan || 'free',
+          }));
+        }
+      } catch (fallbackErr) {
+        console.error('[AuthContext] Fallback profiles fetch failed:', fallbackErr);
+      }
     }
   };
 
   useEffect(() => {
     // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        // Check subscription status after auth changes
-        if (session?.user) {
-          setTimeout(() => {
-            checkSubscription();
-          }, 100);
-        } else {
-          setSubscriptionData({
-            subscribed: false,
-            plan: 'free',
-            product_id: null,
-            subscription_end: null
-          });
-        }
-        
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, sess) => {
+      setSession(sess);
+      setUser(sess?.user ?? null);
+
+      // After auth changes, defer async work and end loading only after first check completes
+      if (sess?.user) {
+        setTimeout(() => {
+          checkSubscription().finally(() => setLoading(false));
+        }, 0);
+      } else {
+        setSubscriptionData({
+          subscribed: false,
+          plan: 'free',
+          product_id: null,
+          subscription_end: null,
+        });
         setLoading(false);
       }
-    );
+    });
 
     // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
+
+      if (currentSession?.user) {
         setTimeout(() => {
-          checkSubscription();
-        }, 100);
+          checkSubscription().finally(() => setLoading(false));
+        }, 0);
+      } else {
+        setLoading(false);
       }
-      
-      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
