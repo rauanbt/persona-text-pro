@@ -48,11 +48,15 @@ serve(async (req) => {
     
     if (customers.data.length === 0) {
       logStep("No customer found, updating unsubscribed state");
-      // Update user profile to free plan
+      // Upsert user profile to free plan
       await supabaseClient
         .from('profiles')
-        .update({ current_plan: 'free' })
-        .eq('user_id', user.id);
+        .upsert({ 
+          user_id: user.id,
+          email: user.email,
+          current_plan: 'free',
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'user_id' });
         
       return new Response(JSON.stringify({ 
         subscribed: false, 
@@ -182,24 +186,28 @@ serve(async (req) => {
         }
       }
       
-      // Update user profile with current plan
+      // Upsert user profile with current plan
       await supabaseClient
         .from('profiles')
-        .update({ 
+        .upsert({ 
+          user_id: user.id,
+          email: user.email,
           current_plan: plan,
-          stripe_customer_id: customerId
-        })
-        .eq('user_id', user.id);
+          stripe_customer_id: customerId,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'user_id' });
     } else {
       logStep("No active subscription found");
-      // Update user profile to free plan
+      // Upsert user profile to free plan
       await supabaseClient
         .from('profiles')
-        .update({ 
+        .upsert({ 
+          user_id: user.id,
+          email: user.email,
           current_plan: 'free',
-          stripe_customer_id: customerId
-        })
-        .eq('user_id', user.id);
+          stripe_customer_id: customerId,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'user_id' });
     }
 
     return new Response(JSON.stringify({

@@ -32,7 +32,7 @@ const PLAN_PRICES = {
 };
 
 const Dashboard = () => {
-  const { user, session, signOut, subscriptionData, checkSubscription } = useAuth();
+  const { user, session, signOut, subscriptionData, checkSubscription, loading: authLoading } = useAuth();
   const [inputText, setInputText] = useState('');
   const [humanizedText, setHumanizedText] = useState('');
   const [selectedTone, setSelectedTone] = useState('regular');
@@ -46,6 +46,7 @@ const Dashboard = () => {
   const [isAnnualBilling, setIsAnnualBilling] = useState(false);
   const [aiDetectionResults, setAiDetectionResults] = useState<any>(null);
   const [isCheckingAI, setIsCheckingAI] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const currentPlan = subscriptionData.plan;
   const planLimit = PLAN_LIMITS[currentPlan as keyof typeof PLAN_LIMITS];
@@ -324,15 +325,28 @@ const Dashboard = () => {
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center space-x-4">
             <h1 className="text-xl font-bold">SapienWrite Dashboard</h1>
-            <Badge variant={currentPlan === 'free' ? 'secondary' : 'default'}>
-              {currentPlan.toUpperCase()}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant={currentPlan === 'free' ? 'secondary' : 'default'}>
+                {currentPlan.toUpperCase()}
+              </Badge>
+              {authLoading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+            </div>
           </div>
           <div className="flex items-center space-x-4">
             <span className="text-sm text-muted-foreground">
               Welcome, {user?.email}
             </span>
-            <Button onClick={() => checkSubscription()} variant="outline" size="sm">
+            <Button 
+              onClick={async () => {
+                setIsRefreshing(true);
+                await checkSubscription();
+                setIsRefreshing(false);
+              }} 
+              variant="outline" 
+              size="sm"
+              disabled={isRefreshing || authLoading}
+            >
+              {isRefreshing ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : null}
               Refresh Status
             </Button>
             <Button onClick={signOut} variant="outline">
