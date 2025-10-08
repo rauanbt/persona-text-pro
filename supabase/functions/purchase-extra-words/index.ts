@@ -58,6 +58,7 @@ serve(async (req) => {
         },
       ],
       mode: "payment",
+      allow_promotion_codes: true,
       success_url: `${req.headers.get("origin")}/dashboard?word_purchase=success&words=${wordPackage.words}`,
       cancel_url: `${req.headers.get("origin")}/dashboard?word_purchase=canceled`,
       metadata: {
