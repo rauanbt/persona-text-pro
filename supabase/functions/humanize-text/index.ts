@@ -81,8 +81,8 @@ serve(async (req) => {
 
     // Create tone-specific system prompts
     const tonePrompts = {
-      regular: "You are an expert at humanizing AI text. PRIMARY GOAL: Preserve the exact line breaks, paragraph spacing, and text structure from the original. SECONDARY GOAL: Make it sound naturally human. CRITICAL: Do not merge separate paragraphs. Do not merge separate lines. Keep each line break exactly where it is. Do not use markdown formatting (no **, *, _, ~~). Output plain text only.",
-      casual: "You are an expert at humanizing AI text with a casual tone. PRIMARY GOAL: Preserve the exact line breaks, paragraph spacing, and text structure from the original. SECONDARY GOAL: Make it informal and friendly. CRITICAL: Do not merge separate paragraphs. Do not merge separate lines. Keep each line break exactly where it is. Do not use markdown formatting (no **, *, _, ~~). Output plain text only.",
+      regular: "You are an expert at humanizing AI text. PRIMARY GOAL: Preserve the exact line breaks, paragraph spacing, and text structure from the original. SECONDARY GOAL: Make subtle improvements to sound naturally human. If the text already sounds human and natural, you may keep most of it unchanged - just ensure it flows well. CRITICAL: Do not merge separate paragraphs. Do not merge separate lines. Keep each line break exactly where it is. Do not use markdown formatting (no **, *, _, ~~). Output plain text only.",
+      casual: "You are an expert at humanizing AI text with a casual tone. PRIMARY GOAL: Preserve the exact line breaks, paragraph spacing, and text structure from the original. SECONDARY GOAL: Make it informal and friendly. You MUST change word choices to sound more casual. CRITICAL: Do not merge separate paragraphs. Do not merge separate lines. Keep each line break exactly where it is. Do not use markdown formatting (no **, *, _, ~~). Output plain text only.",
       formal: "You are an expert at humanizing AI text with a formal tone. PRIMARY GOAL: Preserve the exact line breaks, paragraph spacing, and text structure from the original. SECONDARY GOAL: Make it professional and polished. CRITICAL: Do not merge separate paragraphs. Do not merge separate lines. Keep each line break exactly where it is. Do not use markdown formatting (no **, *, _, ~~). Output plain text only.",
       funny: "You are an expert at humanizing AI text with humor. PRIMARY GOAL: Preserve the exact line breaks, paragraph spacing, and text structure from the original. SECONDARY GOAL: Add appropriate humor. CRITICAL: Do not merge separate paragraphs. Do not merge separate lines. Keep each line break exactly where it is. Do not use markdown formatting (no **, *, _, ~~). Output plain text only.",
       sarcastic: "You are an expert at humanizing AI text with sarcasm. PRIMARY GOAL: Preserve the exact line breaks, paragraph spacing, and text structure from the original. SECONDARY GOAL: Add sarcasm and wit. CRITICAL: Do not merge separate paragraphs. Do not merge separate lines. Keep each line break exactly where it is. Do not use markdown formatting (no **, *, _, ~~). Output plain text only.",
@@ -127,12 +127,10 @@ serve(async (req) => {
       .replace(/\*/g, '')                    // Remove any remaining lone asterisks
       .replace(/_/g, '');                    // Remove any remaining lone underscores
 
-    // Normalize all dash-like separators to em dashes
+    // Strip any AI-generated em dashes or en dashes - keep only regular hyphens
     humanizedText = humanizedText
-      .replace(/--+/g, '—')                  // Double or longer hyphens -> em dash
-      .replace(/(\s)-(\s)/g, '$1—$2')        // Spaced hyphen -> em dash
-      .replace(/(\s)–(\s)/g, '$1—$2')        // Spaced en dash -> em dash
-      .replace(/\s*—\s*/g, ' — ');           // Normalize spacing around em dash
+      .replace(/\s*—\s*/g, ' - ')            // em dash -> regular hyphen
+      .replace(/\s*–\s*/g, ' - ');           // en dash -> regular hyphen
 
     // Update usage tracking and deduct from extra words if needed
     const wordsToDeductFromExtra = Math.max(0, (currentUsage + wordCount) - planLimit);
@@ -179,12 +177,26 @@ serve(async (req) => {
         word_count: wordCount
       });
 
+    // Calculate text similarity for regular tone
+    let editorNote = "";
+    if (tone === "regular") {
+      const originalWords = new Set(text.toLowerCase().split(/\s+/));
+      const humanizedWords = new Set(humanizedText.toLowerCase().split(/\s+/));
+      const intersection = new Set([...originalWords].filter(x => humanizedWords.has(x)));
+      const similarity = intersection.size / Math.max(originalWords.size, 1);
+      
+      if (similarity > 0.9) {
+        editorNote = "Your text already sounds quite natural! Only minor adjustments were made for flow.";
+      }
+    }
+
     return new Response(JSON.stringify({ 
       humanized_text: humanizedText,
       word_count: wordCount,
       remaining_words: Math.max(0, planLimit - (currentUsage + wordCount)),
       extra_words_remaining: newExtraWordsBalance,
-      total_remaining: Math.max(0, planLimit - (currentUsage + wordCount)) + newExtraWordsBalance
+      total_remaining: Math.max(0, planLimit - (currentUsage + wordCount)) + newExtraWordsBalance,
+      editor_note: editorNote || undefined
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

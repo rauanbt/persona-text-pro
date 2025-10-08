@@ -170,12 +170,12 @@ serve(async (req) => {
 
     // Tone-specific system prompts with structure preservation as PRIMARY goal
     const tonePrompts = {
-      regular: "PRIMARY GOAL: Preserve every line break, paragraph spacing, and text structure exactly. Do not merge separate lines or paragraphs. SECONDARY GOAL: Make it sound naturally human. CRITICAL: Keep each line break exactly where it is. Do not use markdown formatting (no **, *, _, ~~). Output plain text only.",
-      formal: "PRIMARY GOAL: Preserve every line break, paragraph spacing, and text structure exactly. Do not merge separate lines or paragraphs. SECONDARY GOAL: Make it formal and professional. CRITICAL: Keep each line break exactly where it is. Do not use markdown formatting (no **, *, _, ~~). Output plain text only.",
-      persuasive: "PRIMARY GOAL: Preserve every line break, paragraph spacing, and text structure exactly. Do not merge separate lines or paragraphs. SECONDARY GOAL: Make it persuasive and compelling. CRITICAL: Keep each line break exactly where it is. Do not use markdown formatting (no **, *, _, ~~). Output plain text only.",
-      empathetic: "PRIMARY GOAL: Preserve every line break, paragraph spacing, and text structure exactly. Do not merge separate lines or paragraphs. SECONDARY GOAL: Make it warm and empathetic. CRITICAL: Keep each line break exactly where it is. Do not use markdown formatting (no **, *, _, ~~). Output plain text only.",
-      sarcastic: "PRIMARY GOAL: Preserve every line break, paragraph spacing, and text structure exactly. Do not merge separate lines or paragraphs. SECONDARY GOAL: Add sarcasm and wit. CRITICAL: Keep each line break exactly where it is. Do not use markdown formatting (no **, *, _, ~~). Output plain text only.",
-      funny: "PRIMARY GOAL: Preserve every line break, paragraph spacing, and text structure exactly. Do not merge separate lines or paragraphs. SECONDARY GOAL: Add humor and entertainment. CRITICAL: Keep each line break exactly where it is. Do not use markdown formatting (no **, *, _, ~~). Output plain text only."
+      regular: "PRIMARY GOAL: Preserve every line break, paragraph spacing, and text structure exactly. Do not merge separate lines or paragraphs. SECONDARY GOAL: Make subtle improvements to sound naturally human. If the text already sounds human and natural, you may keep most of it unchanged - just ensure it flows well. CRITICAL: Keep each line break exactly where it is. Do not use markdown formatting (no **, *, _, ~~). Output plain text only.",
+      formal: "PRIMARY GOAL: Preserve every line break, paragraph spacing, and text structure exactly. Do not merge separate lines or paragraphs. SECONDARY GOAL: Transform the tone to formal and professional language. You MUST change word choices and phrasing to match the formal tone. CRITICAL: Keep each line break exactly where it is. Do not use markdown formatting (no **, *, _, ~~). Output plain text only.",
+      persuasive: "PRIMARY GOAL: Preserve every line break, paragraph spacing, and text structure exactly. Do not merge separate lines or paragraphs. SECONDARY GOAL: Rewrite to be persuasive and compelling. You MUST change word choices to be more convincing. CRITICAL: Keep each line break exactly where it is. Do not use markdown formatting (no **, *, _, ~~). Output plain text only.",
+      empathetic: "PRIMARY GOAL: Preserve every line break, paragraph spacing, and text structure exactly. Do not merge separate lines or paragraphs. SECONDARY GOAL: Add warmth and empathy where appropriate. If the text already sounds warm and natural, minimal changes are fine. CRITICAL: Keep each line break exactly where it is. Do not use markdown formatting (no **, *, _, ~~). Output plain text only.",
+      sarcastic: "PRIMARY GOAL: Preserve every line break, paragraph spacing, and text structure exactly. Do not merge separate lines or paragraphs. SECONDARY GOAL: Rewrite with sarcasm and wit while keeping the core message. You MUST change the wording to sound sarcastic. CRITICAL: Keep each line break exactly where it is. Do not use markdown formatting (no **, *, _, ~~). Output plain text only.",
+      funny: "PRIMARY GOAL: Preserve every line break, paragraph spacing, and text structure exactly. Do not merge separate lines or paragraphs. SECONDARY GOAL: Add humor and entertainment. You MUST change wording to make it funnier. CRITICAL: Keep each line break exactly where it is. Do not use markdown formatting (no **, *, _, ~~). Output plain text only."
     };
 
     const systemPrompt = tonePrompts[tone as keyof typeof tonePrompts] || tonePrompts.regular;
@@ -407,12 +407,10 @@ serve(async (req) => {
       .replace(/\*/g, '')                    // Remove any remaining lone asterisks
       .replace(/_/g, '');                    // Remove any remaining lone underscores
 
-    // Normalize all dash-like separators to em dashes
+    // Strip any AI-generated em dashes or en dashes - keep only regular hyphens
     finalText = finalText
-      .replace(/--+/g, '—')                  // Double or longer hyphens -> em dash
-      .replace(/(\s)-(\s)/g, '$1—$2')        // Spaced hyphen -> em dash
-      .replace(/(\s)–(\s)/g, '$1—$2')        // Spaced en dash -> em dash
-      .replace(/\s*—\s*/g, ' — ');           // Normalize spacing around em dash
+      .replace(/\s*—\s*/g, ' - ')            // em dash -> regular hyphen
+      .replace(/\s*–\s*/g, ' - ');           // en dash -> regular hyphen
 
     return await finalizeResponse(supabase, userData.user.id, text, finalText, tone, wordCount, currentMonth, usage, currentUsage, planLimit, extraWords, passesCompleted, enginesUsed);
 
@@ -486,6 +484,19 @@ async function finalizeResponse(
       word_count: wordCount
     });
 
+  // Calculate text similarity for regular/empathetic tones
+  let editorNote = "";
+  if (tone === "regular" || tone === "empathetic") {
+    const originalWords = new Set(originalText.toLowerCase().split(/\s+/));
+    const humanizedWords = new Set(humanizedText.toLowerCase().split(/\s+/));
+    const intersection = new Set([...originalWords].filter(x => humanizedWords.has(x)));
+    const similarity = intersection.size / Math.max(originalWords.size, 1);
+    
+    if (similarity > 0.9) {
+      editorNote = "Your text already sounds quite natural! Only minor adjustments were made for flow.";
+    }
+  }
+
   return new Response(JSON.stringify({ 
     humanized_text: humanizedText,
     word_count: wordCount,
@@ -493,7 +504,8 @@ async function finalizeResponse(
     extra_words_remaining: newExtraWordsBalance,
     total_remaining: Math.max(0, planLimit - (currentUsage + wordCount)) + newExtraWordsBalance,
     passes_completed: passesCompleted,
-    engine: enginesUsed
+    engine: enginesUsed,
+    editor_note: editorNote || undefined
   }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
