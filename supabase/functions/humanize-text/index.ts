@@ -127,8 +127,12 @@ serve(async (req) => {
       .replace(/\*/g, '')                    // Remove any remaining lone asterisks
       .replace(/_/g, '');                    // Remove any remaining lone underscores
 
-    // Replace long em dashes with regular dashes
-    humanizedText = humanizedText.replace(/—/g, '-');
+    // Normalize all dash-like separators to em dashes
+    humanizedText = humanizedText
+      .replace(/--+/g, '—')                  // Double or longer hyphens -> em dash
+      .replace(/(\s)-(\s)/g, '$1—$2')        // Spaced hyphen -> em dash
+      .replace(/(\s)–(\s)/g, '$1—$2')        // Spaced en dash -> em dash
+      .replace(/\s*—\s*/g, ' — ');           // Normalize spacing around em dash
 
     // Update usage tracking and deduct from extra words if needed
     const wordsToDeductFromExtra = Math.max(0, (currentUsage + wordCount) - planLimit);

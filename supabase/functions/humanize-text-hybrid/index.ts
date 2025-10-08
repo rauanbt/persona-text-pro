@@ -407,8 +407,12 @@ serve(async (req) => {
       .replace(/\*/g, '')                    // Remove any remaining lone asterisks
       .replace(/_/g, '');                    // Remove any remaining lone underscores
 
-    // Replace long em dashes with regular dashes
-    finalText = finalText.replace(/—/g, '-');
+    // Normalize all dash-like separators to em dashes
+    finalText = finalText
+      .replace(/--+/g, '—')                  // Double or longer hyphens -> em dash
+      .replace(/(\s)-(\s)/g, '$1—$2')        // Spaced hyphen -> em dash
+      .replace(/(\s)–(\s)/g, '$1—$2')        // Spaced en dash -> em dash
+      .replace(/\s*—\s*/g, ' — ');           // Normalize spacing around em dash
 
     return await finalizeResponse(supabase, userData.user.id, text, finalText, tone, wordCount, currentMonth, usage, currentUsage, planLimit, extraWords, passesCompleted, enginesUsed);
 
