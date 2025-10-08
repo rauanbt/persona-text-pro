@@ -45,8 +45,17 @@ const TermsOfService = () => {
                 <ul className="list-disc pl-6 space-y-1">
                   <li>Subscriptions are billed monthly or annually as selected</li>
                   <li>Usage limits reset at the beginning of each billing cycle</li>
-                  <li>Refunds may be provided at our discretion for unused services</li>
                   <li>We reserve the right to modify pricing with 30 days notice</li>
+                </ul>
+
+                <h3 className="text-xl font-semibold mb-3 mt-6">5.1 Cancellation & Refund Policy</h3>
+                <p>Our cancellation policy ensures transparency and fairness:</p>
+                <ul className="list-disc pl-6 space-y-1">
+                  <li><strong>Cancellation:</strong> You can cancel your subscription at any time through the Customer Portal or by contacting support</li>
+                  <li><strong>Access Continuation:</strong> Upon cancellation, you will retain full access to your plan features and word credits until the end of your current billing period (monthly or annual)</li>
+                  <li><strong>No Prorated Refunds:</strong> We do not provide prorated refunds for mid-cycle cancellations. Your subscription remains active until the period ends</li>
+                  <li><strong>Word Credits Expiration:</strong> Any unused word credits expire at the end of your billing period and do not carry over after cancellation</li>
+                  <li><strong>Reactivation:</strong> You may reactivate your subscription at any time, starting a new billing cycle with full benefits</li>
                 </ul>
 
                 <h2 className="text-2xl font-semibold mb-4 mt-8">6. Service Availability</h2>
