@@ -27,24 +27,36 @@ serve(async (req) => {
     const { priceId } = await req.json();
     if (!priceId) throw new Error("Price ID is required");
 
-    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", { 
-      apiVersion: "2025-08-27.basil" 
-    });
-    
-    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
-    let customerId;
-    if (customers.data.length > 0) {
-      customerId = customers.data[0].id;
+    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", { apiVersion: "2025-08-27.basil" });
+
+    // Prefer the saved stripe_customer_id from the profile
+    const { data: profile } = await supabaseClient
+      .from('profiles')
+      .select('stripe_customer_id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    let customerId = profile?.stripe_customer_id as string | null | undefined;
+
+    if (!customerId) {
+      const customers = await stripe.customers.list({ email: user.email, limit: 1 });
+      if (customers.data.length > 0) {
+        customerId = customers.data[0].id;
+        // Best-effort: persist it so future calls are stable
+        await supabaseClient.from('profiles').upsert({
+          user_id: user.id,
+          email: user.email,
+          stripe_customer_id: customerId,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'user_id' });
+      }
     }
 
     const session = await stripe.checkout.sessions.create({
-      customer: customerId,
+      customer: customerId || undefined,
       customer_email: customerId ? undefined : user.email,
       line_items: [
-        {
-          price: priceId,
-          quantity: 1,
-        },
+        { price: priceId, quantity: 1 },
       ],
       mode: "subscription",
       allow_promotion_codes: true,

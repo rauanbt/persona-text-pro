@@ -42,16 +42,44 @@ serve(async (req) => {
     logStep("User authenticated", { userId: user.id, email: user.email });
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
-    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
-    if (customers.data.length === 0) {
-      throw new Error("No Stripe customer found for this user");
+
+    // Prefer saved stripe_customer_id from profile
+    const { data: profile } = await supabaseClient
+      .from('profiles')
+      .select('stripe_customer_id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    let customerId = profile?.stripe_customer_id as string | null | undefined;
+
+    if (!customerId) {
+      // Try to find a customer with a valid subscription first
+      const customers = await stripe.customers.list({ email: user.email, limit: 100 });
+      logStep("Stripe customers fetched by email", { count: customers.data.length });
+      let chosen: string | null = null;
+      for (const c of customers.data) {
+        const subs = await stripe.subscriptions.list({ customer: c.id, limit: 10 });
+        const match = subs.data.find((s) => (
+          s.status === 'active' || s.status === 'trialing' || s.status === 'past_due'
+        ));
+        if (match) { chosen = c.id; break; }
+      }
+      customerId = chosen || customers.data[0]?.id;
+      if (!customerId) throw new Error("No Stripe customer found for this user");
+
+      // Persist for future stability
+      await supabaseClient.from('profiles').upsert({
+        user_id: user.id,
+        email: user.email,
+        stripe_customer_id: customerId,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id' });
+      logStep("Persisted stripe_customer_id on profile", { customerId });
     }
-    const customerId = customers.data[0].id;
-    logStep("Found Stripe customer", { customerId });
 
     const origin = req.headers.get("origin") || "http://localhost:3000";
     const portalSession = await stripe.billingPortal.sessions.create({
-      customer: customerId,
+      customer: customerId as string,
       return_url: `${origin}/dashboard`,
     });
     logStep("Customer portal session created", { sessionId: portalSession.id, url: portalSession.url });
