@@ -168,14 +168,14 @@ serve(async (req) => {
       });
     }
 
-    // Tone-specific system prompts with structure preservation as PRIMARY goal
+    // Tone-specific system prompts with language + structure preservation as PRIMARY goals
     const tonePrompts = {
-      regular: "PRIMARY GOAL: Preserve every line break, paragraph spacing, and text structure exactly. Do not merge separate lines or paragraphs. SECONDARY GOAL: Make subtle improvements to sound naturally human. If the text already sounds human and natural, you may keep most of it unchanged - just ensure it flows well. CRITICAL: Keep each line break exactly where it is. Do not use markdown formatting (no **, *, _, ~~). Output plain text only.",
-      formal: "PRIMARY GOAL: Preserve every line break, paragraph spacing, and text structure exactly. Do not merge separate lines or paragraphs. SECONDARY GOAL: Transform the tone to formal and professional language. You MUST change word choices and phrasing to match the formal tone. CRITICAL: Keep each line break exactly where it is. Do not use markdown formatting (no **, *, _, ~~). Output plain text only.",
-      persuasive: "PRIMARY GOAL: Preserve every line break, paragraph spacing, and text structure exactly. Do not merge separate lines or paragraphs. SECONDARY GOAL: Rewrite to be persuasive and compelling. You MUST change word choices to be more convincing. CRITICAL: Keep each line break exactly where it is. Do not use markdown formatting (no **, *, _, ~~). Output plain text only.",
-      empathetic: "PRIMARY GOAL: Preserve every line break, paragraph spacing, and text structure exactly. Do not merge separate lines or paragraphs. SECONDARY GOAL: Add warmth and empathy where appropriate. If the text already sounds warm and natural, minimal changes are fine. CRITICAL: Keep each line break exactly where it is. Do not use markdown formatting (no **, *, _, ~~). Output plain text only.",
-      sarcastic: "PRIMARY GOAL: Preserve every line break, paragraph spacing, and text structure exactly. Do not merge separate lines or paragraphs. SECONDARY GOAL: Rewrite with sarcasm and wit while keeping the core message. You MUST change the wording to sound sarcastic. CRITICAL: Keep each line break exactly where it is. Do not use markdown formatting (no **, *, _, ~~). Output plain text only.",
-      funny: "PRIMARY GOAL: Preserve every line break, paragraph spacing, and text structure exactly. Do not merge separate lines or paragraphs. SECONDARY GOAL: Add humor and entertainment. You MUST change wording to make it funnier. CRITICAL: Keep each line break exactly where it is. Do not use markdown formatting (no **, *, _, ~~). Output plain text only."
+      regular: "ABSOLUTELY CRITICAL RULES (MUST FOLLOW IN THIS ORDER):\n1. PRESERVE ORIGINAL LANGUAGE: If input is in Russian, output MUST be in Russian. If Spanish, output in Spanish. If French, output in French. DO NOT TRANSLATE to English or any other language.\n2. PRESERVE ALL LINE BREAKS: Each line break in input = line break in output. It is FORBIDDEN to merge separate lines into paragraphs. If input has 5 lines, output MUST have 5 lines.\n3. PRESERVE LIST FORMATTING: If input has numbered lists (1. 2. 3. or 1️⃣ 2️⃣ 3️⃣), keep the EXACT same structure with line breaks between items.\n\nONLY AFTER following the above 3 rules: Make subtle improvements to sound naturally human. If the text already sounds human and natural, you may keep most of it unchanged - just ensure it flows well. Do not use markdown formatting (no **, *, _, ~~). Output plain text only.",
+      formal: "ABSOLUTELY CRITICAL RULES (MUST FOLLOW IN THIS ORDER):\n1. PRESERVE ORIGINAL LANGUAGE: If input is in Russian, output MUST be in Russian. If Spanish, output in Spanish. If French, output in French. DO NOT TRANSLATE to English or any other language.\n2. PRESERVE ALL LINE BREAKS: Each line break in input = line break in output. It is FORBIDDEN to merge separate lines into paragraphs. If input has 5 lines, output MUST have 5 lines.\n3. PRESERVE LIST FORMATTING: If input has numbered lists (1. 2. 3. or 1️⃣ 2️⃣ 3️⃣), keep the EXACT same structure with line breaks between items.\n\nONLY AFTER following the above 3 rules: Transform the tone to formal and professional language. You MUST change word choices and phrasing to match the formal tone. Do not use markdown formatting (no **, *, _, ~~). Output plain text only.",
+      persuasive: "ABSOLUTELY CRITICAL RULES (MUST FOLLOW IN THIS ORDER):\n1. PRESERVE ORIGINAL LANGUAGE: If input is in Russian, output MUST be in Russian. If Spanish, output in Spanish. If French, output in French. DO NOT TRANSLATE to English or any other language.\n2. PRESERVE ALL LINE BREAKS: Each line break in input = line break in output. It is FORBIDDEN to merge separate lines into paragraphs. If input has 5 lines, output MUST have 5 lines.\n3. PRESERVE LIST FORMATTING: If input has numbered lists (1. 2. 3. or 1️⃣ 2️⃣ 3️⃣), keep the EXACT same structure with line breaks between items.\n\nONLY AFTER following the above 3 rules: Rewrite to be persuasive and compelling. You MUST change word choices to be more convincing. Do not use markdown formatting (no **, *, _, ~~). Output plain text only.",
+      empathetic: "ABSOLUTELY CRITICAL RULES (MUST FOLLOW IN THIS ORDER):\n1. PRESERVE ORIGINAL LANGUAGE: If input is in Russian, output MUST be in Russian. If Spanish, output in Spanish. If French, output in French. DO NOT TRANSLATE to English or any other language.\n2. PRESERVE ALL LINE BREAKS: Each line break in input = line break in output. It is FORBIDDEN to merge separate lines into paragraphs. If input has 5 lines, output MUST have 5 lines.\n3. PRESERVE LIST FORMATTING: If input has numbered lists (1. 2. 3. or 1️⃣ 2️⃣ 3️⃣), keep the EXACT same structure with line breaks between items.\n\nONLY AFTER following the above 3 rules: Add warmth and empathy where appropriate. If the text already sounds warm and natural, minimal changes are fine. Do not use markdown formatting (no **, *, _, ~~). Output plain text only.",
+      sarcastic: "ABSOLUTELY CRITICAL RULES (MUST FOLLOW IN THIS ORDER):\n1. PRESERVE ORIGINAL LANGUAGE: If input is in Russian, output MUST be in Russian. If Spanish, output in Spanish. If French, output in French. DO NOT TRANSLATE to English or any other language.\n2. PRESERVE ALL LINE BREAKS: Each line break in input = line break in output. It is FORBIDDEN to merge separate lines into paragraphs. If input has 5 lines, output MUST have 5 lines.\n3. PRESERVE LIST FORMATTING: If input has numbered lists (1. 2. 3. or 1️⃣ 2️⃣ 3️⃣), keep the EXACT same structure with line breaks between items.\n\nONLY AFTER following the above 3 rules: Rewrite with sarcasm and wit while keeping the core message. You MUST change the wording to sound sarcastic. Do not use markdown formatting (no **, *, _, ~~). Output plain text only.",
+      funny: "ABSOLUTELY CRITICAL RULES (MUST FOLLOW IN THIS ORDER):\n1. PRESERVE ORIGINAL LANGUAGE: If input is in Russian, output MUST be in Russian. If Spanish, output in Spanish. If French, output in French. DO NOT TRANSLATE to English or any other language.\n2. PRESERVE ALL LINE BREAKS: Each line break in input = line break in output. It is FORBIDDEN to merge separate lines into paragraphs. If input has 5 lines, output MUST have 5 lines.\n3. PRESERVE LIST FORMATTING: If input has numbered lists (1. 2. 3. or 1️⃣ 2️⃣ 3️⃣), keep the EXACT same structure with line breaks between items.\n\nONLY AFTER following the above 3 rules: Add humor and entertainment. You MUST change wording to make it funnier. Do not use markdown formatting (no **, *, _, ~~). Output plain text only."
     };
 
     const systemPrompt = tonePrompts[tone as keyof typeof tonePrompts] || tonePrompts.regular;
@@ -198,7 +198,7 @@ serve(async (req) => {
           model: 'google/gemini-2.5-flash',
           messages: [
             { role: 'system', content: systemPrompt },
-            { role: 'user', content: `CRITICAL: Keep every line break and paragraph exactly as shown. Do not merge lines:\n\n${text}` }
+            { role: 'user', content: `ABSOLUTELY CRITICAL:\n- Output in the SAME LANGUAGE as the input (do NOT translate)\n- Keep EVERY line break exactly where it appears\n- If there are numbered lists (1. 2. 3.), preserve that exact format\n- FORBIDDEN to merge separate lines into paragraphs\n\nInput text:\n${text}` }
           ],
         }),
       });
@@ -211,7 +211,11 @@ serve(async (req) => {
       finalText = geminiData.choices[0].message.content;
       passesCompleted = 1;
       enginesUsed = 'gemini';
-      console.log('[HYBRID-HUMANIZE] Free plan complete');
+      
+      // Verify structure preservation
+      const inputLineBreaks = (text.match(/\n/g) || []).length;
+      const outputLineBreaks = (finalText.match(/\n/g) || []).length;
+      console.log(`[HYBRID-HUMANIZE] Free plan complete - Line breaks: input=${inputLineBreaks}, output=${outputLineBreaks}`);
 
     } else if (userPlan === 'pro' || userPlan === 'wordsmith') {
       // WORDSMITH PLAN: Gemini + OpenAI (2 passes)
@@ -228,7 +232,7 @@ serve(async (req) => {
           model: 'google/gemini-2.5-flash',
           messages: [
             { role: 'system', content: systemPrompt },
-            { role: 'user', content: `CRITICAL: Keep every line break and paragraph exactly as shown. Do not merge lines:\n\n${text}` }
+            { role: 'user', content: `ABSOLUTELY CRITICAL:\n- Output in the SAME LANGUAGE as the input (do NOT translate)\n- Keep EVERY line break exactly where it appears\n- If there are numbered lists (1. 2. 3.), preserve that exact format\n- FORBIDDEN to merge separate lines into paragraphs\n\nInput text:\n${text}` }
           ],
         }),
       });
@@ -239,7 +243,11 @@ serve(async (req) => {
 
       const pass1Data = await pass1Response.json();
       const pass1Result = pass1Data.choices[0].message.content;
-      console.log('[HYBRID-HUMANIZE] Pass 1 (Gemini) complete');
+      
+      // Verify structure preservation after Pass 1
+      const inputLineBreaks = (text.match(/\n/g) || []).length;
+      const pass1LineBreaks = (pass1Result.match(/\n/g) || []).length;
+      console.log(`[HYBRID-HUMANIZE] Pass 1 (Gemini) complete - Line breaks: input=${inputLineBreaks}, output=${pass1LineBreaks}`);
 
       // Pass 2: OpenAI for structural refinement
       const pass2Response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -252,7 +260,7 @@ serve(async (req) => {
           model: 'gpt-4o-mini',
           messages: [
             { role: 'system', content: `${systemPrompt}\n\nRefine for accuracy and natural flow.` },
-            { role: 'user', content: `KEEP EVERY LINE BREAK EXACTLY AS SHOWN. Do not merge separate lines:\n\n${pass1Result}` }
+            { role: 'user', content: `ABSOLUTELY CRITICAL:\n- Output in the SAME LANGUAGE as the input (do NOT translate)\n- Keep EVERY line break exactly where it appears\n- If there are numbered lists, preserve that exact format\n- FORBIDDEN to merge separate lines into paragraphs\n\nInput text:\n${pass1Result}` }
           ],
           max_tokens: Math.min(Math.ceil(wordCount * 2), 4000),
           temperature: 0.8,
@@ -270,7 +278,10 @@ serve(async (req) => {
         finalText = pass2Data.choices[0].message.content;
         passesCompleted = 2;
         enginesUsed = 'gemini-openai';
-        console.log('[HYBRID-HUMANIZE] Pass 2 (OpenAI) complete');
+        
+        // Verify structure preservation after Pass 2
+        const pass2LineBreaks = (finalText.match(/\n/g) || []).length;
+        console.log(`[HYBRID-HUMANIZE] Pass 2 (OpenAI) complete - Line breaks: output=${pass2LineBreaks}`);
       }
 
     } else if (userPlan === 'ultra' || userPlan === 'master') {
@@ -288,7 +299,7 @@ serve(async (req) => {
           model: 'google/gemini-2.5-flash',
           messages: [
             { role: 'system', content: systemPrompt },
-            { role: 'user', content: `CRITICAL: Keep every line break and paragraph exactly as shown. Do not merge lines:\n\n${text}` }
+            { role: 'user', content: `ABSOLUTELY CRITICAL:\n- Output in the SAME LANGUAGE as the input (do NOT translate)\n- Keep EVERY line break exactly where it appears\n- If there are numbered lists (1. 2. 3.), preserve that exact format\n- FORBIDDEN to merge separate lines into paragraphs\n\nInput text:\n${text}` }
           ],
         }),
       });
@@ -299,7 +310,11 @@ serve(async (req) => {
 
       const pass1Data = await pass1Response.json();
       const pass1Result = pass1Data.choices[0].message.content;
-      console.log('[HYBRID-HUMANIZE] Pass 1 (Gemini) complete');
+      
+      // Verify structure preservation after Pass 1
+      const inputLineBreaks = (text.match(/\n/g) || []).length;
+      const pass1LineBreaks = (pass1Result.match(/\n/g) || []).length;
+      console.log(`[HYBRID-HUMANIZE] Pass 1 (Gemini) complete - Line breaks: input=${inputLineBreaks}, output=${pass1LineBreaks}`);
 
       // Pass 2: OpenAI for structural refinement
       const pass2Response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -312,7 +327,7 @@ serve(async (req) => {
           model: 'gpt-4o-mini',
           messages: [
             { role: 'system', content: `${systemPrompt}\n\nRefine for accuracy and clarity.` },
-            { role: 'user', content: `KEEP EVERY LINE BREAK EXACTLY AS SHOWN. Do not merge separate lines:\n\n${pass1Result}` }
+            { role: 'user', content: `ABSOLUTELY CRITICAL:\n- Output in the SAME LANGUAGE as the input (do NOT translate)\n- Keep EVERY line break exactly where it appears\n- If there are numbered lists, preserve that exact format\n- FORBIDDEN to merge separate lines into paragraphs\n\nInput text:\n${pass1Result}` }
           ],
           max_tokens: Math.min(Math.ceil(wordCount * 2), 4000),
           temperature: 0.8,
@@ -328,7 +343,10 @@ serve(async (req) => {
       } else {
         const pass2Data = await pass2Response.json();
         const pass2Result = pass2Data.choices[0].message.content;
-        console.log('[HYBRID-HUMANIZE] Pass 2 (OpenAI) complete');
+        
+        // Verify structure preservation after Pass 2
+        const pass2LineBreaks = (pass2Result.match(/\n/g) || []).length;
+        console.log(`[HYBRID-HUMANIZE] Pass 2 (OpenAI) complete - Line breaks: output=${pass2LineBreaks}`);
 
         // Pass 3: Claude for final tone mastery
         const pass3Response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -341,7 +359,7 @@ serve(async (req) => {
             model: 'anthropic/claude-sonnet-4-20250514',
             messages: [
               { role: 'system', content: `${systemPrompt}\n\nYou are the final polishing layer. Perfect the tone, add nuanced personality, and ensure authentic human voice.` },
-              { role: 'user', content: `KEEP EVERY LINE BREAK EXACTLY AS SHOWN. Do not merge separate lines:\n\n${pass2Result}` }
+              { role: 'user', content: `ABSOLUTELY CRITICAL:\n- Output in the SAME LANGUAGE as the input (do NOT translate)\n- Keep EVERY line break exactly where it appears\n- If there are numbered lists, preserve that exact format\n- FORBIDDEN to merge separate lines into paragraphs\n\nInput text:\n${pass2Result}` }
             ],
           }),
         });
@@ -357,7 +375,10 @@ serve(async (req) => {
           finalText = pass3Data.choices[0].message.content;
           passesCompleted = 3;
           enginesUsed = 'gemini-openai-claude';
-          console.log('[HYBRID-HUMANIZE] Pass 3 (Claude) complete');
+          
+          // Verify structure preservation after Pass 3
+          const pass3LineBreaks = (finalText.match(/\n/g) || []).length;
+          console.log(`[HYBRID-HUMANIZE] Pass 3 (Claude) complete - Line breaks: output=${pass3LineBreaks}`);
         }
       }
     }
@@ -381,8 +402,8 @@ serve(async (req) => {
           body: JSON.stringify({
             model: 'google/gemini-2.5-flash',
             messages: [
-              { role: 'system', content: 'Condense to target word count while preserving ALL line breaks and paragraph structure exactly. Do not merge separate lines. Output plain text with no markdown.' },
-              { role: 'user', content: `Condense to ~${wordCount} words. KEEP EVERY LINE BREAK EXACTLY AS SHOWN:\n\n${finalText}` }
+              { role: 'system', content: 'Condense to target word count while preserving ALL line breaks and paragraph structure exactly. Do not merge separate lines. Output in the SAME LANGUAGE as input (do NOT translate). Output plain text with no markdown.' },
+              { role: 'user', content: `ABSOLUTELY CRITICAL:\n- Output in SAME LANGUAGE as input (do NOT translate)\n- KEEP EVERY LINE BREAK EXACTLY AS SHOWN\n- Condense to ~${wordCount} words\n\nInput text:\n${finalText}` }
             ],
           }),
         });
