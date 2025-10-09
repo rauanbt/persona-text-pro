@@ -2,8 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, ShieldCheck } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Check } from "lucide-react";
 
 export const Pricing = () => {
   const [isAnnual, setIsAnnual] = useState(false);
@@ -142,21 +141,11 @@ export const Pricing = () => {
                 </Badge>
               )}
               {!plan.isFree && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Badge className="absolute top-4 right-4 bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 cursor-help">
-                        <ShieldCheck className="w-3 h-3 mr-1" />
-                        3-Day Guarantee
-                      </Badge>
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-xs">
-                      <p className="text-sm">
-                        Try risk-free! Request a full refund within 3 days of purchase - no questions asked.
-                      </p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <div className="absolute top-4 right-4">
+                  <p className="text-xs text-muted-foreground">
+                    All sales final
+                  </p>
+                </div>
               )}
               <CardHeader className="text-center pb-4">
                 <CardTitle className="text-xl font-bold">{plan.name}</CardTitle>

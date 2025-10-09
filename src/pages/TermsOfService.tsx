@@ -48,28 +48,34 @@ const TermsOfService = () => {
                   <li>We reserve the right to modify pricing with 30 days notice</li>
                 </ul>
 
-                <h3 className="text-xl font-semibold mb-3 mt-6">5.1 Refund & Cancellation Policy</h3>
-                
-                <h4 className="text-lg font-semibold mb-2 mt-4">3-Day Money-Back Guarantee</h4>
-                <p>We offer a 3-day satisfaction guarantee for all subscription purchases:</p>
+                <h3 className="text-xl font-semibold mb-3 mt-6">5.1 No Refunds Policy</h3>
+                <p className="mb-3">
+                  <strong>All subscription purchases are final and non-refundable.</strong> Due to the nature of our AI-powered humanization service, 
+                  we incur immediate computational and server costs when processing your content. These costs cannot be recovered, which is why we 
+                  cannot offer refunds once a subscription is activated.
+                </p>
+                <p className="mb-3">
+                  <strong>Free Trial:</strong> Before purchasing, we strongly encourage you to test our platform using the complimentary 1,500-word trial. 
+                  This allows you to fully experience our service quality and ensure it meets your needs before making a financial commitment.
+                </p>
+
+                <h3 className="text-xl font-semibold mb-3 mt-6">5.2 Cancellation Policy</h3>
                 <ul className="list-disc pl-6 space-y-1">
-                  <li><strong>Eligibility:</strong> You may request a full refund within 72 hours (3 days) of your initial purchase date</li>
-                  <li><strong>Coverage:</strong> This applies to both monthly and annual subscriptions</li>
-                  <li><strong>No Questions Asked:</strong> Simply contact support through our contact form to process your refund</li>
-                  <li><strong>Processing Time:</strong> Refunds are processed within 5-7 business days to your original payment method</li>
-                  <li><strong>One-Time Guarantee:</strong> The 3-day money-back guarantee is available for your first purchase only</li>
+                  <li>You may cancel your subscription at any time via the Stripe Customer Portal</li>
+                  <li>No cancellation fees apply</li>
+                  <li>Upon cancellation, you retain full access until your current billing period ends</li>
+                  <li>Monthly plans: Access continues until month-end</li>
+                  <li>Annual plans: Access continues for the full 12-month period</li>
+                  <li>Unused word credits expire at period end and do not carry over</li>
+                  <li>You may reactivate your subscription at any time</li>
                 </ul>
 
-                <h4 className="text-lg font-semibold mb-2 mt-4">Standard Cancellation Policy (After 3 Days)</h4>
-                <p>After the 3-day refund window, the following cancellation policy applies:</p>
+                <h3 className="text-xl font-semibold mb-3 mt-6">5.3 Subscription Abuse Prevention</h3>
+                <p className="mb-2">We reserve the right to suspend or terminate accounts that demonstrate patterns of abuse, including but not limited to:</p>
                 <ul className="list-disc pl-6 space-y-1">
-                  <li><strong>Cancellation:</strong> You may cancel your subscription at any time via the Stripe Customer Portal or by contacting support</li>
-                  <li><strong>No Refunds:</strong> Cancellations after the 3-day window are not eligible for refunds or prorated credits</li>
-                  <li><strong>Access Continuation:</strong> Upon cancellation, you retain full access to all features until your current billing period ends</li>
-                  <li><strong>Monthly Plans:</strong> Access continues until the end of the month</li>
-                  <li><strong>Annual Plans:</strong> Access continues for the full 12-month period</li>
-                  <li><strong>Word Credits Expiration:</strong> Unused word credits expire at the end of your billing period and do not carry over</li>
-                  <li><strong>Reactivation:</strong> You may reactivate your subscription at any time, starting a new billing cycle</li>
+                  <li>Creating multiple accounts to exploit free trial offerings</li>
+                  <li>Excessive refund requests or chargebacks</li>
+                  <li>Violating our acceptable use policy</li>
                 </ul>
 
                 <h2 className="text-2xl font-semibold mb-4 mt-8">6. Service Availability</h2>

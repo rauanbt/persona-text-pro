@@ -594,13 +594,8 @@ const Dashboard = () => {
                         Manage Subscription
                       </Button>
                       <div className="mt-3 p-3 bg-muted/50 rounded-md border">
-                        <p className="text-xs text-muted-foreground mb-2">
-                          <strong className="text-foreground">3-Day Money-Back Guarantee:</strong> Request a full refund within 3 days of purchase - no questions asked. 
-                          Contact support through our <a href="/contact" className="text-primary hover:underline">submission form</a>.
-                        </p>
                         <p className="text-xs text-muted-foreground">
-                          <strong className="text-foreground">After 3 Days:</strong> You can cancel anytime and keep full access until your billing period ends. 
-                          No prorated refunds for cancellations after the 3-day window.
+                          <strong className="text-foreground">Cancellation:</strong> Cancel anytime and keep full access until your billing period ends. All subscriptions are non-refundable due to immediate AI processing costs.
                         </p>
                       </div>
                     </>
