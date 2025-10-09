@@ -62,7 +62,7 @@ serve(async (req) => {
       logStep("Stripe customers fetched by email", { count: customers.data.length });
       for (const c of customers.data) {
         const subs = await stripe.subscriptions.list({ customer: c.id, limit: 10 });
-        const match = subs.data.find((s) => (
+        const match = subs.data.find((s: any) => (
           s.status === 'active' || s.status === 'trialing' || s.status === 'past_due'
         ));
         if (match) {
@@ -107,8 +107,8 @@ serve(async (req) => {
     }
 
     // Fetch subscriptions for the resolved customer id
-    const subscriptions = await stripe.subscriptions.list({ customer: customerId, limit: 10 });
-    const validSubscriptions = subscriptions.data.filter((sub: Stripe.Subscription) => (
+    const subscriptions = await stripe.subscriptions.list({ customer: customerId as string, limit: 10 });
+    const validSubscriptions = subscriptions.data.filter((sub: any) => (
       sub.status === 'active' || sub.status === 'trialing' || sub.status === 'past_due'
     ));
 

@@ -59,7 +59,7 @@ serve(async (req) => {
       let chosen: string | null = null;
       for (const c of customers.data) {
         const subs = await stripe.subscriptions.list({ customer: c.id, limit: 10 });
-        const match = subs.data.find((s) => (
+        const match = subs.data.find((s: any) => (
           s.status === 'active' || s.status === 'trialing' || s.status === 'past_due'
         ));
         if (match) { chosen = c.id; break; }
