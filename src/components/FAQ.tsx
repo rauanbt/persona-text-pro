@@ -17,11 +17,15 @@ export const FAQ = () => {
     },
     {
       question: "How much does SapienWrite cost?",
-      answer: "We offer a free plan with 1,500 words per month (250 words per request). Our Wordsmith plan is $24.95/month (or $14.97/month annually) for 15,000 words, and Master is $54.95/month (or $32.97/month annually) for 30,000 words. Annual plans save you 40% - Wordsmith at $179.64/year and Master at $395.64/year."
+      answer: "We offer a free plan with 750 words per month (250 words per request). Our Extension-Only plan is $12.95/month for 5,000 words (Chrome Extension access only). Our Wordsmith plan is $24.95/month (or $14.97/month annually) for 15,000 words, and Master is $54.95/month (or $32.97/month annually) for 30,000 words with Chrome Extension included. Annual plans save you 40% - Wordsmith at $179.64/year and Master at $395.64/year."
     },
     {
       question: "What are the different tone options?",
       answer: "We offer 6 distinct tones: Regular (professional and natural), Casual (relaxed and conversational), Formal (structured and polished), Funny (light-hearted and humorous), Sarcastic (witty and sharp), and Smart (sophisticated and intellectual). Each tone maintains the humanization while adding personality to your content."
+    },
+    {
+      question: "Is there a Chrome extension?",
+      answer: "Yes! The SapienWrite Chrome Extension is available in two ways: (1) Included FREE with our Master plan ($54.95/month), or (2) Available as a standalone Extension-Only subscription for $12.95/month with 5,000 words. The extension lets you humanize text anywhere on the web with a simple right-click."
     },
     {
       question: "What languages does SapienWrite support?",
@@ -29,7 +33,7 @@ export const FAQ = () => {
     },
     {
       question: "I want to humanize a long essay. Is it possible?",
-      answer: "Yes! Depending on your plan, you can process from 1,500 words per month (free) to 30,000 words per month (Master). For longer documents, you can process them in chunks or upgrade to a higher plan. You can also purchase extra word packages (5,000 for $12.99, 10,000 for $22.99, or 25,000 for $49.99) that never expire."
+      answer: "Yes! Depending on your plan, you can process from 750 words per month (free) to 30,000 words per month (Master). For longer documents, you can process them in chunks or upgrade to a higher plan. You can also purchase extra word packages (5,000 for $12.99, 10,000 for $22.99, or 25,000 for $49.99) that never expire."
     },
     {
       question: "Can I see my previous humanizations?",
@@ -37,7 +41,7 @@ export const FAQ = () => {
     },
     {
       question: "What is your refund policy?",
-      answer: "All sales are final. Due to the nature of AI-powered services and the immediate computational costs involved, we do not offer refunds on paid subscriptions. We encourage you to fully test our platform using the free 1,500-word trial before upgrading."
+      answer: "All sales are final. Due to the nature of AI-powered services and the immediate computational costs involved, we do not offer refunds on paid subscriptions. We encourage you to fully test our platform using the free 750-word trial before upgrading."
     },
     {
       question: "How do I cancel my subscription?",

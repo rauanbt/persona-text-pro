@@ -104,7 +104,7 @@ export const SapienWriteDifference = () => {
           </h3>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Your content will sound authentically human, bypass all AI detectors, and preserve your original meaning. 
-            <strong className="text-foreground"> Try our free 1,500-word trial to experience the quality before upgrading.</strong>
+            <strong className="text-foreground"> Try our free 750-word trial to experience the quality before upgrading.</strong>
           </p>
         </div>
       </div>

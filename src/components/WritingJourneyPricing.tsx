@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, Star, Crown, Zap } from "lucide-react";
+import { Check, Star, Crown, Zap, Chrome } from "lucide-react";
 
 export const WritingJourneyPricing = () => {
   const [isAnnual, setIsAnnual] = useState(false);
@@ -21,7 +21,7 @@ export const WritingJourneyPricing = () => {
       description: "Discover the power of human-like AI writing",
       icon: <Star className="w-8 h-8 text-amber-500" />,
       features: [
-        "1,500 words per month",
+        "750 words per month",
         "250 words per request",
         "All 6 tone personalities",
         "Basic AI humanization (Gemini engine)",
@@ -57,6 +57,28 @@ export const WritingJourneyPricing = () => {
       borderColor: "border-blue-200 dark:border-blue-800"
     },
     {
+      name: "Extension-Only",
+      subtitle: "Browser convenience",
+      monthlyPrice: "$12.95",
+      annualPrice: "$12.95",
+      period: "per month",
+      description: "Humanize text anywhere on the web",
+      icon: <Chrome className="w-8 h-8 text-green-500" />,
+      features: [
+        "5,000 words per month",
+        "Chrome Extension access only",
+        "All 6 tone personalities",
+        "Advanced dual-engine humanization (Gemini + OpenAI)",
+        "No web platform access"
+      ],
+      buttonText: "Get Extension",
+      popular: false,
+      isFree: false,
+      monthlyPriceId: "price_1SGNtsH8HT0u8xphEd7pG9Po",
+      bgGradient: "from-green-50/50 to-emerald-50/50 dark:from-green-950/20 dark:to-emerald-950/20",
+      borderColor: "border-green-200 dark:border-green-800"
+    },
+    {
       name: "Master",
       subtitle: "For content powerhouses",
       monthlyPrice: "$54.95",
@@ -69,7 +91,8 @@ export const WritingJourneyPricing = () => {
         "3,000 words per request",
         "All 6 tone personalities",
         "Premium triple-engine humanization (Gemini + OpenAI + Claude)",
-        "50+ languages supported"
+        "50+ languages supported",
+        "✅ Chrome Extension Included FREE"
       ],
       buttonText: "Become a Master",
       popular: false,

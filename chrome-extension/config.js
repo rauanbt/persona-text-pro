@@ -1,0 +1,17 @@
+// Supabase Configuration
+const SUPABASE_URL = "https://nycrxoppbsakpkkeiqzb.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55Y3J4b3BwYnNha3Bra2VpcXpiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg4Nzc2NDMsImV4cCI6MjA3NDQ1MzY0M30.On7TSxxCpJT868Kygk1PgfUACyPodjx78G5lKxejt74";
+
+// Dashboard URLs
+const DASHBOARD_URL = "https://sapienwrite.com/dashboard";
+const LOGIN_URL = "https://sapienwrite.com/auth";
+
+// Plan limits
+const PLAN_LIMITS = {
+  free: 750,
+  pro: 15000,
+  ultra: 30000,
+  extension_only: 5000,
+  wordsmith: 15000,
+  master: 30000
+};

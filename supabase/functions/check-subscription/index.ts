@@ -115,7 +115,7 @@ serve(async (req) => {
     const hasActiveSub = validSubscriptions.length > 0;
     let productId: string | null = null;
     let subscriptionEnd: string | null = null;
-    let plan: 'free' | 'pro' | 'ultra' = 'free';
+    let plan: 'free' | 'pro' | 'ultra' | 'extension_only' = 'free';
 
     if (hasActiveSub) {
       const subscription = validSubscriptions[0];
@@ -156,8 +156,16 @@ serve(async (req) => {
         'prod_T8xfxAmZCZ7NYv',
         'prod_T8y8LHh8jAESaK',
       ];
+      const extensionOnlyPriceIds = [
+        'price_1SGNtsH8HT0u8xphEd7pG9Po',
+      ];
+      const extensionOnlyProductIds = [
+        'prod_TCnUcR4OTstj6q',
+      ];
 
-      if (proPriceIds.includes(priceId) || proProductIds.includes(productId)) {
+      if (extensionOnlyPriceIds.includes(priceId) || extensionOnlyProductIds.includes(productId)) {
+        plan = 'extension_only';
+      } else if (proPriceIds.includes(priceId) || proProductIds.includes(productId)) {
         plan = 'pro';
       } else if (ultraPriceIds.includes(priceId) || ultraProductIds.includes(productId)) {
         plan = 'ultra';
@@ -169,7 +177,7 @@ serve(async (req) => {
       logStep("Determined subscription tier", { priceId, productId, plan });
 
       // Reset monthly usage if this is an upgrade
-      const hierarchy = { free: 0, pro: 1, ultra: 2 } as const;
+      const hierarchy = { free: 0, extension_only: 1, pro: 2, ultra: 3 } as const;
       const isUpgrade = hierarchy[plan] > hierarchy[(oldPlan as keyof typeof hierarchy) ?? 'free'];
       if (isUpgrade) {
         logStep("Plan upgrade detected, resetting word count", { oldPlan, newPlan: plan });

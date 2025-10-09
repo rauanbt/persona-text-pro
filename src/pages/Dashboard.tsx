@@ -15,9 +15,10 @@ import { AIDetectionResults } from '@/components/AIDetectionResults';
 import { Loader2, Copy, Download, ExternalLink, Crown, Zap, Plus, Brain, Shield } from 'lucide-react';
 
 const PLAN_LIMITS = {
-  free: 1500,
+  free: 750,
   pro: 15000,
-  ultra: 30000
+  ultra: 30000,
+  extension_only: 5000
 };
 
 const PLAN_PRICES = {
@@ -28,6 +29,9 @@ const PLAN_PRICES = {
   ultra: { 
     monthly: { price: 54.95, priceId: 'price_1SD81xH8HT0u8xphuqiq8xet' },
     annual: { price: 38.47, priceId: 'price_1SD828H8HT0u8xphUaDaMTDV', yearlyPrice: 461.64 }
+  },
+  extension_only: {
+    monthly: { price: 12.95, priceId: 'price_1SGNtsH8HT0u8xphEd7pG9Po' }
   }
 };
 

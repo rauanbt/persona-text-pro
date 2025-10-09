@@ -14,9 +14,10 @@ const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
 // Word limits per plan
 const PLAN_LIMITS = {
-  free: 1500,
+  free: 750,
   wordsmith: 15000,
   master: 30000,
+  extension_only: 5000,
   pro: 15000, // legacy
   ultra: 30000 // legacy
 };
