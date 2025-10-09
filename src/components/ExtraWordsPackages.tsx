@@ -8,28 +8,28 @@ import { Sparkles, Package, Zap } from 'lucide-react';
 
 const WORD_PACKAGES = [
   {
-    id: 'price_1SD82KH8HT0u8xphXJbo7pPd',
+    id: 'price_1SGMdHH8HT0u8xphUzFMp76X',
     name: '5,000 Extra Words',
     words: 5000,
-    price: '$12.99',
+    price: '$8.99',
     description: 'Perfect for small projects',
     icon: Package,
     popular: false
   },
   {
-    id: 'price_1SD82WH8HT0u8xphP7eGLpUi',
+    id: 'price_1SGMdfH8HT0u8xphHTN0OW9z',
     name: '10,000 Extra Words',
     words: 10000,
-    price: '$22.99',
+    price: '$16.99',
     description: 'Great value for regular users',
     icon: Sparkles,
     popular: true
   },
   {
-    id: 'price_1SD82iH8HT0u8xphiQxkr7rG',
+    id: 'price_1SGMe7H8HT0u8xphkppIAPEh',
     name: '25,000 Extra Words',
     words: 25000,
-    price: '$49.99',
+    price: '$41.99',
     description: 'Best for heavy users',
     icon: Zap,
     popular: false

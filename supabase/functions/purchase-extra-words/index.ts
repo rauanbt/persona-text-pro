@@ -7,11 +7,11 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Word packages mapping
+// Word packages mapping - Fair pricing matching subscription rates
 const WORD_PACKAGES = {
-  'price_1SBtTmH8HT0u8xphU5GJdqWx': { words: 5000, product: 'prod_T89ncgVFrjrNpw' },
-  'price_1SBtTzH8HT0u8xphnmDKFThW': { words: 10000, product: 'prod_T89nBIgYrVyrH6' },
-  'price_1SBtUhH8HT0u8xph7PlBMQQ2': { words: 25000, product: 'prod_T89o5p42i30Z0D' }
+  'price_1SGMdHH8HT0u8xphUzFMp76X': { words: 5000, product: 'prod_TCmBoml8yJhyVw' },
+  'price_1SGMdfH8HT0u8xphHTN0OW9z': { words: 10000, product: 'prod_TCmCV3WdukTux9' },
+  'price_1SGMe7H8HT0u8xphkppIAPEh': { words: 25000, product: 'prod_TCmCWyhsstQAjc' }
 };
 
 serve(async (req) => {
