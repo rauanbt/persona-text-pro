@@ -17,7 +17,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
   signInWithGoogle: () => Promise<{ error: any }>;
   signOut: () => Promise<void>;
-  checkSubscription: () => Promise<void>;
+  checkSubscription: (overrideSession?: Session | null) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -45,17 +45,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   });
   const [loading, setLoading] = useState(true);
 
-  const checkSubscription = async () => {
-    if (!session?.user) return;
+  const checkSubscription = async (overrideSession?: Session | null) => {
+    // Resolve the active session: use override or fetch fresh
+    let activeSession = overrideSession !== undefined ? overrideSession : session;
+    
+    if (!activeSession) {
+      const { data: { session: freshSession } } = await supabase.auth.getSession();
+      activeSession = freshSession;
+    }
+
+    if (!activeSession?.user) {
+      console.log('[AuthContext] No active session, skipping subscription check');
+      return;
+    }
 
     try {
-      console.log('[AuthContext] Checking subscription for user:', session.user.id);
+      console.log('[AuthContext] Checking subscription for user:', activeSession.user.id);
+      console.log('[AuthContext] Using session token:', activeSession.access_token ? 'Present' : 'Missing');
 
       // 1) Prime from DB so UI shows the best-known plan immediately
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('current_plan')
-        .eq('user_id', session.user.id)
+        .eq('user_id', activeSession.user.id)
         .maybeSingle();
 
       if (profileError) {
@@ -63,6 +75,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       if (profileData?.current_plan) {
+        console.log('[AuthContext] Primed plan from DB:', profileData.current_plan);
         setSubscriptionData((prev) => ({
           ...prev,
           plan: profileData.current_plan || 'free',
@@ -72,13 +85,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // 2) Then sync with Stripe via Edge Function
       const { data, error } = await supabase.functions.invoke('check-subscription', {
         headers: {
-          Authorization: `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${activeSession.access_token}`,
         },
       });
 
       if (error) throw error;
 
       console.log('[AuthContext] Subscription check result:', data);
+      console.log('[AuthContext] Final plan set to:', data?.plan || profileData?.current_plan || 'free');
 
       setSubscriptionData({
         subscribed: Boolean(data?.subscribed),
@@ -93,7 +107,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const { data: profileData } = await supabase
           .from('profiles')
           .select('current_plan')
-          .eq('user_id', session.user.id)
+          .eq('user_id', activeSession.user.id)
           .maybeSingle();
 
         if (profileData?.current_plan) {
@@ -116,11 +130,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setSession(sess);
       setUser(sess?.user ?? null);
 
-      // After auth changes, defer async work and end loading only after first check completes
+      // After auth changes, check subscription immediately with the session
       if (sess?.user) {
-        setTimeout(() => {
-          checkSubscription().finally(() => setLoading(false));
-        }, 0);
+        checkSubscription(sess).finally(() => setLoading(false));
       } else {
         setSubscriptionData({
           subscribed: false,
@@ -138,9 +150,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(currentSession?.user ?? null);
 
       if (currentSession?.user) {
-        setTimeout(() => {
-          checkSubscription().finally(() => setLoading(false));
-        }, 0);
+        checkSubscription(currentSession).finally(() => setLoading(false));
       } else {
         setLoading(false);
       }
@@ -154,7 +164,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (!session) return;
 
     const interval = setInterval(() => {
-      checkSubscription();
+      checkSubscription(session);
     }, 30000);
 
     return () => clearInterval(interval);
