@@ -37,7 +37,7 @@ export const FAQ = () => {
     },
     {
       question: "What is your refund policy?",
-      answer: "We offer a 3-day money-back guarantee. You can request a full refund within 72 hours (3 days) of your initial purchase for any reason—no questions asked. Simply contact support at contact@sapienwrite.com. After the 3-day window, cancellations are allowed but are not eligible for refunds. You'll retain full access until your billing period ends."
+      answer: "We offer a 3-day money-back guarantee. You can request a full refund within 72 hours (3 days) of your initial purchase for any reason - no questions asked. Simply contact support through our submission form. After the 3-day window, cancellations are allowed but are not eligible for refunds. You'll retain full access until your billing period ends."
     },
     {
       question: "How do I cancel my subscription?",

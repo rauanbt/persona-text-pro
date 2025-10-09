@@ -152,7 +152,7 @@ export const Pricing = () => {
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs">
                       <p className="text-sm">
-                        Try risk-free! Request a full refund within 3 days of purchase—no questions asked.
+                        Try risk-free! Request a full refund within 3 days of purchase - no questions asked.
                       </p>
                     </TooltipContent>
                   </Tooltip>

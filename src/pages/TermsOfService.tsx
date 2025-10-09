@@ -55,7 +55,7 @@ const TermsOfService = () => {
                 <ul className="list-disc pl-6 space-y-1">
                   <li><strong>Eligibility:</strong> You may request a full refund within 72 hours (3 days) of your initial purchase date</li>
                   <li><strong>Coverage:</strong> This applies to both monthly and annual subscriptions</li>
-                  <li><strong>No Questions Asked:</strong> Simply contact support at contact@sapienwrite.com to process your refund</li>
+                  <li><strong>No Questions Asked:</strong> Simply contact support through our contact form to process your refund</li>
                   <li><strong>Processing Time:</strong> Refunds are processed within 5-7 business days to your original payment method</li>
                   <li><strong>One-Time Guarantee:</strong> The 3-day money-back guarantee is available for your first purchase only</li>
                 </ul>
