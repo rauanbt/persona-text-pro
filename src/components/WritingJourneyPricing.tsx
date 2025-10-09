@@ -158,7 +158,7 @@ export const WritingJourneyPricing = () => {
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
           {journeys.map((journey, index) => (
             <Card key={index} className={`relative overflow-hidden transition-all duration-300 hover:shadow-2xl ${journey.popular ? 'scale-105 shadow-xl' : 'hover:scale-102'} bg-gradient-to-br ${journey.bgGradient} border-2 ${journey.borderColor} flex flex-col h-full`}>
               {journey.popular && (

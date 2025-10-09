@@ -64,9 +64,12 @@ export const Header = () => {
           >
             Pricing
           </span>
-          <button className="text-muted-foreground hover:text-foreground transition-colors cursor-not-allowed opacity-60">
+          <span 
+            className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            onClick={() => navigate('/chrome-extension')}
+          >
             Chrome Extension
-          </button>
+          </span>
         </nav>
 
         <div className="flex items-center space-x-3">
