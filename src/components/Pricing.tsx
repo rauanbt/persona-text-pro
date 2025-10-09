@@ -33,7 +33,7 @@ export const Pricing = () => {
     {
       name: "Pro",
       monthlyPrice: "$27.98",
-      annualPrice: "$13.99",
+      annualPrice: "$16.79",
       period: isAnnual ? "per month (billed annually)" : "per month",
       description: "Perfect for professionals and content creators",
       features: [
@@ -49,12 +49,12 @@ export const Pricing = () => {
       popular: true,
       isFree: false,
       monthlyPriceId: "price_1SCfkBH8HT0u8xpho4UsDBf8",
-      annualPriceId: "price_1SCgBNH8HT0u8xphoiFMa331"
+      annualPriceId: "price_1SGMoHH8HT0u8xphAjovqefe"
     },
     {
       name: "Ultra",
       monthlyPrice: "$57.98",
-      annualPrice: "$28.99",
+      annualPrice: "$34.79",
       period: isAnnual ? "per month (billed annually)" : "per month",
       description: "For teams and heavy users",
       features: [
@@ -70,7 +70,7 @@ export const Pricing = () => {
       popular: false,
       isFree: false,
       monthlyPriceId: "price_1SCfkUH8HT0u8xphj7aOiKux",
-      annualPriceId: "price_1SCgCCH8HT0u8xphO8rBX20v"
+      annualPriceId: "price_1SGMqDH8HT0u8xphDw6HRQz6"
     }
   ];
 
@@ -121,7 +121,7 @@ export const Pricing = () => {
             </span>
             {isAnnual && (
               <Badge className="bg-success text-success-foreground ml-2">
-                Save 30%
+                Save 40%
               </Badge>
             )}
           </div>

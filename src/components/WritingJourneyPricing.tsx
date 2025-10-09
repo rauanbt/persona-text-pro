@@ -37,7 +37,7 @@ export const WritingJourneyPricing = () => {
       name: "Wordsmith",
       subtitle: "For professional creators",
       monthlyPrice: "$24.95",
-      annualPrice: "$17.47",
+      annualPrice: "$14.97",
       period: isAnnual ? "per month (billed annually)" : "per month",
       description: "Elevate your content with advanced writing intelligence",
       icon: <Zap className="w-8 h-8 text-blue-500" />,
@@ -52,7 +52,7 @@ export const WritingJourneyPricing = () => {
       popular: true,
       isFree: false,
       monthlyPriceId: "price_1SD818H8HT0u8xph48V9GxXG",
-      annualPriceId: "price_1SD81lH8HT0u8xph8dYBxkqi",
+      annualPriceId: "price_1SGMnjH8HT0u8xphJXTgm1Ii",
       bgGradient: "from-blue-50/50 to-indigo-50/50 dark:from-blue-950/20 dark:to-indigo-950/20",
       borderColor: "border-blue-200 dark:border-blue-800"
     },
@@ -60,7 +60,7 @@ export const WritingJourneyPricing = () => {
       name: "Master",
       subtitle: "For content powerhouses",
       monthlyPrice: "$54.95",
-      annualPrice: "$38.47",
+      annualPrice: "$32.97",
       period: isAnnual ? "per month (billed annually)" : "per month",
       description: "Unlimited creativity with our most advanced tools",
       icon: <Crown className="w-8 h-8 text-purple-500" />,
@@ -75,7 +75,7 @@ export const WritingJourneyPricing = () => {
       popular: false,
       isFree: false,
       monthlyPriceId: "price_1SD81xH8HT0u8xphuqiq8xet",
-      annualPriceId: "price_1SD828H8HT0u8xphUaDaMTDV",
+      annualPriceId: "price_1SGMo6H8HT0u8xphytzP4SFR",
       bgGradient: "from-purple-50/50 to-indigo-50/50 dark:from-purple-950/20 dark:to-indigo-950/20",
       borderColor: "border-purple-200 dark:border-purple-800"
     }
@@ -129,7 +129,7 @@ export const WritingJourneyPricing = () => {
             </span>
             {isAnnual && (
               <Badge className="bg-green-500 text-white ml-2">
-                Save 30% ✨
+                Save 40% ✨
               </Badge>
             )}
           </div>
