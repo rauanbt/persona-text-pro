@@ -57,28 +57,6 @@ export const WritingJourneyPricing = () => {
       borderColor: "border-blue-200 dark:border-blue-800"
     },
     {
-      name: "Extension-Only",
-      subtitle: "Browser convenience",
-      monthlyPrice: "$12.95",
-      annualPrice: "$12.95",
-      period: "per month",
-      description: "Humanize text anywhere on the web",
-      icon: <Chrome className="w-8 h-8 text-green-500" />,
-      features: [
-        "5,000 words per month",
-        "Chrome Extension access only",
-        "All 6 tone personalities",
-        "Advanced dual-engine humanization (Gemini + OpenAI)",
-        "No web platform access"
-      ],
-      buttonText: "Get Extension",
-      popular: false,
-      isFree: false,
-      monthlyPriceId: "price_1SGNtsH8HT0u8xphEd7pG9Po",
-      bgGradient: "from-green-50/50 to-emerald-50/50 dark:from-green-950/20 dark:to-emerald-950/20",
-      borderColor: "border-green-200 dark:border-green-800"
-    },
-    {
       name: "Master",
       subtitle: "For content powerhouses",
       monthlyPrice: "$54.95",
@@ -101,6 +79,28 @@ export const WritingJourneyPricing = () => {
       annualPriceId: "price_1SGMo6H8HT0u8xphytzP4SFR",
       bgGradient: "from-purple-50/50 to-indigo-50/50 dark:from-purple-950/20 dark:to-indigo-950/20",
       borderColor: "border-purple-200 dark:border-purple-800"
+    },
+    {
+      name: "Extension-Only",
+      subtitle: "Browser convenience",
+      monthlyPrice: "$12.95",
+      annualPrice: "$12.95",
+      period: "per month",
+      description: "Humanize text anywhere on the web",
+      icon: <Chrome className="w-8 h-8 text-green-500" />,
+      features: [
+        "5,000 words per month",
+        "Chrome Extension access only",
+        "All 6 tone personalities",
+        "Premium triple-engine humanization (Gemini + OpenAI + Claude)",
+        "No web platform access"
+      ],
+      buttonText: "Get Extension",
+      popular: false,
+      isFree: false,
+      monthlyPriceId: "price_1SGNtsH8HT0u8xphEd7pG9Po",
+      bgGradient: "from-green-50/50 to-emerald-50/50 dark:from-green-950/20 dark:to-emerald-950/20",
+      borderColor: "border-green-200 dark:border-green-800"
     }
   ];
 
