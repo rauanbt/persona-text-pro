@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -54,6 +54,8 @@ const Dashboard = () => {
   const [isCheckingAI, setIsCheckingAI] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showExtensionSetup, setShowExtensionSetup] = useState(false);
+  const [showResult, setShowResult] = useState(false);
+  const resultRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
   const currentPlan = subscriptionData.plan;
@@ -83,6 +85,13 @@ const Dashboard = () => {
       preview: humanizedText?.substring(0, 100)
     });
   }, [humanizedText]);
+
+  // Scroll to result when it appears
+  useEffect(() => {
+    if (showResult && resultRef.current) {
+      resultRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [showResult]);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -211,18 +220,32 @@ const Dashboard = () => {
         throw new Error('No data returned from humanization');
       }
 
-      if (!data.humanized_text) {
-        console.error('[DEBUG] humanized_text is missing or empty in response:', data);
-        throw new Error('Humanized text is empty');
-      }
+      // Try multiple possible response keys for robustness
+      const humanizedResult = 
+        typeof data?.humanized_text === 'string' ? data.humanized_text :
+        typeof data?.text === 'string' ? data.text :
+        typeof data?.result === 'string' ? data.result :
+        typeof data?.finalText === 'string' ? data.finalText :
+        '';
 
-      console.log('[DEBUG] Setting humanized text state:', {
-        length: data.humanized_text.length,
-        preview: data.humanized_text.substring(0, 100)
+      console.log('[DEBUG] Extracted result:', {
+        foundKey: data?.humanized_text ? 'humanized_text' : data?.text ? 'text' : data?.result ? 'result' : data?.finalText ? 'finalText' : 'none',
+        length: humanizedResult.length,
+        preview: humanizedResult.substring(0, 100)
       });
+
+      if (!humanizedResult || humanizedResult.trim().length === 0) {
+        console.warn('[DEBUG] No usable humanized text in response keys:', Object.keys(data || {}));
+        setHumanizedText('No output text was returned. Please try again.');
+        setShowResult(true);
+        console.log('[DEBUG] Showing result panel with fallback message');
+      } else {
+        setHumanizedText(humanizedResult);
+        setShowResult(true);
+        console.log('[DEBUG] Showing result panel with humanized text');
+      }
       
-      setHumanizedText(data.humanized_text);
-      console.log('[DEBUG] State setter called - waiting for React to update');
+      setActiveTab('humanize');
       
       setUsage(prev => ({
         words_used: prev.words_used + wordCount,
@@ -624,12 +647,13 @@ const Dashboard = () => {
                         )}
                       </Button>
 
-                      {humanizedText && (
-                        <div>
+                      {showResult && (
+                        <div ref={resultRef}>
                           <label className="text-sm font-medium mb-2 block">
                             Humanized Text
                           </label>
                           <Textarea
+                            key={`humanized-${humanizedText.length}`}
                             value={humanizedText}
                             readOnly
                             className="min-h-[350px] resize-none bg-muted text-base"
