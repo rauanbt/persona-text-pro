@@ -55,6 +55,8 @@ const Dashboard = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showExtensionSetup, setShowExtensionSetup] = useState(false);
   const [showResult, setShowResult] = useState(false);
+  const [showRawResponse, setShowRawResponse] = useState(false);
+  const [lastRawResponse, setLastRawResponse] = useState<any>(null);
   const resultRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
@@ -162,6 +164,46 @@ const Dashboard = () => {
     }
   };
 
+  // Helper to normalize edge function response (handles strings, nested data, etc.)
+  const normalizeFnResponse = (raw: any) => {
+    // If string, try JSON parse, otherwise treat as the text itself
+    if (typeof raw === 'string') {
+      try {
+        const parsed = JSON.parse(raw);
+        return parsed;
+      } catch {
+        return { humanized_text: raw };
+      }
+    }
+    // If wrapped in "data"
+    if (raw && typeof raw === 'object' && raw.data && typeof raw.data === 'object') {
+      return raw.data;
+    }
+    return raw;
+  };
+
+  // Deep search for the first plausible text field
+  const pickHumanizedText = (obj: any): string => {
+    if (!obj) return '';
+    const candidates = ['humanized_text', 'finalText', 'text', 'result', 'output'];
+    for (const key of candidates) {
+      const v = obj?.[key];
+      if (typeof v === 'string' && v.trim().length > 0) return v;
+    }
+    // Last resort: scan any string leaf
+    try {
+      const stack = [obj];
+      while (stack.length) {
+        const cur = stack.pop();
+        if (typeof cur === 'string' && cur.trim().length > 0) return cur;
+        if (cur && typeof cur === 'object') {
+          Object.values(cur).forEach(v => stack.push(v));
+        }
+      }
+    } catch {}
+    return '';
+  };
+
   const handleHumanize = async () => {
     if (!inputText.trim()) {
       toast({
@@ -195,19 +237,14 @@ const Dashboard = () => {
       console.log('[DEBUG] Calling humanize-text-hybrid edge function...');
       
       const { data, error } = await supabase.functions.invoke('humanize-text-hybrid', {
-        body: { text: inputText, tone: selectedTone },
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`,
-        },
+        body: { text: inputText, tone: selectedTone, source: 'web' },
       });
 
-      console.log('[DEBUG] Edge function response received:', { 
+      console.log('[DEBUG] Raw edge function response:', { 
         hasError: !!error, 
         hasData: !!data,
-        dataKeys: data ? Object.keys(data) : [],
-        humanizedTextExists: !!data?.humanized_text,
-        humanizedTextLength: data?.humanized_text?.length,
-        humanizedTextPreview: data?.humanized_text?.substring(0, 100)
+        dataType: typeof data,
+        dataKeys: data && typeof data === 'object' ? Object.keys(data) : []
       });
 
       if (error) {
@@ -220,29 +257,35 @@ const Dashboard = () => {
         throw new Error('No data returned from humanization');
       }
 
-      // Try multiple possible response keys for robustness
-      const humanizedResult = 
-        typeof data?.humanized_text === 'string' ? data.humanized_text :
-        typeof data?.text === 'string' ? data.text :
-        typeof data?.result === 'string' ? data.result :
-        typeof data?.finalText === 'string' ? data.finalText :
-        '';
+      // Normalize any shape (string, nested, etc.)
+      const normalized = normalizeFnResponse(data);
+      setLastRawResponse(normalized);
 
-      console.log('[DEBUG] Extracted result:', {
-        foundKey: data?.humanized_text ? 'humanized_text' : data?.text ? 'text' : data?.result ? 'result' : data?.finalText ? 'finalText' : 'none',
-        length: humanizedResult.length,
-        preview: humanizedResult.substring(0, 100)
+      console.log('[DEBUG] Normalized response:', {
+        type: typeof normalized,
+        keys: normalized && typeof normalized === 'object' ? Object.keys(normalized) : [],
+        sample: typeof normalized === 'string' ? normalized.substring(0, 100) : null,
+        hasErrorField: !!normalized?.error,
+        statusHints: { total_remaining: normalized?.total_remaining, remaining_words: normalized?.remaining_words }
       });
 
-      if (!humanizedResult || humanizedResult.trim().length === 0) {
-        console.warn('[DEBUG] No usable humanized text in response keys:', Object.keys(data || {}));
+      // If the function returned an error in-body (status 200 with {error})
+      if (normalized?.error) {
+        throw new Error(normalized.error);
+      }
+
+      const humanizedResult = pickHumanizedText(normalized);
+
+      if (humanizedResult.trim().length === 0) {
+        console.warn('[DEBUG] No usable humanized text found. Raw object:', normalized);
         setHumanizedText('No output text was returned. Please try again.');
         setShowResult(true);
         console.log('[DEBUG] Showing result panel with fallback message');
       } else {
         setHumanizedText(humanizedResult);
         setShowResult(true);
-        console.log('[DEBUG] Showing result panel with humanized text');
+        console.log('[DEBUG] Showing result panel with humanized text, length:', humanizedResult.length);
+        console.log('[DEBUG] First 100 chars:', humanizedResult.substring(0, 100));
       }
       
       setActiveTab('humanize');
@@ -254,13 +297,13 @@ const Dashboard = () => {
       }));
       
       // Update extra words if they were used
-      if (data.extra_words_remaining !== undefined) {
-        setExtraWords(data.extra_words_remaining);
+      if (normalized.extra_words_remaining !== undefined) {
+        setExtraWords(normalized.extra_words_remaining);
       }
 
       toast({
         title: "Text humanized successfully!",
-        description: `Used ${wordCount} words. ${data.total_remaining || data.remaining_words} words remaining.`,
+        description: `Used ${wordCount} words. ${normalized.total_remaining || normalized.remaining_words || 'Unknown'} words remaining.`,
       });
       
       console.log('[DEBUG] Humanization complete - toast shown');
@@ -667,6 +710,22 @@ const Dashboard = () => {
                               <Download className="mr-2 h-4 w-4" />
                               Download
                             </Button>
+                          </div>
+                          
+                          {/* Debug UI */}
+                          <div className="mt-4">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => setShowRawResponse(v => !v)}
+                            >
+                              {showRawResponse ? 'Hide' : 'Show'} raw response (debug)
+                            </Button>
+                            {showRawResponse && lastRawResponse && (
+                              <pre className="mt-2 p-3 bg-muted text-xs rounded overflow-auto max-h-64 border">
+                                {JSON.stringify(lastRawResponse, null, 2)}
+                              </pre>
+                            )}
                           </div>
                         </div>
                       )}
