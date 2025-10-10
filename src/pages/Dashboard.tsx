@@ -220,6 +220,8 @@ const Dashboard = () => {
     }
 
     setIsProcessing(true);
+    setHumanizedText(''); // Clear old results
+    setShowResult(false); // Hide result panel
     console.log('[DEBUG] Starting humanization:', { 
       textLength: inputText.length, 
       wordCount,
