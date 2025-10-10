@@ -75,6 +75,15 @@ const Dashboard = () => {
     fetchUsage();
   }, []);
 
+  // Debug: Monitor humanizedText state changes
+  useEffect(() => {
+    console.log('[DEBUG] humanizedText state changed:', {
+      hasValue: !!humanizedText,
+      length: humanizedText?.length,
+      preview: humanizedText?.substring(0, 100)
+    });
+  }, [humanizedText]);
+
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     
@@ -167,8 +176,15 @@ const Dashboard = () => {
     }
 
     setIsProcessing(true);
+    console.log('[DEBUG] Starting humanization:', { 
+      textLength: inputText.length, 
+      wordCount,
+      tone: selectedTone 
+    });
 
     try {
+      console.log('[DEBUG] Calling humanize-text-hybrid edge function...');
+      
       const { data, error } = await supabase.functions.invoke('humanize-text-hybrid', {
         body: { text: inputText, tone: selectedTone },
         headers: {
@@ -176,9 +192,38 @@ const Dashboard = () => {
         },
       });
 
-      if (error) throw error;
+      console.log('[DEBUG] Edge function response received:', { 
+        hasError: !!error, 
+        hasData: !!data,
+        dataKeys: data ? Object.keys(data) : [],
+        humanizedTextExists: !!data?.humanized_text,
+        humanizedTextLength: data?.humanized_text?.length,
+        humanizedTextPreview: data?.humanized_text?.substring(0, 100)
+      });
 
+      if (error) {
+        console.error('[DEBUG] Supabase error:', error);
+        throw error;
+      }
+
+      if (!data) {
+        console.error('[DEBUG] No data returned from edge function');
+        throw new Error('No data returned from humanization');
+      }
+
+      if (!data.humanized_text) {
+        console.error('[DEBUG] humanized_text is missing or empty in response:', data);
+        throw new Error('Humanized text is empty');
+      }
+
+      console.log('[DEBUG] Setting humanized text state:', {
+        length: data.humanized_text.length,
+        preview: data.humanized_text.substring(0, 100)
+      });
+      
       setHumanizedText(data.humanized_text);
+      console.log('[DEBUG] State setter called - waiting for React to update');
+      
       setUsage(prev => ({
         words_used: prev.words_used + wordCount,
         extension_words_used: prev.extension_words_used || 0,
@@ -194,8 +239,10 @@ const Dashboard = () => {
         title: "Text humanized successfully!",
         description: `Used ${wordCount} words. ${data.total_remaining || data.remaining_words} words remaining.`,
       });
+      
+      console.log('[DEBUG] Humanization complete - toast shown');
     } catch (error: any) {
-      console.error('Error humanizing text:', error);
+      console.error('[DEBUG] Error in handleHumanize:', error);
       
       if (error.message?.includes('Word limit exceeded')) {
         toast({
@@ -212,6 +259,7 @@ const Dashboard = () => {
       }
     } finally {
       setIsProcessing(false);
+      console.log('[DEBUG] Processing complete, isProcessing set to false');
     }
   };
 
