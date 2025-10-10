@@ -652,35 +652,15 @@ const Dashboard = () => {
                       <div className="text-sm space-y-2">
                         <div className="flex items-start gap-2">
                           <span className="font-semibold text-primary">1.</span>
-                          <span>Download and install the extension</span>
+                          <span>Download and install the extension from Chrome Web Store</span>
                         </div>
                         <div className="flex items-start gap-2">
                           <span className="font-semibold text-primary">2.</span>
-                          <div className="flex-1 space-y-2">
-                            <span>Your API Key:</span>
-                            <div className="flex items-center gap-2">
-                              <code className="flex-1 bg-muted px-3 py-2 rounded text-xs break-all">
-                                {session?.access_token?.substring(0, 20)}...
-                              </code>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  navigator.clipboard.writeText(session?.access_token || '');
-                                  toast({
-                                    title: "Copied!",
-                                    description: "API key copied to clipboard.",
-                                  });
-                                }}
-                              >
-                                <Copy className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </div>
+                          <span>Click the SapienWrite icon in your browser toolbar</span>
                         </div>
                         <div className="flex items-start gap-2">
                           <span className="font-semibold text-primary">3.</span>
-                          <span>Open the extension and paste your API key in settings</span>
+                          <span>You're automatically logged in - start humanizing text!</span>
                         </div>
                       </div>
                     </CollapsibleContent>
