@@ -12,8 +12,7 @@ import { ExtraWordsPackages } from '@/components/ExtraWordsPackages';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AIDetectionResults } from '@/components/AIDetectionResults';
-import { Loader2, Copy, Download, ExternalLink, Crown, Zap, Plus, Brain, Shield, Chrome, ChevronDown } from 'lucide-react';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Loader2, Copy, Download, ExternalLink, Crown, Zap, Plus, Brain, Shield, Chrome } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const PLAN_LIMITS = {
@@ -55,8 +54,6 @@ const Dashboard = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showExtensionSetup, setShowExtensionSetup] = useState(false);
   const [showResult, setShowResult] = useState(false);
-  const [showRawResponse, setShowRawResponse] = useState(false);
-  const [lastRawResponse, setLastRawResponse] = useState<any>(null);
   const resultRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
@@ -254,7 +251,6 @@ const Dashboard = () => {
 
       // Normalize any shape (string, nested, etc.)
       const normalized = normalizeFnResponse(data);
-      setLastRawResponse(normalized);
 
       console.log('[DEBUG] Normalized response:', {
         type: typeof normalized,

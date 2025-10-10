@@ -345,6 +345,7 @@ Write like a funny human, not an AI trying to tell jokes.`
 
     const systemPrompt = tonePrompts[tone as keyof typeof tonePrompts] || tonePrompts.regular;
     let finalText = text;
+    let bestSoFar = text;
     let passesCompleted = 0;
     let enginesUsed = '';
 
@@ -374,6 +375,7 @@ Write like a funny human, not an AI trying to tell jokes.`
 
       const geminiData = await geminiResponse.json();
       finalText = geminiData.choices[0].message.content;
+      if (finalText && finalText.trim().length > 0) { bestSoFar = finalText; }
       passesCompleted = 1;
       enginesUsed = 'gemini';
       
@@ -408,6 +410,7 @@ Write like a funny human, not an AI trying to tell jokes.`
 
       const pass1Data = await pass1Response.json();
       const pass1Result = pass1Data.choices[0].message.content;
+      if (pass1Result && pass1Result.trim().length > 0) { bestSoFar = pass1Result; }
       
       // Verify structure preservation after Pass 1
       const inputLineBreaks = (text.match(/\n/g) || []).length;
@@ -440,6 +443,7 @@ Write like a funny human, not an AI trying to tell jokes.`
       } else {
         const pass2Data = await pass2Response.json();
         finalText = pass2Data.choices[0].message.content;
+        if (finalText && finalText.trim().length > 0) { bestSoFar = finalText; }
         passesCompleted = 2;
         enginesUsed = 'gemini-openai';
         
@@ -474,6 +478,7 @@ Write like a funny human, not an AI trying to tell jokes.`
 
       const pass1Data = await pass1Response.json();
       const pass1Result = pass1Data.choices[0].message.content;
+      if (pass1Result && pass1Result.trim().length > 0) { bestSoFar = pass1Result; }
       
       // Verify structure preservation after Pass 1
       const inputLineBreaks = (text.match(/\n/g) || []).length;
@@ -506,6 +511,7 @@ Write like a funny human, not an AI trying to tell jokes.`
       } else {
         const pass2Data = await pass2Response.json();
         const pass2Result = pass2Data.choices[0].message.content;
+        if (pass2Result && pass2Result.trim().length > 0) { bestSoFar = pass2Result; }
         
         // Verify structure preservation after Pass 2
         const pass2LineBreaks = (pass2Result.match(/\n/g) || []).length;
@@ -536,6 +542,7 @@ Write like a funny human, not an AI trying to tell jokes.`
         } else {
           const pass3Data = await pass3Response.json();
           finalText = pass3Data.choices[0].message.content;
+          if (finalText && finalText.trim().length > 0) { bestSoFar = finalText; }
           passesCompleted = 3;
           enginesUsed = 'gemini-openai-claude';
           
@@ -590,6 +597,7 @@ PRESERVE STRUCTURE:
           } else {
             const pass4Data = await pass4Response.json();
             finalText = pass4Data.choices[0].message.content;
+            if (finalText && finalText.trim().length > 0) { bestSoFar = finalText; }
             passesCompleted = 4;
             enginesUsed = 'gemini-gpt-claude-cleanup';
             
@@ -622,6 +630,7 @@ PRESERVE STRUCTURE:
         if (correctionResp.ok) {
           const corr = await correctionResp.json();
           finalText = corr.choices?.[0]?.message?.content || finalText;
+          if (finalText && finalText.trim().length > 0) { bestSoFar = finalText; }
           console.log('[LANG] Correction applied successfully');
         } else {
           console.error('[LANG] Correction failed:', correctionResp.status, correctionResp.statusText);
@@ -657,6 +666,7 @@ PRESERVE STRUCTURE:
         if (condenseResponse.ok) {
           const condenseData = await condenseResponse.json();
           finalText = condenseData.choices[0].message.content;
+          if (finalText && finalText.trim().length > 0) { bestSoFar = finalText; }
           console.log('[HYBRID-HUMANIZE] Text condensed successfully');
         }
       } catch (condenseError) {
@@ -665,6 +675,7 @@ PRESERVE STRUCTURE:
     }
 
     // Aggressive AI pattern removal and cleanup
+    const preCleanup = finalText;
     finalText = finalText
       // Remove markdown
       .replace(/\*\*([^*]+)\*\*/g, '$1')
@@ -687,6 +698,23 @@ PRESERVE STRUCTURE:
       .replace(/\bAdditionally,\s*/gi, 'Also ')
       // Fix double spaces
       .replace(/  +/g, ' ');
+
+    if (!finalText || finalText.trim().length === 0) {
+      console.warn('[HYBRID-HUMANIZE] Empty output after cleanup — reverting to previous non-empty pass');
+      if (preCleanup && preCleanup.trim().length > 0) {
+        finalText = preCleanup;
+      } else if (bestSoFar && bestSoFar.trim().length > 0) {
+        finalText = bestSoFar;
+      } else {
+        console.warn('[HYBRID-HUMANIZE] No non-empty pass result — returning original text');
+        finalText = text;
+      }
+    }
+
+    // Final safety: ensure non-empty before response
+    if (!finalText || finalText.trim().length === 0) {
+      finalText = text;
+    }
 
     return await finalizeResponse(supabase, userData.user.id, text, finalText, tone, wordCount, currentMonth, usage, currentUsage, planLimit, extraWords, passesCompleted, enginesUsed, source, userPlan);
 
