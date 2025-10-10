@@ -127,6 +127,36 @@ export const AIDetectionResults = ({ text, onHumanize, status, onStatusChange, o
     return `We are ${confText} confident this text has a ${aiScore}% AI likelihood (combining AI-generated and AI-edited content)`;
   };
 
+  const getDisplayPercentage = () => {
+    if (!result) return 0;
+    
+    switch (result.category) {
+      case 'human':
+        return Math.round(100 - result.score); // Show human %
+      case 'ai':
+        return Math.round(result.score); // Show AI %
+      case 'mixed':
+        return Math.round(result.breakdown.mixed); // Show mixed %
+      default:
+        return Math.round(result.score);
+    }
+  };
+
+  const getDisplayLabel = () => {
+    if (!result) return 'AI Likelihood';
+    
+    switch (result.category) {
+      case 'human':
+        return 'Human Written';
+      case 'ai':
+        return 'AI Generated';
+      case 'mixed':
+        return 'Mixed Content';
+      default:
+        return 'AI Likelihood';
+    }
+  };
+
   const allCompleted = status === 'completed';
 
   if (status === null) return null;
@@ -159,10 +189,10 @@ export const AIDetectionResults = ({ text, onHumanize, status, onStatusChange, o
                     <div className="w-full h-full rounded-full bg-background flex items-center justify-center">
                       <div className="text-center">
                         <div className="text-4xl font-bold text-foreground">
-                          {Math.round(result.score)}%
+                          {getDisplayPercentage()}%
                         </div>
                         <div className="text-sm font-semibold text-muted-foreground mt-1">
-                          AI Likelihood
+                          {getDisplayLabel()}
                         </div>
                       </div>
                     </div>
