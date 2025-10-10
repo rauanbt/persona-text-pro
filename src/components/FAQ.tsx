@@ -50,6 +50,10 @@ export const FAQ = () => {
     {
       question: "How do I cancel my subscription?",
       answer: "You can cancel your subscription anytime through the Stripe Customer Portal accessible from your dashboard. There are no cancellation fees. All sales are final with no refunds. You'll retain full access to your plan features until the end of your current billing period."
+    },
+    {
+      question: "Why does my humanized text still show some AI detection?",
+      answer: "Our humanizer dramatically reduces AI detection scores (typically 60-80% reduction), but no tool can make text 100% undetectable. Advanced AI detectors look for patterns that even humanized text may contain. For best results, we recommend: (1) Using our humanizer to get a strong baseline, (2) Adding personal touches like anecdotes or examples, (3) Breaking up uniform paragraph structures, and (4) Reading aloud and adjusting phrases that sound 'too perfect.' Think of our humanizer as a powerful first pass that gets you 80% there - the final 20% of natural voice comes from your personal editing."
     }
   ];
 

@@ -218,14 +218,129 @@ serve(async (req) => {
       });
     }
 
-    // Tone-specific system prompts with language + structure preservation as PRIMARY goals
+    // Tone-specific system prompts with ANTI-AI-DETECTION rules as PRIMARY goal
     const tonePrompts = {
-      regular: "RULES (follow in order):\n1) Output in the exact same language as the input (no translation).\n2) Preserve ALL line breaks 1:1.\n3) Preserve list formatting exactly.\nThen make subtle human improvements for natural flow. No markdown; plain text only.",
-      formal: "RULES (follow in order):\n1) Output in the exact same language as the input (no translation).\n2) Preserve ALL line breaks 1:1.\n3) Preserve list formatting exactly.\nThen transform to a formal, professional tone with appropriate phrasing. No markdown; plain text only.",
-      persuasive: "RULES (follow in order):\n1) Output in the exact same language as the input (no translation).\n2) Preserve ALL line breaks 1:1.\n3) Preserve list formatting exactly.\nThen rewrite to be persuasive and compelling with stronger word choices. No markdown; plain text only.",
-      empathetic: "RULES (follow in order):\n1) Output in the exact same language as the input (no translation).\n2) Preserve ALL line breaks 1:1.\n3) Preserve list formatting exactly.\nThen add warmth and empathy while keeping meaning faithful. No markdown; plain text only.",
-      sarcastic: "RULES (follow in order):\n1) Output in the exact same language as the input (no translation).\n2) Preserve ALL line breaks 1:1.\n3) Preserve list formatting exactly.\nThen rewrite with sarcasm and dry wit while keeping the core message. Example (language must stay the same): English input 'This is great' → English output (sarcastic): 'Oh wow, this is just fantastic.' Do not switch languages. No markdown; plain text only.",
-      funny: "RULES (follow in order):\n1) Output in the exact same language as the input (no translation).\n2) Preserve ALL line breaks 1:1.\n3) Preserve list formatting exactly.\nThen add humor and playfulness while preserving meaning. No markdown; plain text only."
+      regular: `ANTI-AI-DETECTION RULES (HIGHEST PRIORITY):
+❌ FORBIDDEN WORDS: Moreover, Furthermore, Ultimately, Consequently, Therefore, Nevertheless, Subsequently, Additionally, Specifically, Particularly, Essentially
+✅ USE INSTEAD: But, So, And, Plus, Also, Now, Then, Still, Yet, Though
+
+HUMAN WRITING RULES:
+1. Use contractions naturally (it's, don't, won't, can't, I'm, you're, we're, they're, isn't, aren't)
+2. Mix sentence lengths wildly - some short. Others longer with natural flow.
+3. Use casual connectors, not formal transitions
+4. Add intentional imperfections: occasional fragments. Or comma splices for effect.
+5. Break paragraph balance - make some 1 line, others 4-5 lines
+6. NO em-dashes (—), use regular hyphens (-) or just commas
+7. Vary punctuation - not every sentence needs perfect grammar
+8. Add conversational touches when natural: "basically," "honestly," "you know what"
+
+STRUCTURE PRESERVATION:
+- Output in exact same language as input (${inputLangName} [${inputLangCode}])
+- Keep EVERY line break exactly where it appears
+- Preserve list formatting (1. 2. 3. or - bullets)
+- Plain text only, no markdown
+
+Rewrite naturally as if a real human typed this casually.`,
+
+      formal: `ANTI-AI-DETECTION RULES (HIGHEST PRIORITY):
+❌ REDUCE: Moreover, Furthermore, Consequently (use sparingly, max 1x)
+✅ FORMAL ALTERNATIVES: However, Additionally, Therefore (but vary them)
+
+PROFESSIONAL HUMAN WRITING:
+1. Use some contractions even in formal writing (it's, don't, can't) - professionals do this
+2. Vary sentence structure - not all complex, not all simple
+3. Use active voice primarily, passive occasionally
+4. Professional but not robotic - real executives write with personality
+5. Break up long sentences with semicolons or split them
+6. NO em-dashes (—), use colons (:) or regular hyphens (-)
+
+STRUCTURE PRESERVATION:
+- Output in exact same language as input (${inputLangName} [${inputLangCode}])
+- Keep EVERY line break exactly where it appears
+- Preserve list formatting exactly
+- Plain text only, no markdown
+
+Write professionally but with natural human flow.`,
+
+      persuasive: `ANTI-AI-DETECTION RULES (HIGHEST PRIORITY):
+❌ AVOID: Moreover, Ultimately, Consequently - these kill persuasion
+✅ USE: But, So, And, Because, Plus - direct and powerful
+
+PERSUASIVE HUMAN WRITING:
+1. Use contractions for impact (you'll, we'll, don't, can't)
+2. Vary rhythm - short punchy sentences. Then longer explanatory ones.
+3. Use "you" and "your" frequently - talk TO the reader
+4. Ask rhetorical questions occasionally
+5. Add emotion and urgency naturally
+6. NO perfect parallelism - humans don't write that way
+
+STRUCTURE PRESERVATION:
+- Output in exact same language as input (${inputLangName} [${inputLangCode}])
+- Keep EVERY line break exactly where it appears
+- Preserve list formatting exactly
+- Plain text only, no markdown
+
+Make it compelling like a human sales pitch, not an AI essay.`,
+
+      empathetic: `ANTI-AI-DETECTION RULES (HIGHEST PRIORITY):
+❌ FORBIDDEN: Moreover, Furthermore, Ultimately - these sound cold
+✅ USE: And, But, So, Plus - warm and connecting
+
+EMPATHETIC HUMAN WRITING:
+1. Use contractions (you're, we're, it's, that's) - sounds warmer
+2. Vary sentence flow - some gentle, some reassuring
+3. Use "you," "your," and "we" frequently
+4. Add softening phrases: "I understand," "That makes sense," "I hear you"
+5. Break up text with empathetic pauses (shorter paragraphs)
+6. NO clinical language - write like you're talking to a friend
+
+STRUCTURE PRESERVATION:
+- Output in exact same language as input (${inputLangName} [${inputLangCode}])
+- Keep EVERY line break exactly where it appears
+- Preserve list formatting exactly
+- Plain text only, no markdown
+
+Write with genuine warmth like a caring human, not a counseling AI.`,
+
+      sarcastic: `ANTI-AI-DETECTION RULES (HIGHEST PRIORITY):
+❌ NEVER: Moreover, Furthermore, Consequently - ruins sarcasm completely
+✅ USE: But, So, And, Plus, Oh - casual and biting
+
+SARCASTIC HUMAN WRITING:
+1. Use contractions heavily (it's, don't, won't, can't, I'm, you're)
+2. Vary rhythm for comic effect - setup. Punchline.
+3. Add eye-rolling phrases: "Oh great," "Sure," "Obviously," "Naturally"
+4. Use italics mentally (write "really" instead of "*really*")
+5. Break grammar rules for effect - fragment sentences on purpose
+6. Casual tone always - sarcasm doesn't work formally
+
+STRUCTURE PRESERVATION:
+- Output in exact same language as input (${inputLangName} [${inputLangCode}])
+- Keep EVERY line break exactly where it appears
+- Preserve list formatting exactly
+- Plain text only, no markdown
+
+Write with human wit and dry humor, not AI-generated "sarcasm."`,
+
+      funny: `ANTI-AI-DETECTION RULES (HIGHEST PRIORITY):
+❌ FORBIDDEN: Moreover, Ultimately, Consequently - comedy killer
+✅ USE: But, So, And, Plus, Then - setup for punchlines
+
+FUNNY HUMAN WRITING:
+1. Use contractions (it's, don't, won't) - funnier and more casual
+2. Vary rhythm for comedic timing - build up. Then payoff.
+3. Add unexpected comparisons and exaggerations
+4. Use fragments and run-ons for comic effect
+5. Break rules intentionally - grammar can be funny when broken
+6. NO perfect structure - humor thrives on chaos
+
+STRUCTURE PRESERVATION:
+- Output in exact same language as input (${inputLangName} [${inputLangCode}])
+- Keep EVERY line break exactly where it appears
+- Preserve list formatting exactly
+- Plain text only, no markdown
+
+Write like a funny human, not an AI trying to tell jokes.`
     };
 
     const systemPrompt = tonePrompts[tone as keyof typeof tonePrompts] || tonePrompts.regular;
@@ -299,7 +414,7 @@ serve(async (req) => {
       const pass1LineBreaks = (pass1Result.match(/\n/g) || []).length;
       console.log(`[HYBRID-HUMANIZE] Pass 1 (Gemini) complete - Line breaks: input=${inputLineBreaks}, output=${pass1LineBreaks}`);
 
-      // Pass 2: OpenAI for structural refinement
+      // Pass 2: OpenAI for structural refinement (switched to gpt-5-nano for more casual output)
       const pass2Response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -307,13 +422,12 @@ serve(async (req) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini',
+          model: 'gpt-5-nano',
           messages: [
             { role: 'system', content: `${systemPrompt}\n\nRefine for accuracy and natural flow.` },
             { role: 'user', content: `${langRule}\n\nABSOLUTELY CRITICAL:\n- Keep EVERY line break exactly where it appears\n- If there are numbered lists, preserve that exact format\n- FORBIDDEN to merge separate lines into paragraphs\n\nInput text:\n${pass1Result}` }
           ],
-          max_tokens: Math.min(Math.ceil(wordCount * 2), 4000),
-          temperature: 0.8,
+          max_completion_tokens: Math.min(Math.ceil(wordCount * 2), 4000),
         }),
       });
 
@@ -366,7 +480,7 @@ serve(async (req) => {
       const pass1LineBreaks = (pass1Result.match(/\n/g) || []).length;
       console.log(`[HYBRID-HUMANIZE] Pass 1 (Gemini) complete - Line breaks: input=${inputLineBreaks}, output=${pass1LineBreaks}`);
 
-      // Pass 2: OpenAI for structural refinement
+      // Pass 2: OpenAI for structural refinement (switched to gpt-5-nano for more casual output)
       const pass2Response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -374,13 +488,12 @@ serve(async (req) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini',
+          model: 'gpt-5-nano',
           messages: [
             { role: 'system', content: `${systemPrompt}\n\nRefine for accuracy and clarity.` },
             { role: 'user', content: `${langRule}\n\nABSOLUTELY CRITICAL:\n- Keep EVERY line break exactly where it appears\n- If there are numbered lists, preserve that exact format\n- FORBIDDEN to merge separate lines into paragraphs\n\nInput text:\n${pass1Result}` }
           ],
-          max_tokens: Math.min(Math.ceil(wordCount * 2), 4000),
-          temperature: 0.8,
+          max_completion_tokens: Math.min(Math.ceil(wordCount * 2), 4000),
         }),
       });
 
@@ -429,11 +542,65 @@ serve(async (req) => {
           // Verify structure preservation after Pass 3
           const pass3LineBreaks = (finalText.match(/\n/g) || []).length;
           console.log(`[HYBRID-HUMANIZE] Pass 3 (Claude) complete - Line breaks: output=${pass3LineBreaks}`);
+          
+          // Pass 4: Anti-Detection Cleanup (ULTRA/MASTER ONLY)
+          console.log('[HYBRID-HUMANIZE] Pass 4: Anti-detection cleanup');
+          
+          const pass4Response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${lovableApiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'google/gemini-2.5-flash',
+              messages: [
+                { 
+                  role: 'system', 
+                  content: `You are a human writing expert. Your ONLY job: make AI-generated text sound naturally human WITHOUT changing meaning.
+
+REMOVE these AI fingerprints:
+- "Moreover," "Furthermore," "Ultimately," "Consequently" → replace with "But," "So," "And," "Plus"
+- Em-dashes (—) → use regular hyphens (-) or commas
+- Perfect grammar → add natural imperfections (fragments, comma splices)
+- Uniform sentences → vary lengths dramatically
+
+ADD human touches:
+- Contractions (it's, don't, won't, can't)
+- Occasional sentence fragments. For emphasis.
+- Conversational asides
+- Natural rhythm breaks
+
+PRESERVE STRUCTURE:
+- Keep EVERY line break exactly as shown
+- Same language: ${inputLangName} [${inputLangCode}]
+- Preserve all lists exactly
+- Plain text only, no markdown`
+                },
+                { 
+                  role: 'user', 
+                  content: `${langRule}\n\nRemove AI patterns from this text while keeping meaning identical:\n\n${finalText}` 
+                }
+              ],
+            }),
+          });
+
+          if (!pass4Response.ok) {
+            console.log('[HYBRID-HUMANIZE] Pass 4 failed, using Pass 3 result');
+          } else {
+            const pass4Data = await pass4Response.json();
+            finalText = pass4Data.choices[0].message.content;
+            passesCompleted = 4;
+            enginesUsed = 'gemini-gpt-claude-cleanup';
+            
+            const pass4LineBreaks = (finalText.match(/\n/g) || []).length;
+            console.log(`[HYBRID-HUMANIZE] Pass 4 (Cleanup) complete - Line breaks: output=${pass4LineBreaks}`);
+          }
         }
       }
     }
 
-    console.log(`[HYBRID-HUMANIZE] Humanization complete - ${passesCompleted} passes using ${enginesUsed}`);
+    console.log(`[HYBRID-HUMANIZE] Humanization complete - ${passesCompleted} passes (max 4 for Ultra) using ${enginesUsed}`);
 
     // Post-generation language verification and correction if needed
     try {
@@ -497,20 +664,29 @@ serve(async (req) => {
       }
     }
 
-    // Remove markdown formatting more aggressively
+    // Aggressive AI pattern removal and cleanup
     finalText = finalText
-      .replace(/\*\*([^*]+)\*\*/g, '$1')    // Remove **bold**
-      .replace(/\*([^*\n]+)\*/g, '$1')       // Remove *italic* (not crossing lines)
-      .replace(/__([^_]+)__/g, '$1')         // Remove __bold__
-      .replace(/_([^_\n]+)_/g, '$1')         // Remove _italic_
-      .replace(/~~([^~]+)~~/g, '$1')         // Remove ~~strikethrough~~
-      .replace(/\*/g, '')                    // Remove any remaining lone asterisks
-      .replace(/_/g, '');                    // Remove any remaining lone underscores
-
-    // Strip any AI-generated em dashes or en dashes - keep only regular hyphens
-    finalText = finalText
-      .replace(/\s*—\s*/g, ' - ')            // em dash -> regular hyphen
-      .replace(/\s*–\s*/g, ' - ');           // en dash -> regular hyphen
+      // Remove markdown
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/\*([^*\n]+)\*/g, '$1')
+      .replace(/__([^_]+)__/g, '$1')
+      .replace(/_([^_\n]+)_/g, '$1')
+      .replace(/~~([^~]+)~~/g, '$1')
+      .replace(/\*/g, '')
+      .replace(/_/g, '')
+      // Remove AI-style dashes
+      .replace(/\s*—\s*/g, ' - ')  // em dash
+      .replace(/\s*–\s*/g, ' - ')  // en dash
+      // Remove overly formal transition words (if they slipped through)
+      .replace(/\bMoreover,\s*/gi, 'But ')
+      .replace(/\bFurthermore,\s*/gi, 'Plus ')
+      .replace(/\bConsequently,\s*/gi, 'So ')
+      .replace(/\bUltimately,\s*/gi, 'In the end, ')
+      .replace(/\bNevertheless,\s*/gi, 'Still, ')
+      .replace(/\bSubsequently,\s*/gi, 'Then ')
+      .replace(/\bAdditionally,\s*/gi, 'Also ')
+      // Fix double spaces
+      .replace(/  +/g, ' ');
 
     return await finalizeResponse(supabase, userData.user.id, text, finalText, tone, wordCount, currentMonth, usage, currentUsage, planLimit, extraWords, passesCompleted, enginesUsed, source, userPlan);
 
