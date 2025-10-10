@@ -150,11 +150,12 @@ Also provide your confidence level (0-100) in this assessment and brief reasonin
         };
       } catch (error) {
         console.error(`[AI-DETECTION] ${name} failed:`, error);
+        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
         return {
           name,
           score: 0,
           confidence: 0,
-          reasoning: `Error: ${error.message}`,
+          reasoning: `Error: ${errorMsg}`,
           weight,
           success: false
         };

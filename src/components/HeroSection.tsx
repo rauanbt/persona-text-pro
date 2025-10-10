@@ -20,6 +20,7 @@ export const HeroSection = () => {
 
   const wordCount = text.trim().split(/\s+/).filter(word => word.length > 0).length;
   const maxWords = 500;
+  const isOverLimit = wordCount > maxWords;
 
   const handleTryForFree = () => {
     if (user) {
@@ -58,6 +59,15 @@ export const HeroSection = () => {
       toast({
         title: "Please enter some text",
         description: "Add text to check for AI detection.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (isOverLimit) {
+      toast({
+        title: "Word limit exceeded",
+        description: `Please limit your text to ${maxWords} words for free AI detection.`,
         variant: "destructive",
       });
       return;
@@ -146,6 +156,7 @@ export const HeroSection = () => {
                 placeholder="Paste your AI-generated text here to check for AI detection and humanize it..."
                 value={text}
                 onChange={(e) => setText(e.target.value)}
+                maxLength={maxWords * 6}
                 className="min-h-[400px] resize-none border-2 focus:border-primary/50 transition-colors text-base"
               />
 
@@ -154,7 +165,7 @@ export const HeroSection = () => {
                 <Button
                   variant="outline"
                   onClick={handleCheckAI}
-                  disabled={aiDetectionStatus === 'checking'}
+                  disabled={aiDetectionStatus === 'checking' || isOverLimit}
                   className="border-2 hover:border-primary/50 transition-colors flex-1"
                 >
                   {aiDetectionStatus === 'checking' ? (

@@ -21,14 +21,8 @@ verify_jwt = true
 [functions.process-word-purchase]
 verify_jwt = true
 
-[functions.ai-detection-copyleaks]
+[functions.send-contact-email]
 verify_jwt = true
 
-[functions.ai-detection-zerogpt]
-verify_jwt = true
-
-[functions.ai-detection-gptzero]
-verify_jwt = true
-
-[functions.ai-detection-hybrid]
-verify_jwt = true
+[functions.ai-detection-lovable]
+verify_jwt = false

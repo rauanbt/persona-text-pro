@@ -22,7 +22,7 @@ export const Pricing = () => {
       features: [
         "750 words per month",
         "250 words per request",
-        "5 AI detections/month (real APIs)",
+        "Unlimited AI detection (500 words per check)",
         "All 4 tone options",
         "Basic humanization",
         "AI detection bypass"
@@ -40,7 +40,7 @@ export const Pricing = () => {
       features: [
         "15,000 words per month",
         "1,500 words per request",
-        "50 AI detections/month (GPTZero + Copyleaks + ZeroGPT)",
+        "Unlimited AI detection (2,500 words per check)",
         "All 4 tone options",
         "My Writing Style",
         "Advanced Humanization Engine",
@@ -81,7 +81,7 @@ export const Pricing = () => {
       features: [
         "30,000 words per month",
         "3,000 words per request",
-        "100 AI detections/month (GPTZero + Copyleaks + ZeroGPT)",
+        "Unlimited AI detection (2,500 words per check)",
         "All 4 tone options",
         "My Writing Style",
         "Advanced Humanization Engine",

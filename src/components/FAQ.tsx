@@ -13,7 +13,11 @@ export const FAQ = () => {
     },
     {
       question: "Does SapienWrite bypass AI detection tools?",
-      answer: "Yes! Our system is specifically designed to bypass all major AI detection tools including GPTZero, Copyleaks, ZeroGPT, and many others. We continuously test against these tools and update our algorithms to maintain effectiveness."
+      answer: "Yes! Our system is specifically designed to bypass all major AI detection tools. We use advanced multi-model AI analysis (powered by Gemini, GPT, and Claude) to ensure your humanized text passes detection checks. We continuously test and update our algorithms to maintain effectiveness."
+    },
+    {
+      question: "Are there limits on AI detection checks?",
+      answer: "No! We offer unlimited AI detection checks for all users. Free users can check up to 500 words per request, while paid subscribers (Pro, Ultra) can check up to 2,500 words per request. There's no monthly limit on the number of checks you can perform."
     },
     {
       question: "How much does SapienWrite cost?",

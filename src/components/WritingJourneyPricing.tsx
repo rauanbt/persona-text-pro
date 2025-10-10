@@ -23,7 +23,7 @@ export const WritingJourneyPricing = () => {
       features: [
         "750 words per month",
         "250 words per request",
-        "5 AI detections/month (GPTZero + Copyleaks + ZeroGPT APIs)",
+        "Unlimited AI detection (500 words per check)",
         "All 6 tone personalities",
         "Basic AI humanization (Gemini engine)",
         "English language only"
@@ -45,7 +45,7 @@ export const WritingJourneyPricing = () => {
       features: [
         "15,000 words per month",
         "1,500 words per request",
-        "50 AI detections/month (GPTZero + Copyleaks + ZeroGPT APIs)",
+        "Unlimited AI detection (2,500 words per check)",
         "All 6 tone personalities",
         "Advanced dual-engine humanization (Gemini + OpenAI)",
         "50+ languages supported"
@@ -69,7 +69,7 @@ export const WritingJourneyPricing = () => {
       features: [
         "30,000 words per month",
         "3,000 words per request",
-        "100 AI detections/month (GPTZero + Copyleaks + ZeroGPT APIs)",
+        "Unlimited AI detection (2,500 words per check)",
         "All 6 tone personalities",
         "Premium triple-engine humanization (Gemini + OpenAI + Claude)",
         "50+ languages supported",
