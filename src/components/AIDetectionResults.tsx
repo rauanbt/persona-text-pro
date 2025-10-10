@@ -110,6 +110,21 @@ export const AIDetectionResults = ({ text, onHumanize, status, onStatusChange, o
     }
   };
 
+  const getCategoryPercentage = () => {
+    if (!result) return 0;
+    
+    switch (result.category) {
+      case 'human':
+        return result.breakdown.human;
+      case 'mixed':
+        return result.breakdown.mixed;
+      case 'ai':
+        return result.breakdown.ai_generated;
+      default:
+        return result.score;
+    }
+  };
+
   const getConfidenceMessage = () => {
     if (!result) return '';
     
@@ -160,7 +175,7 @@ export const AIDetectionResults = ({ text, onHumanize, status, onStatusChange, o
                     <div className="w-full h-full rounded-full bg-background flex items-center justify-center">
                       <div className="text-center">
                         <div className="text-4xl font-bold text-foreground">
-                          {result.score}%
+                          {getCategoryPercentage()}%
                         </div>
                         <div className="text-sm font-semibold text-muted-foreground mt-1">
                           {getCategoryLabel(result.category)}
