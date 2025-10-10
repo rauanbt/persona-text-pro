@@ -119,6 +119,8 @@ export type Database = {
       usage_tracking: {
         Row: {
           created_at: string
+          detection_count: number | null
+          detection_limit: number | null
           extension_words_used: number | null
           id: string
           month_year: string
@@ -129,6 +131,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          detection_count?: number | null
+          detection_limit?: number | null
           extension_words_used?: number | null
           id?: string
           month_year: string
@@ -139,6 +143,8 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          detection_count?: number | null
+          detection_limit?: number | null
           extension_words_used?: number | null
           id?: string
           month_year?: string
@@ -154,7 +160,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_detection_limit: {
+        Args: { plan_name: string }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never
