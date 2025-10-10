@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, Loader2, Info } from "lucide-react";
+import { AlertCircle, Loader2, Info, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Tooltip,
@@ -34,44 +34,52 @@ interface AIDetectionResultsProps {
 
 export const AIDetectionResults = ({ text, onHumanize, status, onStatusChange, onScoreReceived }: AIDetectionResultsProps) => {
   const [result, setResult] = useState<AIDetectionResult | null>(null);
+  const [showDetails, setShowDetails] = useState(false);
+  const hasRequestedRef = useRef(false);
 
   useEffect(() => {
-    if (status !== 'checking') return;
+    if (status === 'checking' && !hasRequestedRef.current) {
+      hasRequestedRef.current = true;
+      
+      const checkAI = async () => {
+        try {
+          const { data, error } = await supabase.functions.invoke('ai-detection-lovable', {
+            body: { text }
+          });
 
-    const checkAI = async () => {
-      try {
-        const { data, error } = await supabase.functions.invoke('ai-detection-lovable', {
-          body: { text }
-        });
+          if (error) throw error;
 
-        if (error) throw error;
+          if (data?.error) {
+            throw new Error(data.message || 'Detection failed');
+          }
 
-        if (data?.error) {
-          throw new Error(data.message || 'Detection failed');
+          setResult({
+            score: data.score,
+            category: data.category,
+            confidence: data.confidence,
+            breakdown: data.breakdown,
+            label: data.label,
+            riskLevel: data.riskLevel
+          });
+          onStatusChange('completed');
+          
+          if (onScoreReceived) {
+            onScoreReceived(data.score);
+          }
+        } catch (error: any) {
+          console.error('AI detection error:', error);
+          setResult(null);
+          onStatusChange(null);
         }
+      };
 
-        setResult({
-          score: data.score,
-          category: data.category,
-          confidence: data.confidence,
-          breakdown: data.breakdown,
-          label: data.label,
-          riskLevel: data.riskLevel
-        });
-        onStatusChange('completed');
-        
-        if (onScoreReceived) {
-          onScoreReceived(data.score);
-        }
-      } catch (error: any) {
-        console.error('AI detection error:', error);
-        setResult(null);
-        onStatusChange(null);
-      }
-    };
-
-    checkAI();
-  }, [status, text, onStatusChange, onScoreReceived]);
+      checkAI();
+    }
+    
+    if (status !== 'checking') {
+      hasRequestedRef.current = false;
+    }
+  }, [status, text]);
 
   const getCategoryColor = (category: string) => {
     switch (category) {
@@ -110,37 +118,13 @@ export const AIDetectionResults = ({ text, onHumanize, status, onStatusChange, o
     }
   };
 
-  const getCategoryPercentage = () => {
-    if (!result) return 0;
-    
-    switch (result.category) {
-      case 'human':
-        return result.breakdown.human;
-      case 'mixed':
-        return result.breakdown.mixed;
-      case 'ai':
-        return result.breakdown.ai_generated;
-      default:
-        return result.score;
-    }
-  };
-
   const getConfidenceMessage = () => {
     if (!result) return '';
     
     const confText = getConfidenceText(result.confidence);
-    const breakdown = result.breakdown;
+    const aiScore = Math.round(result.score);
     
-    if (result.category === 'human') {
-      if (breakdown.mixed > 20) {
-        return `We are ${confText} confident this text was originally human written and lightly polished by AI`;
-      }
-      return `We are ${confText} confident this text was human written`;
-    } else if (result.category === 'ai') {
-      return `We are ${confText} confident this text was AI generated`;
-    } else {
-      return `We are ${confText} confident this text was originally human written and edited by AI`;
-    }
+    return `We are ${confText} confident this text has a ${aiScore}% AI likelihood (combining AI-generated and AI-edited content)`;
   };
 
   const allCompleted = status === 'completed';
@@ -153,7 +137,7 @@ export const AIDetectionResults = ({ text, onHumanize, status, onStatusChange, o
         <h3 className="text-lg font-semibold text-foreground">AI Detection Results</h3>
         {allCompleted && (
           <Badge variant="secondary" className="text-xs">
-            Model v3.2
+            Model v3.2 • Final average from 3 engines
           </Badge>
         )}
       </div>
@@ -175,10 +159,10 @@ export const AIDetectionResults = ({ text, onHumanize, status, onStatusChange, o
                     <div className="w-full h-full rounded-full bg-background flex items-center justify-center">
                       <div className="text-center">
                         <div className="text-4xl font-bold text-foreground">
-                          {getCategoryPercentage()}%
+                          {Math.round(result.score)}%
                         </div>
                         <div className="text-sm font-semibold text-muted-foreground mt-1">
-                          {getCategoryLabel(result.category)}
+                          AI Likelihood
                         </div>
                       </div>
                     </div>
@@ -187,114 +171,57 @@ export const AIDetectionResults = ({ text, onHumanize, status, onStatusChange, o
                 
                 <div className="mt-4 text-center">
                   <p className="text-sm font-medium text-foreground">{result.label}</p>
+                  <p className="text-xs text-muted-foreground mt-1">Category: {getCategoryLabel(result.category)}</p>
                 </div>
               </div>
 
               {/* Confidence Message */}
               <div className="bg-muted/50 rounded-lg p-4">
                 <p className="text-sm text-center text-muted-foreground leading-relaxed">
-                  {getConfidenceMessage().split(' ').map((word, i) => {
-                    const isHighlight = ['human written', 'polished by AI', 'edited by AI', 'AI generated', 'lightly polished'].some(phrase => 
-                      getConfidenceMessage().toLowerCase().includes(phrase.toLowerCase()) && 
-                      phrase.toLowerCase().includes(word.toLowerCase())
-                    );
-                    
-                    return isHighlight ? (
-                      <TooltipProvider key={i}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="underline decoration-dotted decoration-primary/50 cursor-help">
-                              {word}
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p className="text-xs max-w-xs">
-                              {word.toLowerCase().includes('human') && 'Content shows natural human writing patterns'}
-                              {word.toLowerCase().includes('polished') && 'Minor AI improvements to grammar and structure'}
-                              {word.toLowerCase().includes('edited') && 'Significant AI modifications to the original text'}
-                              {word.toLowerCase().includes('generated') && 'Content appears to be created by AI'}
-                            </p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    ) : (
-                      <span key={i}>{word} </span>
-                    );
-                  })}
+                  {getConfidenceMessage()}
                 </p>
               </div>
 
-              {/* Probability Breakdown Bar */}
+              {/* Simple AI vs Human Bar */}
               <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium text-foreground">Probability Breakdown</p>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Info className="w-4 h-4 text-muted-foreground" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="text-xs max-w-xs">
-                          Analysis of content authorship based on multiple AI models
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-foreground">AI vs Human Content</p>
                 </div>
                 
                 <div className="relative h-8 rounded-full overflow-hidden bg-muted flex">
-                  {/* AI Generated segment */}
-                  {result.breakdown.ai_generated > 0 && (
+                  {/* AI Total segment */}
+                  {Math.round(result.score) > 0 && (
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <div
                             className="bg-gradient-to-r from-red-500 to-red-600 flex items-center justify-center text-xs font-semibold text-white cursor-help transition-all hover:brightness-110"
-                            style={{ width: `${result.breakdown.ai_generated}%` }}
+                            style={{ width: `${Math.round(result.score)}%` }}
                           >
-                            {result.breakdown.ai_generated >= 15 && `${result.breakdown.ai_generated}%`}
+                            {Math.round(result.score) >= 10 && `${Math.round(result.score)}%`}
                           </div>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p className="text-xs">{result.breakdown.ai_generated}% AI Generated</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  )}
-                  
-                  {/* Mixed segment */}
-                  {result.breakdown.mixed > 0 && (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div
-                            className="bg-gradient-to-r from-yellow-500 to-orange-500 flex items-center justify-center text-xs font-semibold text-white cursor-help transition-all hover:brightness-110"
-                            style={{ width: `${result.breakdown.mixed}%` }}
-                          >
-                            {result.breakdown.mixed >= 15 && `${result.breakdown.mixed}%`}
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p className="text-xs">{result.breakdown.mixed}% Mixed (Human + AI)</p>
+                          <p className="text-xs">{Math.round(result.score)}% AI Content</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
                   )}
                   
                   {/* Human segment */}
-                  {result.breakdown.human > 0 && (
+                  {(100 - Math.round(result.score)) > 0 && (
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <div
                             className="bg-gradient-to-r from-green-500 to-emerald-600 flex items-center justify-center text-xs font-semibold text-white cursor-help transition-all hover:brightness-110"
-                            style={{ width: `${result.breakdown.human}%` }}
+                            style={{ width: `${100 - Math.round(result.score)}%` }}
                           >
-                            {result.breakdown.human >= 15 && `${result.breakdown.human}%`}
+                            {(100 - Math.round(result.score)) >= 10 && `${100 - Math.round(result.score)}%`}
                           </div>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p className="text-xs">{result.breakdown.human}% Human Written</p>
+                          <p className="text-xs">{100 - Math.round(result.score)}% Human Content</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -305,17 +232,58 @@ export const AIDetectionResults = ({ text, onHumanize, status, onStatusChange, o
                 <div className="flex flex-wrap gap-4 text-xs text-muted-foreground justify-center">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full bg-gradient-to-r from-red-500 to-red-600" />
-                    <span>AI Generated: {result.breakdown.ai_generated}%</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-gradient-to-r from-yellow-500 to-orange-500" />
-                    <span>Mixed: {result.breakdown.mixed}%</span>
+                    <span>AI: {Math.round(result.score)}%</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full bg-gradient-to-r from-green-500 to-emerald-600" />
-                    <span>Human: {result.breakdown.human}%</span>
+                    <span>Human: {100 - Math.round(result.score)}%</span>
                   </div>
                 </div>
+              </div>
+
+              {/* Detailed Breakdown Toggle */}
+              <div className="border-t pt-4">
+                <button
+                  onClick={() => setShowDetails(!showDetails)}
+                  className="flex items-center justify-between w-full text-sm font-medium text-foreground hover:text-primary transition-colors"
+                >
+                  <span>Show detailed breakdown</span>
+                  {showDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </button>
+                
+                {showDetails && (
+                  <div className="mt-4 space-y-3 animate-in slide-in-from-top duration-300">
+                    <p className="text-xs text-muted-foreground">
+                      AI likelihood is calculated from AI-generated + Mixed content
+                    </p>
+                    
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full bg-gradient-to-r from-red-500 to-red-600" />
+                          <span>AI Generated</span>
+                        </div>
+                        <span className="font-medium">{Math.round(result.breakdown.ai_generated)}%</span>
+                      </div>
+                      
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full bg-gradient-to-r from-yellow-500 to-orange-500" />
+                          <span>Mixed (AI-edited human)</span>
+                        </div>
+                        <span className="font-medium">{Math.round(result.breakdown.mixed)}%</span>
+                      </div>
+                      
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full bg-gradient-to-r from-green-500 to-emerald-600" />
+                          <span>Human Written</span>
+                        </div>
+                        <span className="font-medium">{Math.round(result.breakdown.human)}%</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Humanize Button - Show for mixed or ai categories */}
