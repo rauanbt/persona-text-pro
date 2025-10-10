@@ -12,7 +12,9 @@ import { ExtraWordsPackages } from '@/components/ExtraWordsPackages';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AIDetectionResults } from '@/components/AIDetectionResults';
-import { Loader2, Copy, Download, ExternalLink, Crown, Zap, Plus, Brain, Shield } from 'lucide-react';
+import { Loader2, Copy, Download, ExternalLink, Crown, Zap, Plus, Brain, Shield, Chrome, ChevronDown } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { useNavigate } from 'react-router-dom';
 
 const PLAN_LIMITS = {
   free: 750,
@@ -51,6 +53,8 @@ const Dashboard = () => {
   const [aiDetectionResults, setAiDetectionResults] = useState<any>(null);
   const [isCheckingAI, setIsCheckingAI] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showExtensionSetup, setShowExtensionSetup] = useState(false);
+  const navigate = useNavigate();
 
   const currentPlan = subscriptionData.plan;
   const planLimit = PLAN_LIMITS[currentPlan as keyof typeof PLAN_LIMITS];
@@ -330,7 +334,10 @@ const Dashboard = () => {
           <div className="flex items-center space-x-4">
             <h1 className="text-xl font-bold">SapienWrite Dashboard</h1>
             <div className="flex items-center gap-2">
-              <Badge variant={currentPlan === 'free' ? 'secondary' : 'default'}>
+              <Badge variant={currentPlan === 'free' ? 'secondary' : 'default'} className="flex items-center gap-1">
+                {(currentPlan === 'ultra' || currentPlan === 'extension_only') && (
+                  <Chrome className="h-3 w-3" />
+                )}
                 {currentPlan.toUpperCase()}
               </Badge>
               {authLoading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
@@ -607,6 +614,80 @@ const Dashboard = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Chrome Extension Access */}
+            {(currentPlan === 'ultra' || currentPlan === 'extension_only') && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Chrome className="h-5 w-5" />
+                    Chrome Extension Access
+                  </CardTitle>
+                  <Badge variant="secondary" className="w-fit">
+                    {currentPlan === 'ultra' ? 'Included in your plan' : 'Active'}
+                  </Badge>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Access SapienWrite directly in Chrome on any website.
+                  </p>
+                  
+                  <Button 
+                    onClick={() => navigate('/chrome-extension')}
+                    variant="default"
+                    className="w-full"
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Download Extension
+                  </Button>
+
+                  <Collapsible open={showExtensionSetup} onOpenChange={setShowExtensionSetup}>
+                    <CollapsibleTrigger asChild>
+                      <Button variant="ghost" className="w-full justify-between">
+                        Setup Instructions
+                        <ChevronDown className={`h-4 w-4 transition-transform ${showExtensionSetup ? 'rotate-180' : ''}`} />
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="space-y-3 pt-3">
+                      <div className="text-sm space-y-2">
+                        <div className="flex items-start gap-2">
+                          <span className="font-semibold text-primary">1.</span>
+                          <span>Download and install the extension</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="font-semibold text-primary">2.</span>
+                          <div className="flex-1 space-y-2">
+                            <span>Your API Key:</span>
+                            <div className="flex items-center gap-2">
+                              <code className="flex-1 bg-muted px-3 py-2 rounded text-xs break-all">
+                                {session?.access_token?.substring(0, 20)}...
+                              </code>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(session?.access_token || '');
+                                  toast({
+                                    title: "Copied!",
+                                    description: "API key copied to clipboard.",
+                                  });
+                                }}
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="font-semibold text-primary">3.</span>
+                          <span>Open the extension and paste your API key in settings</span>
+                        </div>
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Upgrade Options */}
             {currentPlan !== 'ultra' && (
