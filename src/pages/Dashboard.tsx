@@ -43,7 +43,7 @@ const Dashboard = () => {
   const [humanizedText, setHumanizedText] = useState('');
   const [selectedTone, setSelectedTone] = useState('regular');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [usage, setUsage] = useState({ words_used: 0, extension_words_used: 0, requests_count: 0 });
+  const [usage, setUsage] = useState({ words_used: 0, extension_words_used: 0, requests_count: 0, detection_count: 0 });
   const [extraWords, setExtraWords] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showExtraWordsDialog, setShowExtraWordsDialog] = useState(false);
@@ -54,6 +54,7 @@ const Dashboard = () => {
   const [isCheckingAI, setIsCheckingAI] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showExtensionSetup, setShowExtensionSetup] = useState(false);
+  const [detectionLimit, setDetectionLimit] = useState(5);
   const navigate = useNavigate();
 
   const currentPlan = subscriptionData.plan;
@@ -112,17 +113,17 @@ const Dashboard = () => {
     try {
       const currentMonth = new Date().toISOString().slice(0, 7);
       
-      // Fetch both usage and extra words balance in parallel
+      // Fetch usage, extra words balance, and detection limit in parallel
       const [usageResult, profileResult] = await Promise.all([
         supabase
           .from('usage_tracking')
-          .select('words_used, extension_words_used, requests_count')
+          .select('words_used, extension_words_used, requests_count, detection_count, detection_limit')
           .eq('user_id', user.id)
           .eq('month_year', currentMonth)
-          .single(),
+          .maybeSingle(),
         supabase
           .from('profiles')
-          .select('extra_words_balance')
+          .select('extra_words_balance, current_plan')
           .eq('user_id', user.id)
           .single()
       ]);
@@ -135,8 +136,18 @@ const Dashboard = () => {
         throw profileResult.error;
       }
 
-      setUsage(usageResult.data || { words_used: 0, extension_words_used: 0, requests_count: 0 });
+      setUsage(usageResult.data || { words_used: 0, extension_words_used: 0, requests_count: 0, detection_count: 0 });
       setExtraWords(profileResult.data?.extra_words_balance || 0);
+      
+      // Set detection limit based on plan
+      const plan = profileResult.data?.current_plan || 'free';
+      const planLimits: Record<string, number> = {
+        free: 5,
+        extension_only: 0,
+        pro: 50,
+        ultra: 100
+      };
+      setDetectionLimit(planLimits[plan] || 5);
     } catch (error) {
       console.error('Error fetching usage:', error);
     } finally {
@@ -182,7 +193,8 @@ const Dashboard = () => {
       setUsage(prev => ({
         words_used: prev.words_used + wordCount,
         extension_words_used: prev.extension_words_used || 0,
-        requests_count: prev.requests_count + 1
+        requests_count: prev.requests_count + 1,
+        detection_count: prev.detection_count || 0
       }));
       
       // Update extra words if they were used
@@ -301,8 +313,26 @@ const Dashboard = () => {
 
       if (error) throw error;
 
+      // Check for limit error
+      if (data?.error === 'Detection limit reached') {
+        toast({
+          title: "Detection Limit Reached",
+          description: data.message || `You've used all ${detectionLimit} AI detections for this month. Upgrade to get more!`,
+          variant: "destructive",
+        });
+        setAiDetectionStatus(null);
+        setIsCheckingAI(false);
+        return;
+      }
+
       setAiDetectionResults(data);
       setAiDetectionStatus('completed');
+      
+      // Update detection count in local state
+      setUsage(prev => ({
+        ...prev,
+        detection_count: (prev.detection_count || 0) + 1
+      }));
       
       toast({
         title: "AI Detection Complete",
@@ -616,6 +646,46 @@ const Dashboard = () => {
                   </TabsContent>
 
                   <TabsContent value="detect" className="space-y-6">
+                    {/* Detection Usage Display */}
+                    <div className="bg-muted/50 rounded-lg p-4 border">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <Shield className="h-4 w-4 text-primary" />
+                          <span className="text-sm font-medium">AI Detections Used</span>
+                        </div>
+                        <Badge variant={(usage.detection_count || 0) >= detectionLimit ? 'destructive' : 'default'}>
+                          {usage.detection_count || 0} / {detectionLimit}
+                        </Badge>
+                      </div>
+                      <Progress 
+                        value={Math.min(((usage.detection_count || 0) / detectionLimit) * 100, 100)} 
+                        className="mb-2" 
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Using real AI detection APIs: GPTZero, Copyleaks, and ZeroGPT
+                      </p>
+                      {(usage.detection_count || 0) >= detectionLimit * 0.8 && (usage.detection_count || 0) < detectionLimit && (
+                        <div className="mt-2 p-2 bg-amber-50 dark:bg-amber-950/20 rounded text-xs text-amber-900 dark:text-amber-100">
+                          ⚠️ You've used {Math.round(((usage.detection_count || 0) / detectionLimit) * 100)}% of your AI detections
+                        </div>
+                      )}
+                      {(usage.detection_count || 0) >= detectionLimit && (
+                        <div className="mt-2 p-3 bg-destructive/10 border border-destructive/20 rounded">
+                          <p className="text-sm font-medium text-destructive mb-1">Detection Limit Reached</p>
+                          <p className="text-xs text-muted-foreground mb-2">
+                            Upgrade to Pro (50/month) or Ultra (100/month) for more AI detections.
+                          </p>
+                          <Button 
+                            variant="destructive" 
+                            size="sm"
+                            onClick={() => window.location.href = '#upgrade'}
+                          >
+                            View Upgrade Options
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+
                     <div className="space-y-4">
                       <div>
                         <label className="text-sm font-medium mb-2 block">
@@ -631,13 +701,13 @@ const Dashboard = () => {
                           <span>
                             Words: {inputText.trim() ? inputText.trim().split(/\s+/).length : 0}
                           </span>
-                          <span>Free for all users</span>
+                          <span>{detectionLimit - (usage.detection_count || 0)} detections remaining</span>
                         </div>
                       </div>
 
                       <Button 
                         onClick={handleCheckAI}
-                        disabled={isCheckingAI || !inputText.trim()}
+                        disabled={isCheckingAI || !inputText.trim() || (usage.detection_count || 0) >= detectionLimit}
                         className="w-full"
                         size="lg"
                         variant="outline"
@@ -647,10 +717,15 @@ const Dashboard = () => {
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                             Analyzing Text...
                           </>
+                        ) : (usage.detection_count || 0) >= detectionLimit ? (
+                          <>
+                            <Shield className="mr-2 h-4 w-4" />
+                            Detection Limit Reached
+                          </>
                         ) : (
                           <>
                             <Shield className="mr-2 h-4 w-4" />
-                            Check for AI Detection
+                            Check for AI Detection ({detectionLimit - (usage.detection_count || 0)} left)
                           </>
                         )}
                       </Button>

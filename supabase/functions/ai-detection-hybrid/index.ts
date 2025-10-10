@@ -10,6 +10,15 @@ const corsHeaders = {
 const supabaseUrl = Deno.env.get('SUPABASE_URL');
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
+const PLAN_DETECTION_LIMITS: Record<string, number> = {
+  free: 5,
+  extension_only: 0,
+  pro: 50,
+  ultra: 100,
+  wordsmith: 50,
+  master: 100
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -25,6 +34,40 @@ serve(async (req) => {
     const { data: userData, error: userError } = await supabase.auth.getUser(token);
     if (userError || !userData.user) {
       throw new Error('User not authenticated');
+    }
+
+    // Check detection usage limits
+    const currentMonthYear = new Date().toISOString().slice(0, 7);
+    const { data: usageData, error: usageError } = await supabase
+      .from('usage_tracking')
+      .select('detection_count, detection_limit')
+      .eq('user_id', userData.user.id)
+      .eq('month_year', currentMonthYear)
+      .maybeSingle();
+
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('current_plan')
+      .eq('user_id', userData.user.id)
+      .single();
+
+    const userPlan = profileData?.current_plan || 'free';
+    const detectionLimit = PLAN_DETECTION_LIMITS[userPlan] || 5;
+    const detectionCount = usageData?.detection_count || 0;
+
+    console.log('[HYBRID] Detection usage:', { detectionCount, detectionLimit, plan: userPlan });
+
+    if (detectionCount >= detectionLimit) {
+      return new Response(JSON.stringify({
+        error: 'Detection limit reached',
+        message: `You've used all ${detectionLimit} AI detections for this month. Upgrade to get more!`,
+        detectionCount,
+        detectionLimit,
+        plan: userPlan
+      }), {
+        status: 429,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const { text } = await req.json();
@@ -113,6 +156,29 @@ serve(async (req) => {
     };
     
     const riskLevel = getRiskLevel(averageScore);
+
+    // Increment detection count
+    if (usageData) {
+      await supabase
+        .from('usage_tracking')
+        .update({ 
+          detection_count: detectionCount + 1,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', userData.user.id)
+        .eq('month_year', currentMonthYear);
+    } else {
+      await supabase
+        .from('usage_tracking')
+        .insert({
+          user_id: userData.user.id,
+          month_year: currentMonthYear,
+          detection_count: 1,
+          words_used: 0
+        });
+    }
+
+    console.log('[HYBRID] Detection count incremented');
     
     return new Response(JSON.stringify({
       overallScore: averageScore,
