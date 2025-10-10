@@ -12,7 +12,8 @@ import { ExtraWordsPackages } from '@/components/ExtraWordsPackages';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AIDetectionResults } from '@/components/AIDetectionResults';
-import { Loader2, Copy, Download, ExternalLink, Crown, Zap, Plus, Brain, Shield, Chrome } from 'lucide-react';
+import { Loader2, Copy, Download, ExternalLink, Crown, Zap, Plus, Brain, Shield, Chrome, ChevronDown } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useNavigate } from 'react-router-dom';
 
 const PLAN_LIMITS = {
@@ -704,20 +705,6 @@ const Dashboard = () => {
                           </div>
                           
                           {/* Debug UI */}
-                          <div className="mt-4">
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={() => setShowRawResponse(v => !v)}
-                            >
-                              {showRawResponse ? 'Hide' : 'Show'} raw response (debug)
-                            </Button>
-                            {showRawResponse && lastRawResponse && (
-                              <pre className="mt-2 p-3 bg-muted text-xs rounded overflow-auto max-h-64 border">
-                                {JSON.stringify(lastRawResponse, null, 2)}
-                              </pre>
-                            )}
-                          </div>
                         </div>
                       )}
                     </div>
