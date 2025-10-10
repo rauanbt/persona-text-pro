@@ -34,7 +34,7 @@ export const WritingJourneyPricing = () => {
       borderColor: "border-amber-200 dark:border-amber-800"
     },
     {
-      name: "Wordsmith",
+      name: "Pro",
       subtitle: "For professional creators",
       monthlyPrice: "$24.95",
       annualPrice: "$14.97",
@@ -48,7 +48,7 @@ export const WritingJourneyPricing = () => {
         "Advanced dual-engine humanization (Gemini + OpenAI)",
         "50+ languages supported"
       ],
-      buttonText: "Choose Wordsmith",
+      buttonText: "Choose Pro",
       popular: true,
       isFree: false,
       monthlyPriceId: "price_1SD818H8HT0u8xph48V9GxXG",
@@ -57,7 +57,7 @@ export const WritingJourneyPricing = () => {
       borderColor: "border-blue-200 dark:border-blue-800"
     },
     {
-      name: "Master",
+      name: "Ultra",
       subtitle: "For content powerhouses",
       monthlyPrice: "$54.95",
       annualPrice: "$32.97",
@@ -72,7 +72,7 @@ export const WritingJourneyPricing = () => {
         "50+ languages supported",
         "✅ Chrome Extension Included FREE"
       ],
-      buttonText: "Become a Master",
+      buttonText: "Become an Ultra",
       popular: false,
       isFree: false,
       monthlyPriceId: "price_1SD81xH8HT0u8xphuqiq8xet",

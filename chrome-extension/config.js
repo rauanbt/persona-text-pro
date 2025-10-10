@@ -12,6 +12,6 @@ const PLAN_LIMITS = {
   pro: 15000,
   ultra: 30000,
   extension_only: 5000,
-  wordsmith: 15000,
-  master: 30000
+  wordsmith: 15000, // legacy - maps to pro
+  master: 30000 // legacy - maps to ultra
 };

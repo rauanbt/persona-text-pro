@@ -73,19 +73,19 @@ function updatePlanBadge(plan) {
   const planNames = {
     free: 'Free',
     extension_only: 'Extension',
-    pro: 'Wordsmith',
-    wordsmith: 'Wordsmith',
-    ultra: 'Master',
-    master: 'Master'
+    pro: 'Pro',
+    wordsmith: 'Pro', // legacy
+    ultra: 'Ultra',
+    master: 'Ultra' // legacy
   };
   
   const planClasses = {
     free: 'status-free',
     extension_only: 'status-extension',
     pro: 'status-pro',
-    wordsmith: 'status-pro',
-    ultra: 'status-master',
-    master: 'status-master'
+    wordsmith: 'status-pro', // legacy
+    ultra: 'status-ultra',
+    master: 'status-ultra' // legacy
   };
   
   badge.textContent = planNames[plan] || 'Free';

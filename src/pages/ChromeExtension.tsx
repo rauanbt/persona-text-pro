@@ -25,7 +25,7 @@ const ChromeExtension = () => {
               Download Extension
             </Button>
             <p className="text-sm text-muted-foreground mt-4">
-              Requires Extension-Only ($12.95/month) or Master plan ($54.95/month)
+              Requires Extension-Only ($12.95/month) or Ultra plan ($54.95/month)
             </p>
           </div>
 
@@ -69,14 +69,14 @@ const ChromeExtension = () => {
               <Card className="border-2 border-purple-200 bg-purple-50/50">
                 <CardContent className="p-6">
                   <div className="text-xs font-bold text-purple-600 mb-2">BEST VALUE</div>
-                  <h3 className="text-2xl font-bold mb-2">Master</h3>
+                  <h3 className="text-2xl font-bold mb-2">Ultra</h3>
                   <div className="text-3xl font-bold text-primary mb-4">$54.95<span className="text-lg text-muted-foreground">/month</span></div>
                   <ul className="space-y-2 mb-6">
                     <li className="flex items-center"><Check className="w-4 h-4 text-purple-500 mr-2" />30,000 words/month</li>
                     <li className="flex items-center"><Check className="w-4 h-4 text-purple-500 mr-2" />✅ Extension + Web Platform</li>
                     <li className="flex items-center"><Check className="w-4 h-4 text-purple-500 mr-2" />Premium triple-engine</li>
                   </ul>
-                  <Button className="w-full">Get Master</Button>
+                  <Button className="w-full">Get Ultra</Button>
                 </CardContent>
               </Card>
             </div>
@@ -90,7 +90,7 @@ const ChromeExtension = () => {
                 "Download the extension from Chrome Web Store",
                 "Click 'Add to Chrome' to install",
                 "Log in with your SapienWrite account",
-                "Subscribe to Extension-Only or Master plan",
+                "Subscribe to Extension-Only or Ultra plan",
                 "Start humanizing text with a right-click!"
               ].map((step, i) => (
                 <div key={i} className="flex items-start gap-4 p-4 bg-card rounded-lg border">

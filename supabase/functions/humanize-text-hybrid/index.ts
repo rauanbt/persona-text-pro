@@ -108,7 +108,7 @@ serve(async (req) => {
     if (userPlan === 'free' && inputLangCode !== 'en') {
       console.log('[HYBRID-HUMANIZE] Non-English text detected - rejecting free user request');
       return new Response(JSON.stringify({ 
-        error: 'Free plan supports English only. Upgrade to Wordsmith or Master plan for 50+ languages.',
+        error: 'Free plan supports English only. Upgrade to Pro or Ultra plan for 50+ languages.',
         upgrade_required: true
       }), {
         status: 403,
@@ -198,8 +198,8 @@ serve(async (req) => {
       console.log(`[HYBRID-HUMANIZE] Free plan complete - Line breaks: input=${inputLineBreaks}, output=${outputLineBreaks}`);
 
     } else if (userPlan === 'pro' || userPlan === 'wordsmith') {
-      // WORDSMITH PLAN: Gemini + OpenAI (2 passes)
-      console.log('[HYBRID-HUMANIZE] Wordsmith plan - Dual-engine humanization');
+      // PRO PLAN: Gemini + OpenAI (2 passes)
+      console.log('[HYBRID-HUMANIZE] Pro plan - Dual-engine humanization');
       
       // Pass 1: Gemini for creative foundation
       const pass1Response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -265,8 +265,8 @@ serve(async (req) => {
       }
 
     } else if (userPlan === 'ultra' || userPlan === 'master') {
-      // MASTER PLAN: Gemini + OpenAI + Claude (3 passes)
-      console.log('[HYBRID-HUMANIZE] Master plan - Triple-engine humanization');
+      // ULTRA PLAN: Gemini + OpenAI + Claude (3 passes)
+      console.log('[HYBRID-HUMANIZE] Ultra plan - Triple-engine humanization');
       
       // Pass 1: Gemini for creative foundation
       const pass1Response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {

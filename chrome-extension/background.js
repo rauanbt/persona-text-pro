@@ -47,11 +47,11 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       const subscriptionData = await checkSubscription();
       const plan = subscriptionData.plan || 'free';
       
-      // Check if extension-only or master plan
+      // Check if extension-only or ultra plan (also support legacy master)
       if (plan !== 'extension_only' && plan !== 'master' && plan !== 'ultra') {
         chrome.tabs.sendMessage(tab.id, {
           action: 'showNotification',
-          message: 'Upgrade to Extension-Only or Master plan to use the Chrome Extension',
+          message: 'Upgrade to Extension-Only or Ultra plan to use the Chrome Extension',
           type: 'error'
         });
         return;
