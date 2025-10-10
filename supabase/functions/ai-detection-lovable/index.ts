@@ -39,9 +39,14 @@ serve(async (req) => {
     }
 
     const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+    const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY');
     
     if (!lovableApiKey) {
       throw new Error('LOVABLE_API_KEY not configured');
+    }
+    
+    if (!anthropicApiKey) {
+      console.warn('[AI-DETECTION] ANTHROPIC_API_KEY not configured - Claude will be skipped');
     }
 
     // System prompt for AI detection
@@ -96,48 +101,106 @@ Also provide your confidence level (0-100) in this assessment and brief reasonin
       }
     };
 
+    // Helper function for Lovable AI Gateway (Gemini & GPT)
+    const callLovableAI = async (model: string) => {
+      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${lovableApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: `Analyze this text for AI generation:\n\n${text}` }
+          ],
+          tools: [detectionTool],
+          tool_choice: { type: "function", function: { name: "detect_ai_content" } }
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`API error: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+      
+      if (!toolCall) {
+        throw new Error('No tool call returned');
+      }
+
+      return JSON.parse(toolCall.function.arguments);
+    };
+
+    // Helper function for Anthropic API (Claude)
+    const callAnthropicAI = async (model: string) => {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': anthropicApiKey!,
+          'anthropic-version': '2023-06-01',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model,
+          max_tokens: 1024,
+          tools: [{
+            name: detectionTool.function.name,
+            description: detectionTool.function.description,
+            input_schema: detectionTool.function.parameters
+          }],
+          tool_choice: { type: "tool", name: "detect_ai_content" },
+          messages: [
+            { 
+              role: 'user', 
+              content: `${systemPrompt}\n\nAnalyze this text for AI generation:\n\n${text}` 
+            }
+          ]
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Anthropic API error: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      const toolUse = data.content?.find((block: any) => block.type === 'tool_use');
+      
+      if (!toolUse) {
+        throw new Error('No tool use returned');
+      }
+
+      return toolUse.input;
+    };
+
     // Call three models in parallel
     const models = [
-      { name: 'gemini', model: 'google/gemini-2.5-flash', weight: 0.40 },
-      { name: 'gpt', model: 'openai/gpt-5-mini-2025-08-07', weight: 0.35 },
-      { name: 'claude', model: 'claude-sonnet-4-20250514', weight: 0.25 }
+      { name: 'gemini', model: 'google/gemini-2.5-flash', weight: 0.40, gateway: 'lovable' },
+      { name: 'gpt', model: 'openai/gpt-5-mini', weight: 0.35, gateway: 'lovable' },
+      { name: 'claude', model: 'claude-sonnet-4-20250514', weight: 0.25, gateway: 'anthropic' }
     ];
 
     console.log('[AI-DETECTION] Calling three AI models in parallel...');
 
-    const modelPromises = models.map(async ({ name, model, weight }) => {
+    const modelPromises = models.map(async ({ name, model, weight, gateway }) => {
       try {
-        const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${lovableApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model,
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: `Analyze this text for AI generation:\n\n${text}` }
-            ],
-            tools: [detectionTool],
-            tool_choice: { type: "function", function: { name: "detect_ai_content" } }
-          }),
-        });
+        let result;
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error(`[AI-DETECTION] ${name} error:`, response.status, errorText);
-          throw new Error(`${name} API error: ${response.status}`);
+        if (gateway === 'lovable') {
+          result = await callLovableAI(model);
+        } else if (gateway === 'anthropic') {
+          if (!anthropicApiKey) {
+            throw new Error('ANTHROPIC_API_KEY not configured');
+          }
+          result = await callAnthropicAI(model);
+        } else {
+          throw new Error(`Unknown gateway: ${gateway}`);
         }
 
-        const data = await response.json();
-        const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-        
-        if (!toolCall) {
-          throw new Error(`${name} did not return tool call`);
-        }
-
-        const result = JSON.parse(toolCall.function.arguments);
         console.log(`[AI-DETECTION] ${name} result:`, result);
 
         return {
