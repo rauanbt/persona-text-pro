@@ -63,10 +63,10 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       
       // Fetch current usage
       const session = await getSession();
-      const planLimit = PLAN_LIMITS[plan] || 750;
+      const extensionLimit = EXTENSION_LIMITS[plan] || 750;
       
       const response = await fetch(
-        `${SUPABASE_URL}/rest/v1/usage_tracking?user_id=eq.${session.user.id}&select=words_used`,
+        `${SUPABASE_URL}/rest/v1/usage_tracking?user_id=eq.${session.user.id}&select=words_used,extension_words_used`,
         {
           headers: {
             'apikey': SUPABASE_ANON_KEY,
@@ -76,8 +76,21 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       );
       
       const data = await response.json();
-      const wordsUsed = data[0]?.words_used || 0;
-      const wordBalance = Math.max(0, planLimit - wordsUsed);
+      const usageData = data[0] || { words_used: 0, extension_words_used: 0 };
+      
+      // Calculate word balance based on plan
+      let wordBalance;
+      if (plan === 'free') {
+        // Free plan: shared pool
+        const totalUsed = (usageData.words_used || 0) + (usageData.extension_words_used || 0);
+        wordBalance = Math.max(0, extensionLimit - totalUsed);
+      } else if (plan === 'extension_only' || plan === 'ultra' || plan === 'master') {
+        // Extension-Only, Ultra, Master: separate extension pool
+        const extensionUsed = usageData.extension_words_used || 0;
+        wordBalance = Math.max(0, extensionLimit - extensionUsed);
+      } else {
+        wordBalance = 0; // Pro plan has no extension access
+      }
       
       console.log('[Background] Word balance:', wordBalance);
       
@@ -97,10 +110,11 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         type: 'info'
       });
       
-      // Call humanize function
+      // Call humanize function with source indicator
       const result = await callSupabaseFunction('humanize-text-hybrid', {
         text: selectedText,
-        tone: 'regular'
+        tone: 'regular',
+        source: 'extension'
       });
       
       console.log('[Background] Text humanized successfully');

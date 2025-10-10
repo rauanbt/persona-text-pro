@@ -43,7 +43,7 @@ const Dashboard = () => {
   const [humanizedText, setHumanizedText] = useState('');
   const [selectedTone, setSelectedTone] = useState('regular');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [usage, setUsage] = useState({ words_used: 0, requests_count: 0 });
+  const [usage, setUsage] = useState({ words_used: 0, extension_words_used: 0, requests_count: 0 });
   const [extraWords, setExtraWords] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showExtraWordsDialog, setShowExtraWordsDialog] = useState(false);
@@ -57,10 +57,19 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   const currentPlan = subscriptionData.plan;
-  const planLimit = PLAN_LIMITS[currentPlan as keyof typeof PLAN_LIMITS];
-  const remainingWords = Math.max(0, planLimit - usage.words_used);
+  const isExtensionOnlyPlan = currentPlan === 'extension_only';
+  const hasExtensionBonus = currentPlan === 'ultra' || currentPlan === 'master';
+  const webPlanLimit = PLAN_LIMITS[currentPlan as keyof typeof PLAN_LIMITS];
+  const extensionLimit = hasExtensionBonus ? 5000 : 0;
+  
+  const webWordsUsed = usage.words_used || 0;
+  const extensionWordsUsed = usage.extension_words_used || 0;
+  
+  const remainingWords = Math.max(0, webPlanLimit - webWordsUsed);
+  const extensionRemainingWords = hasExtensionBonus ? Math.max(0, extensionLimit - extensionWordsUsed) : 0;
   const totalAvailableWords = remainingWords + extraWords;
-  const usagePercentage = Math.min((usage.words_used / planLimit) * 100, 100);
+  const usagePercentage = Math.min((webWordsUsed / webPlanLimit) * 100, 100);
+  const extensionUsagePercentage = hasExtensionBonus ? Math.min((extensionWordsUsed / extensionLimit) * 100, 100) : 0;
 
   useEffect(() => {
     fetchUsage();
@@ -107,7 +116,7 @@ const Dashboard = () => {
       const [usageResult, profileResult] = await Promise.all([
         supabase
           .from('usage_tracking')
-          .select('words_used, requests_count')
+          .select('words_used, extension_words_used, requests_count')
           .eq('user_id', user.id)
           .eq('month_year', currentMonth)
           .single(),
@@ -126,7 +135,7 @@ const Dashboard = () => {
         throw profileResult.error;
       }
 
-      setUsage(usageResult.data || { words_used: 0, requests_count: 0 });
+      setUsage(usageResult.data || { words_used: 0, extension_words_used: 0, requests_count: 0 });
       setExtraWords(profileResult.data?.extra_words_balance || 0);
     } catch (error) {
       console.error('Error fetching usage:', error);
@@ -172,6 +181,7 @@ const Dashboard = () => {
       setHumanizedText(data.humanized_text);
       setUsage(prev => ({
         words_used: prev.words_used + wordCount,
+        extension_words_used: prev.extension_words_used || 0,
         requests_count: prev.requests_count + 1
       }));
       
@@ -375,57 +385,127 @@ const Dashboard = () => {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
-                  Usage Statistics
-                  <Badge variant={usagePercentage > 80 ? 'destructive' : 'default'}>
-                    {usage.words_used.toLocaleString()} / {planLimit.toLocaleString()} words
-                  </Badge>
+                  {isExtensionOnlyPlan ? 'Extension Usage' : 'Web Dashboard Usage'}
+                  {!isExtensionOnlyPlan && (
+                    <Badge variant={usagePercentage > 80 ? 'destructive' : 'default'}>
+                      {usage.words_used.toLocaleString()} / {webPlanLimit.toLocaleString()} words
+                    </Badge>
+                  )}
                 </CardTitle>
                 <CardDescription>
-                  Monthly usage resets on the 1st of each month
+                  {isExtensionOnlyPlan 
+                    ? 'Extension-Only plan - use the Chrome Extension to humanize text'
+                    : 'Monthly usage resets on the 1st of each month'}
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Progress value={usagePercentage} className="mb-2" />
-                <div className="flex justify-between text-sm text-muted-foreground">
-                  <div>
-                    <div>{remainingWords.toLocaleString()} monthly words remaining</div>
-                    {extraWords > 0 && (
-                      <div className="text-primary font-medium">
-                        + {extraWords.toLocaleString()} extra words
+                {isExtensionOnlyPlan ? (
+                  // Extension-Only Plan Display
+                  <div className="space-y-4">
+                    <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-6 text-center">
+                      <Chrome className="w-12 h-12 mx-auto mb-3 text-blue-500" />
+                      <h3 className="font-semibold text-lg mb-2">Chrome Extension Access Only</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Your plan includes 5,000 words/month for the Chrome Extension
+                      </p>
+                      <div className="text-3xl font-bold text-primary mb-2">
+                        {(5000 - extensionWordsUsed).toLocaleString()} words remaining
+                      </div>
+                      <Progress value={(extensionWordsUsed / 5000) * 100} className="mb-2" />
+                      <p className="text-xs text-muted-foreground">
+                        {extensionWordsUsed.toLocaleString()} of 5,000 words used
+                      </p>
+                      <Button 
+                        variant="outline" 
+                        className="mt-4"
+                        onClick={() => navigate('/chrome-extension')}
+                      >
+                        View Extension Setup Instructions
+                      </Button>
+                    </div>
+                    <div className="bg-amber-50 dark:bg-amber-950/20 rounded-lg p-4 text-sm">
+                      <p className="font-medium mb-2">Want web dashboard access?</p>
+                      <p className="text-muted-foreground mb-3">
+                        Upgrade to Pro or Ultra plan to unlock the web humanizer and AI detection tools.
+                      </p>
+                      <Button 
+                        variant="default" 
+                        size="sm"
+                        onClick={() => window.location.href = '#upgrade'}
+                      >
+                        View Upgrade Options
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  // Regular Plans Display
+                  <>
+                    <Progress value={usagePercentage} className="mb-2" />
+                    <div className="flex justify-between text-sm text-muted-foreground">
+                      <div>
+                        <div>{remainingWords.toLocaleString()} monthly words remaining</div>
+                        {extraWords > 0 && (
+                          <div className="text-primary font-medium">
+                            + {extraWords.toLocaleString()} extra words
+                          </div>
+                        )}
+                      </div>
+                      <span>{usage.requests_count} requests made</span>
+                    </div>
+                    <div className="mt-2 pt-2 border-t">
+                      <div className="flex justify-between text-sm">
+                        <span className="font-medium">Total Available:</span>
+                        <span className="font-bold text-primary">{totalAvailableWords.toLocaleString()} words</span>
+                      </div>
+                    </div>
+                    
+                    {/* Extension Bonus Words for Ultra Plan */}
+                    {hasExtensionBonus && (
+                      <div className="mt-4 pt-4 border-t">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <Chrome className="w-4 h-4 text-blue-500" />
+                            <span className="text-sm font-medium">Extension Bonus Words</span>
+                          </div>
+                          <Badge variant="secondary">
+                            {extensionRemainingWords.toLocaleString()} / 5,000
+                          </Badge>
+                        </div>
+                        <Progress value={extensionUsagePercentage} className="mb-2" />
+                        <p className="text-xs text-muted-foreground">
+                          Separate 5,000-word pool for Chrome Extension use only
+                        </p>
                       </div>
                     )}
-                  </div>
-                  <span>{usage.requests_count} requests made</span>
-                </div>
-                <div className="mt-2 pt-2 border-t">
-                  <div className="flex justify-between text-sm">
-                    <span className="font-medium">Total Available:</span>
-                    <span className="font-bold text-primary">{totalAvailableWords.toLocaleString()} words</span>
-                  </div>
-                </div>
-                <Dialog open={showExtraWordsDialog} onOpenChange={setShowExtraWordsDialog}>
-                  <DialogTrigger asChild>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="w-full mt-3 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Buy Extra Words
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-4xl">
-                    <DialogHeader>
-                      <DialogTitle>Extra Words Packages</DialogTitle>
-                    </DialogHeader>
-                    <ExtraWordsPackages onClose={() => setShowExtraWordsDialog(false)} />
-                  </DialogContent>
-                </Dialog>
+                    
+                    {!isExtensionOnlyPlan && (
+                      <Dialog open={showExtraWordsDialog} onOpenChange={setShowExtraWordsDialog}>
+                        <DialogTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="w-full mt-3 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+                          >
+                            <Plus className="w-4 h-4 mr-2" />
+                            Buy Extra Words
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-4xl">
+                          <DialogHeader>
+                            <DialogTitle>Extra Words Packages</DialogTitle>
+                          </DialogHeader>
+                          <ExtraWordsPackages onClose={() => setShowExtraWordsDialog(false)} />
+                        </DialogContent>
+                      </Dialog>
+                    )}
+                  </>
+                )}
               </CardContent>
             </Card>
 
-            {/* Tabbed Interface */}
-            <Card>
+            {/* AI Tools - Hidden for Extension-Only Plan */}
+            {!isExtensionOnlyPlan && (
+              <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Brain className="w-5 h-5" />
@@ -573,6 +653,7 @@ const Dashboard = () => {
                 </Tabs>
               </CardContent>
             </Card>
+            )}
           </div>
 
           {/* Sidebar */}
@@ -590,7 +671,7 @@ const Dashboard = () => {
                   <div>
                     <div className="font-semibold text-lg capitalize">{currentPlan}</div>
                     <div className="text-sm text-muted-foreground">
-                      {planLimit.toLocaleString()} words/month
+                      {webPlanLimit.toLocaleString()} words/month
                     </div>
                   </div>
                   

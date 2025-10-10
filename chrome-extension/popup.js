@@ -1,5 +1,15 @@
 // Popup Script - Handles UI interactions
 
+// Extension word limits (must match config.js)
+const EXTENSION_LIMITS = {
+  free: 750,           // Shared pool with web
+  extension_only: 5000, // Extension only
+  ultra: 5000,          // Bonus extension words
+  master: 5000,         // Bonus extension words (legacy)
+  pro: 0,              // No extension access
+  wordsmith: 0         // No extension access (legacy)
+};
+
 let subscriptionData = null;
 let wordBalance = 0;
 
@@ -97,11 +107,11 @@ async function fetchWordBalance() {
   try {
     const session = await getSession();
     const plan = subscriptionData.plan || 'free';
-    const planLimit = PLAN_LIMITS[plan] || 750;
+    const extensionLimit = EXTENSION_LIMITS[plan] || 750;
     
     // Fetch usage from Supabase
     const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/usage_tracking?user_id=eq.${session.user.id}&select=words_used`,
+      `${SUPABASE_URL}/rest/v1/usage_tracking?user_id=eq.${session.user.id}&select=words_used,extension_words_used`,
       {
         headers: {
           'apikey': SUPABASE_ANON_KEY,
@@ -115,14 +125,27 @@ async function fetchWordBalance() {
     }
     
     const data = await response.json();
-    const wordsUsed = data[0]?.words_used || 0;
-    wordBalance = Math.max(0, planLimit - wordsUsed);
+    const usageData = data[0] || { words_used: 0, extension_words_used: 0 };
+    
+    // Calculate word balance based on plan
+    if (plan === 'free') {
+      // Free plan: shared pool
+      const totalUsed = (usageData.words_used || 0) + (usageData.extension_words_used || 0);
+      wordBalance = Math.max(0, extensionLimit - totalUsed);
+    } else if (plan === 'extension_only' || plan === 'ultra' || plan === 'master') {
+      // Extension-Only, Ultra, Master: separate extension pool
+      const extensionUsed = usageData.extension_words_used || 0;
+      wordBalance = Math.max(0, extensionLimit - extensionUsed);
+    } else {
+      // Pro/Wordsmith: No extension access
+      wordBalance = 0;
+    }
     
     // Update UI
-    updateWordBalanceUI(wordBalance, planLimit);
+    updateWordBalanceUI(wordBalance, extensionLimit);
     
     // Show upgrade prompt if out of words
-    if (wordBalance <= 0) {
+    if (wordBalance <= 0 && plan !== 'pro' && plan !== 'wordsmith') {
       document.getElementById('upgrade-prompt').classList.remove('hidden');
     }
   } catch (error) {
@@ -202,7 +225,8 @@ document.getElementById('humanize-button')?.addEventListener('click', async () =
   try {
     const result = await callSupabaseFunction('humanize-text-hybrid', {
       text: text,
-      tone: 'regular'
+      tone: 'regular',
+      source: 'extension'
     });
     
     // Copy to clipboard

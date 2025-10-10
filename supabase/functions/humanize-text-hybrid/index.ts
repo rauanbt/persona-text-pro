@@ -12,14 +12,22 @@ const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
 const supabaseUrl = Deno.env.get('SUPABASE_URL');
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-// Word limits per plan
+// Word limits per plan (web dashboard)
 const PLAN_LIMITS = {
-  free: 750,
-  wordsmith: 15000,
-  master: 30000,
-  extension_only: 5000,
-  pro: 15000, // legacy
-  ultra: 30000 // legacy
+  free: 750,          // Shared pool (web + extension)
+  wordsmith: 15000,   // Web only
+  master: 30000,      // Web (+ 5k extension bonus)
+  extension_only: 0,  // Extension only plan has no web access
+  pro: 15000,         // Web only
+  ultra: 30000        // Web (+ 5k extension bonus)
+};
+
+// Extension word limits (separate tracking for Ultra/Master + Extension-Only plans)
+const EXTENSION_LIMITS = {
+  free: 750,           // Shared with web pool
+  extension_only: 5000, // Extension only
+  ultra: 5000,          // Bonus pool for extension
+  master: 5000          // Bonus pool for extension (legacy)
 };
 
 // Lightweight ISO 639-1 language name map for logs/prompts
@@ -74,7 +82,7 @@ serve(async (req) => {
       throw new Error('User not authenticated');
     }
 
-    const { text, tone } = await req.json();
+    const { text, tone, source = 'web' } = await req.json(); // source: 'web' or 'extension'
     
     if (!text || !tone) {
       throw new Error('Text and tone are required');
@@ -120,18 +128,68 @@ serve(async (req) => {
     const langRule = `Input language detected: ${inputLangName} [${inputLangCode}]. Your output MUST be ${inputLangName} [${inputLangCode}] — NEVER translate or switch languages.`;
 
     const extraWords = profile?.extra_words_balance || 0;
-    const planLimit = PLAN_LIMITS[userPlan as keyof typeof PLAN_LIMITS] || PLAN_LIMITS.free;
-
+    
+    // Determine word limit and usage column based on source and plan
+    const isExtensionRequest = source === 'extension';
+    const isExtensionOnlyPlan = userPlan === 'extension_only';
+    const hasExtensionBonus = userPlan === 'ultra' || userPlan === 'master';
+    const isFreePlan = userPlan === 'free';
+    
     // Get or create usage tracking for current month
     const { data: usage } = await supabase
       .from('usage_tracking')
-      .select('words_used, requests_count')
+      .select('words_used, extension_words_used, requests_count')
       .eq('user_id', userData.user.id)
       .eq('month_year', currentMonth)
       .single();
 
-    const currentUsage = usage?.words_used || 0;
-    const totalAvailableWords = planLimit - currentUsage + extraWords;
+    const webWordsUsed = usage?.words_used || 0;
+    const extensionWordsUsed = usage?.extension_words_used || 0;
+    
+    // Calculate available words based on plan and source
+    let planLimit: number;
+    let currentUsage: number;
+    let totalAvailableWords: number;
+    
+    if (isExtensionOnlyPlan) {
+      // Extension-Only plan: 5000 extension words, no web access
+      if (!isExtensionRequest) {
+        return new Response(JSON.stringify({ 
+          error: 'Extension-Only plan users must use the Chrome Extension. Upgrade to Pro or Ultra for web access.',
+          upgrade_required: true
+        }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      planLimit = EXTENSION_LIMITS.extension_only;
+      currentUsage = extensionWordsUsed;
+      totalAvailableWords = planLimit - currentUsage;
+    } else if (isFreePlan) {
+      // Free plan: 750 shared words (web + extension)
+      planLimit = PLAN_LIMITS.free;
+      currentUsage = webWordsUsed + extensionWordsUsed; // Combined usage for free plan
+      totalAvailableWords = planLimit - currentUsage + extraWords;
+    } else if (isExtensionRequest && hasExtensionBonus) {
+      // Ultra/Master using extension: 5000 bonus extension words (separate pool)
+      planLimit = EXTENSION_LIMITS[userPlan as keyof typeof EXTENSION_LIMITS] || 5000;
+      currentUsage = extensionWordsUsed;
+      totalAvailableWords = planLimit - currentUsage;
+    } else if (isExtensionRequest) {
+      // Pro/Wordsmith: No extension access
+      return new Response(JSON.stringify({ 
+        error: 'Pro plan does not include Chrome Extension access. Upgrade to Ultra or get Extension-Only plan.',
+        upgrade_required: true
+      }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    } else {
+      // Web request for Pro/Wordsmith/Ultra/Master
+      planLimit = PLAN_LIMITS[userPlan as keyof typeof PLAN_LIMITS] || PLAN_LIMITS.free;
+      currentUsage = webWordsUsed;
+      totalAvailableWords = planLimit - currentUsage + extraWords;
+    }
     
     // Check if user would exceed their total available words
     if (wordCount > totalAvailableWords) {
@@ -467,19 +525,30 @@ async function finalizeResponse(
   planLimit: number,
   extraWords: number,
   passesCompleted: number = 2,
-  enginesUsed: string = 'openai-dual-pass'
+  enginesUsed: string = 'openai-dual-pass',
+  source: string = 'web'
 ) {
-  // Update usage tracking and deduct from extra words if needed
-  const wordsToDeductFromExtra = Math.max(0, (currentUsage + wordCount) - planLimit);
+  const isExtensionRequest = source === 'extension';
+  
+  // Update usage tracking and deduct from extra words if needed (only for web requests with extra words)
+  const wordsToDeductFromExtra = !isExtensionRequest ? Math.max(0, (currentUsage + wordCount) - planLimit) : 0;
   const newExtraWordsBalance = extraWords - wordsToDeductFromExtra;
   
   if (usage) {
+    // Update the appropriate column based on source
+    const updateData: any = {
+      requests_count: (usage.requests_count || 0) + 1
+    };
+    
+    if (isExtensionRequest) {
+      updateData.extension_words_used = (usage.extension_words_used || 0) + wordCount;
+    } else {
+      updateData.words_used = currentUsage + wordCount;
+    }
+    
     await supabase
       .from('usage_tracking')
-      .update({
-        words_used: currentUsage + wordCount,
-        requests_count: (usage.requests_count || 0) + 1
-      })
+      .update(updateData)
       .eq('user_id', userId)
       .eq('month_year', currentMonth);
   } else {
@@ -488,7 +557,8 @@ async function finalizeResponse(
       .insert({
         user_id: userId,
         month_year: currentMonth,
-        words_used: wordCount,
+        words_used: isExtensionRequest ? 0 : wordCount,
+        extension_words_used: isExtensionRequest ? wordCount : 0,
         requests_count: 1
       });
   }
@@ -527,15 +597,16 @@ async function finalizeResponse(
     }
   }
 
-  return new Response(JSON.stringify({ 
+  return new Response(JSON.stringify({
     humanized_text: humanizedText,
     word_count: wordCount,
     remaining_words: Math.max(0, planLimit - (currentUsage + wordCount)),
     extra_words_remaining: newExtraWordsBalance,
-    total_remaining: Math.max(0, planLimit - (currentUsage + wordCount)) + newExtraWordsBalance,
+    total_remaining: Math.max(0, planLimit - (currentUsage + wordCount)) + (isExtensionRequest ? 0 : newExtraWordsBalance),
     passes_completed: passesCompleted,
     engine: enginesUsed,
-    editor_note: editorNote || undefined
+    editor_note: editorNote || undefined,
+    source: source
   }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });

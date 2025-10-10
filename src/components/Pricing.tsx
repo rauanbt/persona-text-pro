@@ -52,6 +52,25 @@ export const Pricing = () => {
       annualPriceId: "price_1SGMoHH8HT0u8xphAjovqefe"
     },
     {
+      name: "Extension-Only",
+      monthlyPrice: "$12.95",
+      annualPrice: "$12.95",
+      period: "per month",
+      description: "Chrome Extension access only",
+      features: [
+        "5,000 extension words per month",
+        "Chrome Extension access",
+        "All 4 tone options",
+        "Advanced humanization",
+        "No web dashboard access"
+      ],
+      buttonText: "Get Extension-Only",
+      popular: false,
+      isFree: false,
+      monthlyPriceId: "price_1SGNtsH8HT0u8xphEd7pG9Po",
+      annualPriceId: "price_1SGNtsH8HT0u8xphEd7pG9Po"
+    },
+    {
       name: "Ultra",
       monthlyPrice: "$57.98",
       annualPrice: "$34.79",
@@ -64,6 +83,7 @@ export const Pricing = () => {
         "My Writing Style",
         "Advanced Humanization Engine",
         "Ultra-human writing output",
+        "Chrome Extension (5,000 bonus words)",
         "Priority support"
       ],
       buttonText: "Choose Ultra",
@@ -127,7 +147,7 @@ export const Pricing = () => {
           </div>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
           {plans.map((plan, index) => (
             <Card key={index} className={`relative ${plan.popular ? 'border-primary shadow-lg scale-105' : ''}`}>
               {plan.popular && (

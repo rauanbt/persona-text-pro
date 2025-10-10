@@ -119,6 +119,7 @@ export type Database = {
       usage_tracking: {
         Row: {
           created_at: string
+          extension_words_used: number | null
           id: string
           month_year: string
           requests_count: number | null
@@ -128,6 +129,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          extension_words_used?: number | null
           id?: string
           month_year: string
           requests_count?: number | null
@@ -137,6 +139,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          extension_words_used?: number | null
           id?: string
           month_year?: string
           requests_count?: number | null
