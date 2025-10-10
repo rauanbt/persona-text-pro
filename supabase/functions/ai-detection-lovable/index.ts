@@ -49,8 +49,8 @@ serve(async (req) => {
       console.warn('[AI-DETECTION] ANTHROPIC_API_KEY not configured - Claude will be skipped');
     }
 
-    // System prompt for AI detection
-    const systemPrompt = `You are an advanced AI content detector. Analyze the given text and determine the probability that it was AI-generated.
+    // System prompt for AI detection with breakdown analysis
+    const systemPrompt = `You are an advanced AI content detector. Analyze the given text and provide a detailed breakdown of AI involvement.
 
 Focus on these AI indicators:
 - Uniform sentence lengths and structure
@@ -62,40 +62,79 @@ Focus on these AI indicators:
 - Overly balanced paragraph structures
 - Use of em-dashes in a formulaic way
 
-Provide a probability score from 0-100, where:
-- 0-30: Likely human-written
-- 31-70: Mixed or uncertain
-- 71-100: Likely AI-generated
+ALSO look for signs of AI editing/polishing on human text:
+- Minor grammatical improvements and polish
+- Consistent formatting and structure added to natural voice
+- Slight vocabulary enhancement while maintaining personal style
+- Natural flow with occasional perfect phrases
 
-Also provide your confidence level (0-100) in this assessment and brief reasoning.`;
+Provide a THREE-CATEGORY breakdown:
+1. AI Generated (0-100%): Fully created by AI
+2. Mixed (0-100%): Human-written but edited/polished by AI
+3. Human (0-100%): Purely human-written
 
-    // Define the tool for structured output
+The three percentages should sum to 100%. Also determine the primary category (human, mixed, or ai) and provide a descriptive label.`;
+
+    // Define the tool for structured output with breakdown
     const detectionTool = {
       type: "function" as const,
       function: {
         name: "detect_ai_content",
-        description: "Analyze text and return AI detection probability",
+        description: "Analyze text and return detailed AI detection breakdown",
         parameters: {
           type: "object",
           properties: {
             ai_probability: {
               type: "number",
-              description: "Probability the text is AI-generated (0-100)",
+              description: "Overall AI probability score (0-100)",
               minimum: 0,
               maximum: 100
             },
+            breakdown: {
+              type: "object",
+              description: "Detailed breakdown of content authorship",
+              properties: {
+                ai_generated: {
+                  type: "number",
+                  description: "Percentage fully AI-generated (0-100)",
+                  minimum: 0,
+                  maximum: 100
+                },
+                mixed: {
+                  type: "number",
+                  description: "Percentage human-written but AI-edited (0-100)",
+                  minimum: 0,
+                  maximum: 100
+                },
+                human: {
+                  type: "number",
+                  description: "Percentage purely human-written (0-100)",
+                  minimum: 0,
+                  maximum: 100
+                }
+              },
+              required: ["ai_generated", "mixed", "human"]
+            },
+            category: {
+              type: "string",
+              enum: ["human", "mixed", "ai"],
+              description: "Primary classification category"
+            },
             confidence: {
-              type: "number",
-              description: "Confidence in this assessment (0-100)",
-              minimum: 0,
-              maximum: 100
+              type: "string",
+              enum: ["low", "moderate", "high"],
+              description: "Confidence level in this assessment"
+            },
+            label: {
+              type: "string",
+              description: "Descriptive label (e.g. 'Lightly edited by AI', 'Mostly AI-generated', 'Appears human-written')"
             },
             reasoning: {
               type: "string",
               description: "Brief explanation of the assessment"
             }
           },
-          required: ["ai_probability", "confidence", "reasoning"],
+          required: ["ai_probability", "breakdown", "category", "confidence", "label", "reasoning"],
           additionalProperties: false
         }
       }
@@ -207,6 +246,9 @@ Also provide your confidence level (0-100) in this assessment and brief reasonin
           name,
           score: result.ai_probability,
           confidence: result.confidence,
+          breakdown: result.breakdown,
+          category: result.category,
+          label: result.label,
           reasoning: result.reasoning,
           weight,
           success: true
@@ -246,9 +288,55 @@ Also provide your confidence level (0-100) in this assessment and brief reasonin
       0
     );
     
-    const averageConfidence = successfulResults.reduce((sum, r) => sum + r.confidence, 0) / successfulResults.length;
+    // Calculate weighted breakdown percentages
+    const weightedBreakdown = normalizedResults.reduce(
+      (acc, r: any) => {
+        const breakdown = r.breakdown || { ai_generated: r.score, mixed: 0, human: 100 - r.score };
+        return {
+          ai_generated: acc.ai_generated + (breakdown.ai_generated * r.normalizedWeight),
+          mixed: acc.mixed + (breakdown.mixed * r.normalizedWeight),
+          human: acc.human + (breakdown.human * r.normalizedWeight)
+        };
+      },
+      { ai_generated: 0, mixed: 0, human: 0 }
+    );
+
+    // Normalize breakdown to sum to 100
+    const breakdownSum = weightedBreakdown.ai_generated + weightedBreakdown.mixed + weightedBreakdown.human;
+    const normalizedBreakdown = {
+      ai_generated: Math.round((weightedBreakdown.ai_generated / breakdownSum) * 100),
+      mixed: Math.round((weightedBreakdown.mixed / breakdownSum) * 100),
+      human: Math.round((weightedBreakdown.human / breakdownSum) * 100)
+    };
+
+    // Determine category based on highest percentage
+    let category: 'human' | 'mixed' | 'ai' = 'mixed';
+    const maxValue = Math.max(normalizedBreakdown.ai_generated, normalizedBreakdown.mixed, normalizedBreakdown.human);
+    if (maxValue === normalizedBreakdown.human) category = 'human';
+    else if (maxValue === normalizedBreakdown.ai_generated) category = 'ai';
 
     const finalScore = Math.round(weightedScore);
+
+    // Determine confidence level (aggregate from models)
+    const confidenceLevels = successfulResults.map((r: any) => r.confidence || 'moderate');
+    const highConfidence = confidenceLevels.filter((c: string) => c === 'high').length;
+    const lowConfidence = confidenceLevels.filter((c: string) => c === 'low').length;
+    let confidenceLevel: 'low' | 'moderate' | 'high' = 'moderate';
+    if (highConfidence > lowConfidence && highConfidence >= successfulResults.length / 2) {
+      confidenceLevel = 'high';
+    } else if (lowConfidence > highConfidence) {
+      confidenceLevel = 'low';
+    }
+
+    // Generate descriptive label
+    let label = 'Mixed content';
+    if (category === 'human') {
+      label = normalizedBreakdown.mixed > 20 ? 'Lightly edited by AI' : 'Appears human-written';
+    } else if (category === 'ai') {
+      label = normalizedBreakdown.ai_generated > 80 ? 'Mostly AI-generated' : 'Significantly AI-generated';
+    } else {
+      label = normalizedBreakdown.mixed > 60 ? 'Heavily polished by AI' : 'Edited by AI';
+    }
 
     // Determine risk level
     let riskLevel = 'Human-like';
@@ -261,18 +349,21 @@ Also provide your confidence level (0-100) in this assessment and brief reasonin
       riskColor = 'warning';
     }
 
-    console.log(`[AI-DETECTION] Final Score: ${finalScore}%, Risk: ${riskLevel}`);
+    console.log(`[AI-DETECTION] Final Score: ${finalScore}%, Category: ${category}, Label: ${label}`);
 
     return new Response(JSON.stringify({
       score: finalScore,
-      confidence: Math.round(averageConfidence),
+      category,
+      confidence: confidenceLevel,
+      breakdown: normalizedBreakdown,
+      label,
       riskLevel,
       riskColor,
       wordCount,
       models: successfulResults.map(r => ({
         name: r.name,
         score: Math.round(r.score),
-        confidence: Math.round(r.confidence)
+        confidence: (r as any).confidence || 'moderate'
       })),
       summary: {
         totalModels: models.length,
