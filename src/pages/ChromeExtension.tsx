@@ -60,7 +60,7 @@ const ChromeExtension = () => {
                     <li className="flex items-center"><Check className="w-4 h-4 text-green-500 mr-2" />5,000 words/month</li>
                     <li className="flex items-center"><Check className="w-4 h-4 text-green-500 mr-2" />Chrome Extension only</li>
                     <li className="flex items-center"><Check className="w-4 h-4 text-green-500 mr-2" />All 6 tone personalities</li>
-                    <li className="flex items-center"><Check className="w-4 h-4 text-green-500 mr-2" />Premium triple-engine (Gemini + OpenAI + Claude)</li>
+                    <li className="flex items-center"><Check className="w-4 h-4 text-green-500 mr-2" />Premium triple-engine (Gemini + ChatGPT + Claude)</li>
                   </ul>
                   <Button className="w-full" variant="outline">Get Extension-Only</Button>
                 </CardContent>

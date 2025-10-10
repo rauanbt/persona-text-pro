@@ -47,7 +47,7 @@ export const WritingJourneyPricing = () => {
         "1,500 words per request",
         "Unlimited AI detection (2,500 words per check)",
         "All 6 tone personalities",
-        "Advanced dual-engine humanization (Gemini + OpenAI)",
+        "Advanced dual-engine humanization (Gemini + ChatGPT)",
         "50+ languages supported"
       ],
       buttonText: "Choose Pro",
@@ -71,7 +71,7 @@ export const WritingJourneyPricing = () => {
         "3,000 words per request",
         "Unlimited AI detection (2,500 words per check)",
         "All 6 tone personalities",
-        "Premium triple-engine humanization (Gemini + OpenAI + Claude)",
+        "Premium triple-engine humanization (Gemini + ChatGPT + Claude)",
         "50+ languages supported",
         "✅ Chrome Extension Included FREE (5,000 bonus words)"
       ],
@@ -95,7 +95,7 @@ export const WritingJourneyPricing = () => {
         "5,000 words per month",
         "Chrome Extension access only",
         "All 6 tone personalities",
-        "Premium triple-engine humanization (Gemini + OpenAI + Claude)",
+        "Premium triple-engine humanization (Gemini + ChatGPT + Claude)",
         "No web platform access"
       ],
       buttonText: "Get Extension",

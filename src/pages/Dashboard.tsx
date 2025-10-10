@@ -641,7 +641,7 @@ const Dashboard = () => {
                           Check up to 2,500 words per detection with our advanced multi-model AI detector
                         </p>
                         <p className="text-xs text-blue-700 dark:text-blue-300">
-                          Powered by Gemini + GPT + Claude for accurate consensus results
+                          Powered by Gemini + ChatGPT + Claude for accurate consensus results
                         </p>
                       </div>
                     </div>

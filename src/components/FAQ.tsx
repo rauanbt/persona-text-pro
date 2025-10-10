@@ -13,7 +13,7 @@ export const FAQ = () => {
     },
     {
       question: "Does SapienWrite bypass AI detection tools?",
-      answer: "Yes! Our system is specifically designed to bypass all major AI detection tools. We use advanced multi-model AI analysis (powered by Gemini, GPT, and Claude) to ensure your humanized text passes detection checks. We continuously test and update our algorithms to maintain effectiveness."
+      answer: "Yes! Our system is specifically designed to bypass all major AI detection tools. We use advanced multi-model AI analysis (powered by Gemini, ChatGPT, and Claude) to ensure your humanized text passes detection checks. We continuously test and update our algorithms to maintain effectiveness."
     },
     {
       question: "Are there limits on AI detection checks?",
