@@ -182,25 +182,20 @@ const Dashboard = () => {
     return raw;
   };
 
-  // Deep search for the first plausible text field
+  // Extract humanized text from known fields only
   const pickHumanizedText = (obj: any): string => {
-    if (!obj) return '';
+    if (!obj || typeof obj !== 'object') return '';
+    
+    // Only check explicit known fields - no deep scanning to avoid picking up unrelated strings
     const candidates = ['humanized_text', 'finalText', 'text', 'result', 'output'];
+    
     for (const key of candidates) {
-      const v = obj?.[key];
-      if (typeof v === 'string' && v.trim().length > 0) return v;
-    }
-    // Last resort: scan any string leaf
-    try {
-      const stack = [obj];
-      while (stack.length) {
-        const cur = stack.pop();
-        if (typeof cur === 'string' && cur.trim().length > 0) return cur;
-        if (cur && typeof cur === 'object') {
-          Object.values(cur).forEach(v => stack.push(v));
-        }
+      const value = obj[key];
+      if (typeof value === 'string' && value.trim().length > 0) {
+        return value;
       }
-    } catch {}
+    }
+    
     return '';
   };
 
