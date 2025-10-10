@@ -22,6 +22,41 @@ const PLAN_LIMITS = {
   ultra: 30000 // legacy
 };
 
+// Lightweight ISO 639-1 language name map for logs/prompts
+const ISO_NAME_MAP: Record<string, string> = {
+  en: 'English', ru: 'Russian', es: 'Spanish', fr: 'French', de: 'German', it: 'Italian',
+  pt: 'Portuguese', zh: 'Chinese', ja: 'Japanese', ko: 'Korean', uk: 'Ukrainian', tr: 'Turkish',
+  pl: 'Polish', ar: 'Arabic', hi: 'Hindi', id: 'Indonesian', vi: 'Vietnamese', nl: 'Dutch',
+  sv: 'Swedish', no: 'Norwegian', fi: 'Finnish'
+};
+
+// Detect input language using Lovable AI (Gemini). Returns ISO 639-1 code and readable name.
+async function detectLanguageIso(sample: string): Promise<{ code: string; name: string }> {
+  try {
+    const languageDetectionPrompt = 'Return ONLY the ISO 639-1 two-letter code for the language of the user text. Lowercase. Example: "en". If uncertain, return "en". No extra words.';
+    const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${lovableApiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash-lite',
+        messages: [
+          { role: 'system', content: languageDetectionPrompt },
+          { role: 'user', content: sample.substring(0, 500) }
+        ],
+      }),
+    });
+    if (!resp.ok) throw new Error(`Language detect failed: ${resp.status} ${resp.statusText}`);
+    const data = await resp.json();
+    const raw: string = (data.choices?.[0]?.message?.content ?? '').trim().toLowerCase();
+    const code = /^[a-z]{2}$/.test(raw) ? raw : (raw.match(/\b[a-z]{2}\b/)?.[0] ?? 'en');
+    const name = ISO_NAME_MAP[code] ?? code;
+    return { code, name };
+  } catch (e) {
+    console.error('[LANG] detectLanguageIso error:', e);
+    return { code: 'en', name: 'English' };
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -57,88 +92,32 @@ serve(async (req) => {
 
     const userPlan = profile?.current_plan || 'free';
 
-    // Language detection for free users (English only)
-    if (userPlan === 'free') {
-      console.log('[HYBRID-HUMANIZE] Free plan detected - checking language (first 200 chars):', text.substring(0, 200));
-      
-      try {
-        const languageDetectionPrompt = 'You are a language detector. Analyze if the provided text is written in English. Respond with ONLY the word "YES" if the text is in English, or "NO" if it is in any other language. Do not provide explanations or translations.';
-        
-        const langCheckResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${lovableApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'google/gemini-2.5-flash-lite',
-            messages: [
-              { role: 'system', content: languageDetectionPrompt },
-              { role: 'user', content: text.substring(0, 500) } // Check first 500 chars
-            ],
-          }),
-        });
-
-        if (!langCheckResponse.ok) {
-          console.error('[HYBRID-HUMANIZE] Language detection API failed:', langCheckResponse.status, langCheckResponse.statusText);
-          // Default to rejecting if detection fails (safer approach)
-          return new Response(JSON.stringify({ 
-            error: 'Language detection unavailable. Please try again or upgrade to access all languages.',
-            upgrade_required: true
-          }), {
-            status: 503,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
-
-        const langData = await langCheckResponse.json();
-        const detectionResponse = langData.choices?.[0]?.message?.content || '';
-        console.log('[HYBRID-HUMANIZE] Language detection raw response:', detectionResponse);
-        
-        // Parse response more robustly - look for "yes" or "no" in the response
-        const normalizedResponse = detectionResponse.toLowerCase().trim();
-        const isEnglish = /^yes\b/.test(normalizedResponse) || normalizedResponse === 'yes';
-        const isNotEnglish = /^no\b/.test(normalizedResponse) || normalizedResponse === 'no';
-        
-        console.log('[HYBRID-HUMANIZE] Language detection result - isEnglish:', isEnglish, 'isNotEnglish:', isNotEnglish);
-        
-        // If we can't determine with confidence, reject (safer)
-        if (!isEnglish && !isNotEnglish) {
-          console.warn('[HYBRID-HUMANIZE] Ambiguous language detection response:', detectionResponse);
-          return new Response(JSON.stringify({ 
-            error: 'Unable to verify language. Free plan supports English only. Upgrade to Wordsmith or Master plan for 50+ languages.',
-            upgrade_required: true
-          }), {
-            status: 403,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
-        
-        if (isNotEnglish) {
-          console.log('[HYBRID-HUMANIZE] Non-English text detected - rejecting free user request');
-          return new Response(JSON.stringify({ 
-            error: 'Free plan supports English only. Upgrade to Wordsmith or Master plan for 50+ languages.',
-            upgrade_required: true
-          }), {
-            status: 403,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
-        
-        console.log('[HYBRID-HUMANIZE] English text confirmed - proceeding with humanization');
-        
-      } catch (langError) {
-        console.error('[HYBRID-HUMANIZE] Language detection error:', langError);
-        // Default to rejecting if detection crashes (safer approach)
-        return new Response(JSON.stringify({ 
-          error: 'Language detection failed. Please try again or upgrade to access all languages.',
-          upgrade_required: true
-        }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
+    // Detect input language for all plans
+    let inputLangCode = 'en';
+    let inputLangName = 'English';
+    try {
+      const det = await detectLanguageIso(text);
+      inputLangCode = det.code;
+      inputLangName = det.name;
+      console.log(`[LANG] Detected inputLang=${inputLangCode} (${inputLangName})`);
+    } catch (langError) {
+      console.error('[LANG] Language detection failed:', langError);
     }
+
+    // Restrict free plan to English only
+    if (userPlan === 'free' && inputLangCode !== 'en') {
+      console.log('[HYBRID-HUMANIZE] Non-English text detected - rejecting free user request');
+      return new Response(JSON.stringify({ 
+        error: 'Free plan supports English only. Upgrade to Wordsmith or Master plan for 50+ languages.',
+        upgrade_required: true
+      }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Build language rule for all passes
+    const langRule = `Input language detected: ${inputLangName} [${inputLangCode}]. Your output MUST be ${inputLangName} [${inputLangCode}] — NEVER translate or switch languages.`;
 
     const extraWords = profile?.extra_words_balance || 0;
     const planLimit = PLAN_LIMITS[userPlan as keyof typeof PLAN_LIMITS] || PLAN_LIMITS.free;
@@ -171,12 +150,12 @@ serve(async (req) => {
 
     // Tone-specific system prompts with language + structure preservation as PRIMARY goals
     const tonePrompts = {
-      regular: "ABSOLUTELY CRITICAL RULES (MUST FOLLOW IN THIS ORDER):\n1. PRESERVE ORIGINAL LANGUAGE: If input is in Russian, output MUST be in Russian. If Spanish, output in Spanish. If French, output in French. DO NOT TRANSLATE to English or any other language.\n2. PRESERVE ALL LINE BREAKS: Each line break in input = line break in output. It is FORBIDDEN to merge separate lines into paragraphs. If input has 5 lines, output MUST have 5 lines.\n3. PRESERVE LIST FORMATTING: If input has numbered lists (1. 2. 3. or 1️⃣ 2️⃣ 3️⃣), keep the EXACT same structure with line breaks between items.\n\nONLY AFTER following the above 3 rules: Make subtle improvements to sound naturally human. If the text already sounds human and natural, you may keep most of it unchanged - just ensure it flows well. Do not use markdown formatting (no **, *, _, ~~). Output plain text only.",
-      formal: "ABSOLUTELY CRITICAL RULES (MUST FOLLOW IN THIS ORDER):\n1. PRESERVE ORIGINAL LANGUAGE: If input is in Russian, output MUST be in Russian. If Spanish, output in Spanish. If French, output in French. DO NOT TRANSLATE to English or any other language.\n2. PRESERVE ALL LINE BREAKS: Each line break in input = line break in output. It is FORBIDDEN to merge separate lines into paragraphs. If input has 5 lines, output MUST have 5 lines.\n3. PRESERVE LIST FORMATTING: If input has numbered lists (1. 2. 3. or 1️⃣ 2️⃣ 3️⃣), keep the EXACT same structure with line breaks between items.\n\nONLY AFTER following the above 3 rules: Transform the tone to formal and professional language. You MUST change word choices and phrasing to match the formal tone. Do not use markdown formatting (no **, *, _, ~~). Output plain text only.",
-      persuasive: "ABSOLUTELY CRITICAL RULES (MUST FOLLOW IN THIS ORDER):\n1. PRESERVE ORIGINAL LANGUAGE: If input is in Russian, output MUST be in Russian. If Spanish, output in Spanish. If French, output in French. DO NOT TRANSLATE to English or any other language.\n2. PRESERVE ALL LINE BREAKS: Each line break in input = line break in output. It is FORBIDDEN to merge separate lines into paragraphs. If input has 5 lines, output MUST have 5 lines.\n3. PRESERVE LIST FORMATTING: If input has numbered lists (1. 2. 3. or 1️⃣ 2️⃣ 3️⃣), keep the EXACT same structure with line breaks between items.\n\nONLY AFTER following the above 3 rules: Rewrite to be persuasive and compelling. You MUST change word choices to be more convincing. Do not use markdown formatting (no **, *, _, ~~). Output plain text only.",
-      empathetic: "ABSOLUTELY CRITICAL RULES (MUST FOLLOW IN THIS ORDER):\n1. PRESERVE ORIGINAL LANGUAGE: If input is in Russian, output MUST be in Russian. If Spanish, output in Spanish. If French, output in French. DO NOT TRANSLATE to English or any other language.\n2. PRESERVE ALL LINE BREAKS: Each line break in input = line break in output. It is FORBIDDEN to merge separate lines into paragraphs. If input has 5 lines, output MUST have 5 lines.\n3. PRESERVE LIST FORMATTING: If input has numbered lists (1. 2. 3. or 1️⃣ 2️⃣ 3️⃣), keep the EXACT same structure with line breaks between items.\n\nONLY AFTER following the above 3 rules: Add warmth and empathy where appropriate. If the text already sounds warm and natural, minimal changes are fine. Do not use markdown formatting (no **, *, _, ~~). Output plain text only.",
-      sarcastic: "ABSOLUTELY CRITICAL RULES (MUST FOLLOW IN THIS ORDER):\n1. PRESERVE ORIGINAL LANGUAGE: If input is in Russian, output MUST be in Russian. If Spanish, output in Spanish. If French, output in French. DO NOT TRANSLATE to English or any other language.\n2. PRESERVE ALL LINE BREAKS: Each line break in input = line break in output. It is FORBIDDEN to merge separate lines into paragraphs. If input has 5 lines, output MUST have 5 lines.\n3. PRESERVE LIST FORMATTING: If input has numbered lists (1. 2. 3. or 1️⃣ 2️⃣ 3️⃣), keep the EXACT same structure with line breaks between items.\n\nONLY AFTER following the above 3 rules: Rewrite with sarcasm and wit while keeping the core message. You MUST change the wording to sound sarcastic. Do not use markdown formatting (no **, *, _, ~~). Output plain text only.",
-      funny: "ABSOLUTELY CRITICAL RULES (MUST FOLLOW IN THIS ORDER):\n1. PRESERVE ORIGINAL LANGUAGE: If input is in Russian, output MUST be in Russian. If Spanish, output in Spanish. If French, output in French. DO NOT TRANSLATE to English or any other language.\n2. PRESERVE ALL LINE BREAKS: Each line break in input = line break in output. It is FORBIDDEN to merge separate lines into paragraphs. If input has 5 lines, output MUST have 5 lines.\n3. PRESERVE LIST FORMATTING: If input has numbered lists (1. 2. 3. or 1️⃣ 2️⃣ 3️⃣), keep the EXACT same structure with line breaks between items.\n\nONLY AFTER following the above 3 rules: Add humor and entertainment. You MUST change wording to make it funnier. Do not use markdown formatting (no **, *, _, ~~). Output plain text only."
+      regular: "RULES (follow in order):\n1) Output in the exact same language as the input (no translation).\n2) Preserve ALL line breaks 1:1.\n3) Preserve list formatting exactly.\nThen make subtle human improvements for natural flow. No markdown; plain text only.",
+      formal: "RULES (follow in order):\n1) Output in the exact same language as the input (no translation).\n2) Preserve ALL line breaks 1:1.\n3) Preserve list formatting exactly.\nThen transform to a formal, professional tone with appropriate phrasing. No markdown; plain text only.",
+      persuasive: "RULES (follow in order):\n1) Output in the exact same language as the input (no translation).\n2) Preserve ALL line breaks 1:1.\n3) Preserve list formatting exactly.\nThen rewrite to be persuasive and compelling with stronger word choices. No markdown; plain text only.",
+      empathetic: "RULES (follow in order):\n1) Output in the exact same language as the input (no translation).\n2) Preserve ALL line breaks 1:1.\n3) Preserve list formatting exactly.\nThen add warmth and empathy while keeping meaning faithful. No markdown; plain text only.",
+      sarcastic: "RULES (follow in order):\n1) Output in the exact same language as the input (no translation).\n2) Preserve ALL line breaks 1:1.\n3) Preserve list formatting exactly.\nThen rewrite with sarcasm and dry wit while keeping the core message. Example (language must stay the same): English input 'This is great' → English output (sarcastic): 'Oh wow, this is just fantastic.' Do not switch languages. No markdown; plain text only.",
+      funny: "RULES (follow in order):\n1) Output in the exact same language as the input (no translation).\n2) Preserve ALL line breaks 1:1.\n3) Preserve list formatting exactly.\nThen add humor and playfulness while preserving meaning. No markdown; plain text only."
     };
 
     const systemPrompt = tonePrompts[tone as keyof typeof tonePrompts] || tonePrompts.regular;
@@ -199,7 +178,7 @@ serve(async (req) => {
           model: 'google/gemini-2.5-flash',
           messages: [
             { role: 'system', content: systemPrompt },
-            { role: 'user', content: `ABSOLUTELY CRITICAL:\n- Output in the SAME LANGUAGE as the input (do NOT translate)\n- Keep EVERY line break exactly where it appears\n- If there are numbered lists (1. 2. 3.), preserve that exact format\n- FORBIDDEN to merge separate lines into paragraphs\n\nInput text:\n${text}` }
+            { role: 'user', content: `${langRule}\n\nABSOLUTELY CRITICAL:\n- Keep EVERY line break exactly where it appears\n- If there are numbered lists (1. 2. 3.), preserve that exact format\n- FORBIDDEN to merge separate lines into paragraphs\n\nInput text:\n${text}` }
           ],
         }),
       });
@@ -233,7 +212,7 @@ serve(async (req) => {
           model: 'google/gemini-2.5-flash',
           messages: [
             { role: 'system', content: systemPrompt },
-            { role: 'user', content: `ABSOLUTELY CRITICAL:\n- Output in the SAME LANGUAGE as the input (do NOT translate)\n- Keep EVERY line break exactly where it appears\n- If there are numbered lists (1. 2. 3.), preserve that exact format\n- FORBIDDEN to merge separate lines into paragraphs\n\nInput text:\n${text}` }
+            { role: 'user', content: `${langRule}\n\nABSOLUTELY CRITICAL:\n- Keep EVERY line break exactly where it appears\n- If there are numbered lists (1. 2. 3.), preserve that exact format\n- FORBIDDEN to merge separate lines into paragraphs\n\nInput text:\n${text}` }
           ],
         }),
       });
@@ -261,7 +240,7 @@ serve(async (req) => {
           model: 'gpt-4o-mini',
           messages: [
             { role: 'system', content: `${systemPrompt}\n\nRefine for accuracy and natural flow.` },
-            { role: 'user', content: `ABSOLUTELY CRITICAL:\n- Output in the SAME LANGUAGE as the input (do NOT translate)\n- Keep EVERY line break exactly where it appears\n- If there are numbered lists, preserve that exact format\n- FORBIDDEN to merge separate lines into paragraphs\n\nInput text:\n${pass1Result}` }
+            { role: 'user', content: `${langRule}\n\nABSOLUTELY CRITICAL:\n- Keep EVERY line break exactly where it appears\n- If there are numbered lists, preserve that exact format\n- FORBIDDEN to merge separate lines into paragraphs\n\nInput text:\n${pass1Result}` }
           ],
           max_tokens: Math.min(Math.ceil(wordCount * 2), 4000),
           temperature: 0.8,
@@ -300,7 +279,7 @@ serve(async (req) => {
           model: 'google/gemini-2.5-flash',
           messages: [
             { role: 'system', content: systemPrompt },
-            { role: 'user', content: `ABSOLUTELY CRITICAL:\n- Output in the SAME LANGUAGE as the input (do NOT translate)\n- Keep EVERY line break exactly where it appears\n- If there are numbered lists (1. 2. 3.), preserve that exact format\n- FORBIDDEN to merge separate lines into paragraphs\n\nInput text:\n${text}` }
+            { role: 'user', content: `${langRule}\n\nABSOLUTELY CRITICAL:\n- Keep EVERY line break exactly where it appears\n- If there are numbered lists (1. 2. 3.), preserve that exact format\n- FORBIDDEN to merge separate lines into paragraphs\n\nInput text:\n${text}` }
           ],
         }),
       });
@@ -328,7 +307,7 @@ serve(async (req) => {
           model: 'gpt-4o-mini',
           messages: [
             { role: 'system', content: `${systemPrompt}\n\nRefine for accuracy and clarity.` },
-            { role: 'user', content: `ABSOLUTELY CRITICAL:\n- Output in the SAME LANGUAGE as the input (do NOT translate)\n- Keep EVERY line break exactly where it appears\n- If there are numbered lists, preserve that exact format\n- FORBIDDEN to merge separate lines into paragraphs\n\nInput text:\n${pass1Result}` }
+            { role: 'user', content: `${langRule}\n\nABSOLUTELY CRITICAL:\n- Keep EVERY line break exactly where it appears\n- If there are numbered lists, preserve that exact format\n- FORBIDDEN to merge separate lines into paragraphs\n\nInput text:\n${pass1Result}` }
           ],
           max_tokens: Math.min(Math.ceil(wordCount * 2), 4000),
           temperature: 0.8,
@@ -360,7 +339,7 @@ serve(async (req) => {
             model: 'anthropic/claude-sonnet-4-20250514',
             messages: [
               { role: 'system', content: `${systemPrompt}\n\nYou are the final polishing layer. Perfect the tone, add nuanced personality, and ensure authentic human voice.` },
-              { role: 'user', content: `ABSOLUTELY CRITICAL:\n- Output in the SAME LANGUAGE as the input (do NOT translate)\n- Keep EVERY line break exactly where it appears\n- If there are numbered lists, preserve that exact format\n- FORBIDDEN to merge separate lines into paragraphs\n\nInput text:\n${pass2Result}` }
+              { role: 'user', content: `${langRule}\n\nABSOLUTELY CRITICAL:\n- Keep EVERY line break exactly where it appears\n- If there are numbered lists, preserve that exact format\n- FORBIDDEN to merge separate lines into paragraphs\n\nInput text:\n${pass2Result}` }
             ],
           }),
         });
@@ -386,6 +365,35 @@ serve(async (req) => {
 
     console.log(`[HYBRID-HUMANIZE] Humanization complete - ${passesCompleted} passes using ${enginesUsed}`);
 
+    // Post-generation language verification and correction if needed
+    try {
+      const outLang = await detectLanguageIso(finalText);
+      console.log(`[LANG] Output language detected: ${outLang.name} [${outLang.code}]`);
+      if (outLang.code !== inputLangCode) {
+        console.warn(`[LANG] Mismatch detected: input=${inputLangCode}, output=${outLang.code} — correcting`);
+        const correctionResp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${lovableApiKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'google/gemini-2.5-flash',
+            messages: [
+              { role: 'system', content: `Rewrite the user's text into ${inputLangName} [${inputLangCode}] without changing meaning, tone ("${tone}"), structure, or formatting. Keep every line break and list exactly as-is. Output plain text only. Do NOT add commentary.` },
+              { role: 'user', content: `${langRule}\n\nRewrite this text into the exact same language as specified while keeping tone and structure identical:\n${finalText}` }
+            ],
+          }),
+        });
+        if (correctionResp.ok) {
+          const corr = await correctionResp.json();
+          finalText = corr.choices?.[0]?.message?.content || finalText;
+          console.log('[LANG] Correction applied successfully');
+        } else {
+          console.error('[LANG] Correction failed:', correctionResp.status, correctionResp.statusText);
+        }
+      }
+    } catch (e) {
+      console.error('[LANG] Post-generation language verification failed:', e);
+    }
+
     // Check if output is too long and condense if needed
     const outputWordCount = finalText.trim().split(/\s+/).length;
     const lengthRatio = outputWordCount / wordCount;
@@ -404,7 +412,7 @@ serve(async (req) => {
             model: 'google/gemini-2.5-flash',
             messages: [
               { role: 'system', content: 'Condense to target word count while preserving ALL line breaks and paragraph structure exactly. Do not merge separate lines. Output in the SAME LANGUAGE as input (do NOT translate). Output plain text with no markdown.' },
-              { role: 'user', content: `ABSOLUTELY CRITICAL:\n- Output in SAME LANGUAGE as input (do NOT translate)\n- KEEP EVERY LINE BREAK EXACTLY AS SHOWN\n- Condense to ~${wordCount} words\n\nInput text:\n${finalText}` }
+              { role: 'user', content: `${langRule}\nABSOLUTELY CRITICAL:\n- KEEP EVERY LINE BREAK EXACTLY AS SHOWN\n- Condense to ~${wordCount} words\n\nInput text:\n${finalText}` }
             ],
           }),
         });
