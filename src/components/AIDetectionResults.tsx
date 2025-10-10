@@ -19,9 +19,10 @@ interface AIDetectionResultsProps {
   onHumanize: () => void;
   status: 'checking' | 'completed' | null;
   onStatusChange: (status: 'checking' | 'completed' | null) => void;
+  onScoreReceived?: (score: number) => void;
 }
 
-export const AIDetectionResults = ({ text, onHumanize, status, onStatusChange }: AIDetectionResultsProps) => {
+export const AIDetectionResults = ({ text, onHumanize, status, onStatusChange, onScoreReceived }: AIDetectionResultsProps) => {
   const [results, setResults] = useState<AIDetector[]>([]);
   const [overallScore, setOverallScore] = useState<number | null>(null);
 
@@ -49,6 +50,11 @@ export const AIDetectionResults = ({ text, onHumanize, status, onStatusChange }:
           status: 'complete'
         }]);
         onStatusChange('completed');
+        
+        // Notify parent component of the score
+        if (onScoreReceived) {
+          onScoreReceived(data.score);
+        }
       } catch (error: any) {
         console.error('AI detection error:', error);
         setOverallScore(null);

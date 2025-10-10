@@ -298,43 +298,15 @@ const Dashboard = () => {
       return;
     }
 
-    setIsCheckingAI(true);
+    // Just set status to 'checking' - let AIDetectionResults handle the API call
     setAiDetectionStatus('checking');
+  };
 
-    try {
-      const { data, error } = await supabase.functions.invoke('ai-detection-lovable', {
-        body: { text: inputText },
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`,
-        },
-      });
-
-      if (error) throw error;
-
-      if (data?.error) {
-        throw new Error(data.message || 'Detection failed');
-      }
-
-      setAiDetectionResults(data);
-      setAiDetectionStatus('completed');
-      
-      toast({
-        title: "AI Detection Complete",
-        description: `AI Detection Score: ${data.score}%`,
-      });
-    } catch (error: any) {
-      console.error('Error checking AI:', error);
-      
-      toast({
-        title: "AI Detection Error",
-        description: error.message || "Failed to analyze text. Please try again.",
-        variant: "destructive",
-      });
-      
-      setAiDetectionStatus(null);
-    } finally {
-      setIsCheckingAI(false);
-    }
+  const handleAIDetectionScore = (score: number) => {
+    toast({
+      title: "AI Detection Complete",
+      description: `AI Detection Score: ${score}%`,
+    });
   };
 
   const handleHumanizeFromDetection = () => {
@@ -686,14 +658,13 @@ const Dashboard = () => {
                         )}
                       </Button>
 
-                      {aiDetectionResults && (
-                        <AIDetectionResults
-                          text={inputText}
-                          onHumanize={handleHumanizeFromDetection}
-                          status={aiDetectionStatus}
-                          onStatusChange={setAiDetectionStatus}
-                        />
-                      )}
+                      <AIDetectionResults
+                        text={inputText}
+                        onHumanize={handleHumanizeFromDetection}
+                        status={aiDetectionStatus}
+                        onStatusChange={setAiDetectionStatus}
+                        onScoreReceived={handleAIDetectionScore}
+                      />
                     </div>
                   </TabsContent>
                 </Tabs>
