@@ -91,9 +91,6 @@ export const AIDetectionResults = ({ text, onHumanize, status, onStatusChange }:
               </Badge>
             )}
           </CardTitle>
-          <CardDescription>
-            Triple AI engine analysis (Gemini + ChatGPT + Claude)
-          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {!allCompleted ? (
