@@ -84,10 +84,24 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         // Free plan: shared pool
         const totalUsed = (usageData.words_used || 0) + (usageData.extension_words_used || 0);
         wordBalance = Math.max(0, extensionLimit - totalUsed);
-      } else if (plan === 'extension_only' || plan === 'ultra' || plan === 'master') {
-        // Extension-Only, Ultra, Master: separate extension pool
+      } else if (plan === 'extension_only') {
+        // Extension-Only: separate extension pool
         const extensionUsed = usageData.extension_words_used || 0;
         wordBalance = Math.max(0, extensionLimit - extensionUsed);
+      } else if (plan === 'ultra' || plan === 'master') {
+        // Ultra/Master: extension pool + web pool fallback
+        const extensionRemaining = Math.max(0, 5000 - (usageData.extension_words_used || 0));
+        const webRemaining = Math.max(0, 30000 - (usageData.words_used || 0));
+        
+        // Total available words = extension pool + web pool
+        wordBalance = extensionRemaining + webRemaining;
+        
+        // Store both values for detailed display
+        chrome.storage.local.set({
+          extensionPoolRemaining: extensionRemaining,
+          webPoolRemaining: webRemaining,
+          usingFallback: extensionRemaining === 0
+        });
       } else {
         wordBalance = 0; // Pro plan has no extension access
       }

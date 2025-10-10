@@ -132,10 +132,24 @@ async function fetchWordBalance() {
       // Free plan: shared pool
       const totalUsed = (usageData.words_used || 0) + (usageData.extension_words_used || 0);
       wordBalance = Math.max(0, extensionLimit - totalUsed);
-    } else if (plan === 'extension_only' || plan === 'ultra' || plan === 'master') {
-      // Extension-Only, Ultra, Master: separate extension pool
+    } else if (plan === 'extension_only') {
+      // Extension-Only: separate extension pool
       const extensionUsed = usageData.extension_words_used || 0;
       wordBalance = Math.max(0, extensionLimit - extensionUsed);
+    } else if (plan === 'ultra' || plan === 'master') {
+      // Ultra/Master: extension pool + web pool fallback
+      const extensionRemaining = Math.max(0, 5000 - (usageData.extension_words_used || 0));
+      const webRemaining = Math.max(0, 30000 - (usageData.words_used || 0));
+      
+      // Total available words = extension pool + web pool
+      wordBalance = extensionRemaining + webRemaining;
+      
+      // Store both values for detailed display
+      chrome.storage.local.set({
+        extensionPoolRemaining: extensionRemaining,
+        webPoolRemaining: webRemaining,
+        usingFallback: extensionRemaining === 0
+      });
     } else {
       // Pro/Wordsmith: No extension access
       wordBalance = 0;
@@ -143,6 +157,34 @@ async function fetchWordBalance() {
     
     // Update UI
     updateWordBalanceUI(wordBalance, extensionLimit);
+    
+    // Display fallback notification for Ultra/Master users
+    if ((plan === 'ultra' || plan === 'master')) {
+      chrome.storage.local.get(['extensionPoolRemaining', 'webPoolRemaining', 'usingFallback'], (result) => {
+        const wordBalanceEl = document.getElementById('word-balance');
+        if (!wordBalanceEl) return;
+        
+        // Remove existing notifications
+        const existingNotification = wordBalanceEl.querySelector('.fallback-notification');
+        const existingBreakdown = wordBalanceEl.querySelector('.pool-breakdown');
+        if (existingNotification) existingNotification.remove();
+        if (existingBreakdown) existingBreakdown.remove();
+        
+        if (result.usingFallback) {
+          // Show fallback notification
+          const notificationEl = document.createElement('div');
+          notificationEl.className = 'fallback-notification';
+          notificationEl.innerHTML = `ℹ️ Extension bonus exhausted - using web pool (${result.webPoolRemaining.toLocaleString()} words remaining)`;
+          wordBalanceEl.appendChild(notificationEl);
+        } else if (result.extensionPoolRemaining !== undefined) {
+          // Show pool breakdown
+          const breakdownEl = document.createElement('div');
+          breakdownEl.className = 'pool-breakdown';
+          breakdownEl.innerHTML = `Extension: ${result.extensionPoolRemaining.toLocaleString()} | Web: ${result.webPoolRemaining.toLocaleString()}`;
+          wordBalanceEl.appendChild(breakdownEl);
+        }
+      });
+    }
     
     // Show upgrade prompt if out of words
     if (wordBalance <= 0 && plan !== 'pro' && plan !== 'wordsmith') {

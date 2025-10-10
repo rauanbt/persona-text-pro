@@ -475,6 +475,21 @@ const Dashboard = () => {
                         <p className="text-xs text-muted-foreground">
                           Separate 5,000-word pool for Chrome Extension use only
                         </p>
+                        
+                        {extensionRemainingWords === 0 && (
+                          <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mt-2">
+                            <div className="flex items-start gap-2">
+                              <div className="text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0">ℹ️</div>
+                              <div className="text-xs text-blue-900 dark:text-blue-100">
+                                <p className="font-medium">Extension bonus exhausted</p>
+                                <p className="mt-1">
+                                  Your extension now automatically uses your web dashboard pool 
+                                  ({remainingWords.toLocaleString()} words remaining). No interruption!
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                     

@@ -70,7 +70,7 @@ export const WritingJourneyPricing = () => {
         "All 6 tone personalities",
         "Premium triple-engine humanization (Gemini + OpenAI + Claude)",
         "50+ languages supported",
-        "✅ Chrome Extension Included FREE"
+        "✅ Chrome Extension Included FREE (5,000 bonus words)"
       ],
       buttonText: "Become an Ultra",
       popular: false,

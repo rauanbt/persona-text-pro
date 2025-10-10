@@ -61,3 +61,20 @@
     opacity: 0;
   }
 }
+
+.fallback-notification {
+  background: #fef3c7;
+  border-left: 3px solid #f59e0b;
+  padding: 8px 12px;
+  margin-top: 8px;
+  font-size: 12px;
+  border-radius: 4px;
+  color: #92400e;
+}
+
+.pool-breakdown {
+  color: #6b7280;
+  font-size: 11px;
+  margin-top: 4px;
+  text-align: center;
+}
