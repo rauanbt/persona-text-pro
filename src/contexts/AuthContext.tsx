@@ -187,6 +187,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         title: "Welcome back!",
         description: "You have successfully signed in.",
       });
+      
+      // Check if opened from extension
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('from') === 'extension') {
+        // Redirect to extension auth page
+        window.location.href = '/extension-auth?from=extension';
+      }
     }
 
     return { error };

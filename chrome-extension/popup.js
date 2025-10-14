@@ -204,9 +204,9 @@ function updateWordBalanceUI(remaining, total) {
   document.getElementById('progress-fill').style.width = `${percentage}%`;
 }
 
-// Login button
+// Login button - open with extension parameter
 document.getElementById('login-button')?.addEventListener('click', () => {
-  chrome.tabs.create({ url: LOGIN_URL });
+  chrome.tabs.create({ url: `${LOGIN_URL}?from=extension` });
 });
 
 document.getElementById('signup-link')?.addEventListener('click', (e) => {

@@ -159,12 +159,195 @@ function replaceSelectedText(originalText, humanizedText) {
   }
 }
 
+// Create humanize dialog
+function createDialog(text, wordCount, wordBalance) {
+  // Remove existing dialog
+  const existing = document.getElementById('sapienwrite-dialog');
+  if (existing) existing.remove();
+  
+  const dialog = document.createElement('div');
+  dialog.id = 'sapienwrite-dialog';
+  dialog.style.cssText = `
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 999999;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    padding: 24px;
+    max-width: 500px;
+    width: 90%;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  `;
+  
+  const truncatedText = text.length > 100 ? text.substring(0, 100) + '...' : text;
+  
+  dialog.innerHTML = `
+    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px;">
+      <div>
+        <h3 style="margin: 0; font-size: 20px; font-weight: 700; color: #1a1a1a;">Humanize Text</h3>
+        <p style="margin: 4px 0 0; font-size: 14px; color: #666;">${wordCount} words • ${wordBalance} remaining</p>
+      </div>
+      <button id="sapienwrite-close" style="background: none; border: none; font-size: 24px; cursor: pointer; padding: 0; color: #999;">×</button>
+    </div>
+    
+    <div style="background: #f5f5f5; padding: 12px; border-radius: 8px; margin-bottom: 16px; max-height: 100px; overflow-y: auto;">
+      <p style="margin: 0; font-size: 14px; color: #333; line-height: 1.5;">${truncatedText}</p>
+    </div>
+    
+    <div style="margin-bottom: 16px;">
+      <label style="display: block; font-size: 14px; font-weight: 600; color: #333; margin-bottom: 8px;">Tone</label>
+      <select id="sapienwrite-tone" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; background: white; cursor: pointer;">
+        <option value="regular">Regular</option>
+        <option value="professional">Professional</option>
+        <option value="casual">Casual</option>
+        <option value="academic">Academic</option>
+        <option value="creative">Creative</option>
+      </select>
+    </div>
+    
+    <div id="sapienwrite-dialog-content" style="min-height: 50px;">
+      <div style="display: flex; gap: 12px;">
+        <button id="sapienwrite-humanize" style="flex: 1; padding: 12px; background: #2563eb; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">
+          Humanize
+        </button>
+        <button id="sapienwrite-cancel" style="flex: 1; padding: 12px; background: #f5f5f5; color: #666; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">
+          Cancel
+        </button>
+      </div>
+    </div>
+  `;
+  
+  // Add backdrop
+  const backdrop = document.createElement('div');
+  backdrop.id = 'sapienwrite-backdrop';
+  backdrop.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 999998;
+  `;
+  
+  document.body.appendChild(backdrop);
+  document.body.appendChild(dialog);
+  
+  // Event listeners
+  document.getElementById('sapienwrite-close').onclick = closeDialog;
+  document.getElementById('sapienwrite-cancel').onclick = closeDialog;
+  backdrop.onclick = closeDialog;
+  
+  document.getElementById('sapienwrite-humanize').onclick = () => {
+    const tone = document.getElementById('sapienwrite-tone').value;
+    chrome.runtime.sendMessage({
+      action: 'humanizeWithTone',
+      text: text,
+      tone: tone
+    });
+  };
+}
+
+function closeDialog() {
+  const dialog = document.getElementById('sapienwrite-dialog');
+  const backdrop = document.getElementById('sapienwrite-backdrop');
+  if (dialog) dialog.remove();
+  if (backdrop) backdrop.remove();
+}
+
+function showProcessing() {
+  const content = document.getElementById('sapienwrite-dialog-content');
+  if (!content) return;
+  
+  content.innerHTML = `
+    <div style="text-align: center; padding: 20px;">
+      <div style="display: inline-block; width: 40px; height: 40px; border: 4px solid #e0e0e0; border-top-color: #2563eb; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+      <p style="margin: 12px 0 0; color: #666; font-size: 14px;">Humanizing your text...</p>
+    </div>
+  `;
+  
+  // Add animation
+  if (!document.getElementById('sapienwrite-spin-style')) {
+    const style = document.createElement('style');
+    style.id = 'sapienwrite-spin-style';
+    style.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';
+    document.head.appendChild(style);
+  }
+}
+
+function showResult(originalText, humanizedText) {
+  const content = document.getElementById('sapienwrite-dialog-content');
+  if (!content) return;
+  
+  content.innerHTML = `
+    <div style="margin-bottom: 16px;">
+      <div style="background: #f0fdf4; border-left: 4px solid #22c55e; padding: 12px; border-radius: 8px; margin-bottom: 12px;">
+        <p style="margin: 0; font-size: 13px; color: #166534; line-height: 1.5;">${humanizedText}</p>
+      </div>
+    </div>
+    <div style="display: flex; gap: 12px;">
+      <button id="sapienwrite-replace" style="flex: 1; padding: 12px; background: #22c55e; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">
+        Replace Text
+      </button>
+      <button id="sapienwrite-copy" style="flex: 1; padding: 12px; background: #2563eb; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">
+        Copy
+      </button>
+    </div>
+  `;
+  
+  document.getElementById('sapienwrite-replace').onclick = () => {
+    replaceSelectedText(originalText, humanizedText);
+    closeDialog();
+  };
+  
+  document.getElementById('sapienwrite-copy').onclick = () => {
+    navigator.clipboard.writeText(humanizedText);
+    showNotification('Copied to clipboard!', 'success');
+    closeDialog();
+  };
+}
+
+function showError(errorMessage) {
+  const content = document.getElementById('sapienwrite-dialog-content');
+  if (!content) return;
+  
+  content.innerHTML = `
+    <div style="background: #fee2e2; border-left: 4px solid #ef4444; padding: 12px; border-radius: 8px; margin-bottom: 12px;">
+      <p style="margin: 0; font-size: 14px; color: #991b1b;">${errorMessage}</p>
+    </div>
+    <button id="sapienwrite-close-error" style="width: 100%; padding: 12px; background: #f5f5f5; color: #666; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">
+      Close
+    </button>
+  `;
+  
+  document.getElementById('sapienwrite-close-error').onclick = closeDialog;
+}
+
 // Listen for messages from background script
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('[Content] Message received:', message);
   
   if (message.action === 'showNotification') {
     showNotification(message.message, message.type || 'info');
+  }
+  
+  if (message.action === 'showDialog') {
+    createDialog(message.text, message.wordCount, message.wordBalance);
+  }
+  
+  if (message.action === 'showProcessing') {
+    showProcessing();
+  }
+  
+  if (message.action === 'showResult') {
+    showResult(message.originalText, message.humanizedText);
+  }
+  
+  if (message.action === 'showError') {
+    showError(message.message);
   }
   
   if (message.action === 'replaceText') {
