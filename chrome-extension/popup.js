@@ -66,6 +66,10 @@ async function loadUserData() {
     // Update plan badge
     updatePlanBadge(subscriptionData.plan || 'free');
     
+    // Check if user has extension access
+    const plan = subscriptionData.plan || 'free';
+    showUpgradeRequiredCard(plan);
+    
     // Fetch word balance
     await fetchWordBalance();
     
@@ -74,6 +78,35 @@ async function loadUserData() {
     console.error('[Popup] Error loading user data:', error);
     showError('Failed to load user data. Please try again.');
     showLoginView();
+  }
+}
+
+// Show upgrade required card for Free/Pro users
+function showUpgradeRequiredCard(plan) {
+  const upgradeCard = document.getElementById('upgrade-required-card');
+  const quickHumanize = document.querySelector('.card:has(#quick-text)');
+  const wordBalanceCard = quickHumanize?.previousElementSibling;
+  
+  if (plan === 'free' || plan === 'pro' || plan === 'wordsmith') {
+    // Show upgrade required card
+    upgradeCard.classList.remove('hidden');
+    
+    // Hide quick humanize and word balance features
+    if (quickHumanize) quickHumanize.style.display = 'none';
+    if (wordBalanceCard) wordBalanceCard.style.display = 'none';
+    
+    // Update current plan name
+    const planNames = {
+      free: 'Free',
+      pro: 'Pro',
+      wordsmith: 'Pro'
+    };
+    document.getElementById('current-plan-name').textContent = planNames[plan] || plan;
+  } else {
+    // Hide upgrade card, show normal features
+    upgradeCard.classList.add('hidden');
+    if (quickHumanize) quickHumanize.style.display = 'block';
+    if (wordBalanceCard) wordBalanceCard.style.display = 'block';
   }
 }
 
@@ -230,9 +263,17 @@ document.getElementById('manage-subscription-button')?.addEventListener('click',
   }
 });
 
-// Upgrade button
+// Upgrade buttons
 document.getElementById('upgrade-button')?.addEventListener('click', () => {
-  chrome.tabs.create({ url: `${DASHBOARD_URL}#upgrade` });
+  chrome.tabs.create({ url: `https://sapienwrite.com/pricing?from=extension` });
+});
+
+document.getElementById('upgrade-extension-button')?.addEventListener('click', () => {
+  chrome.tabs.create({ url: `https://sapienwrite.com/pricing?from=extension&plan=extension` });
+});
+
+document.getElementById('upgrade-ultra-button')?.addEventListener('click', () => {
+  chrome.tabs.create({ url: `https://sapienwrite.com/pricing?from=extension&plan=ultra` });
 });
 
 // Logout link

@@ -325,7 +325,27 @@
         <a href="#" class="link" id="logout-link">Sign Out</a>
       </div>
 
-      <!-- Upgrade Prompt (conditional) -->
+      <!-- Upgrade Required Card (for Free/Pro users) -->
+      <div id="upgrade-required-card" class="card hidden" style="margin-top: 15px; border: 2px solid #fbbf24; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);">
+        <div style="text-align: center;">
+          <div style="font-size: 32px; margin-bottom: 10px;">🔒</div>
+          <div style="font-size: 16px; font-weight: 700; color: #92400e; margin-bottom: 8px;">Extension Access Locked</div>
+          <p style="font-size: 13px; color: #92400e; margin-bottom: 16px; line-height: 1.5;">
+            The Chrome Extension requires Extension-Only or Ultra plan.<br>
+            Your current plan: <span id="current-plan-name" style="font-weight: 600;"></span>
+          </p>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <button class="button button-primary" id="upgrade-extension-button" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+              Upgrade to Extension-Only - $12.95/mo
+            </button>
+            <button class="button button-primary" id="upgrade-ultra-button" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);">
+              Upgrade to Ultra - $54.95/mo
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Upgrade Prompt (conditional - for out of words) -->
       <div id="upgrade-prompt" class="upgrade-prompt hidden">
         <div class="upgrade-text">
           You're out of words! Upgrade to continue using SapienWrite.

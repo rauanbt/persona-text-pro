@@ -326,6 +326,83 @@ function showError(errorMessage) {
   document.getElementById('sapienwrite-close-error').onclick = closeDialog;
 }
 
+// Show upgrade required dialog
+function showUpgradeRequiredDialog(currentPlan) {
+  // Remove existing dialog
+  const existing = document.getElementById('sapienwrite-dialog');
+  if (existing) existing.remove();
+  
+  const dialog = document.createElement('div');
+  dialog.id = 'sapienwrite-dialog';
+  dialog.style.cssText = `
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 999999;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    padding: 32px;
+    max-width: 480px;
+    width: 90%;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    text-align: center;
+  `;
+  
+  const planNames = {
+    free: 'Free',
+    pro: 'Pro',
+    wordsmith: 'Pro'
+  };
+  
+  dialog.innerHTML = `
+    <div style="font-size: 48px; margin-bottom: 16px;">🔒</div>
+    <h3 style="margin: 0 0 12px; font-size: 24px; font-weight: 700; color: #1a1a1a;">Upgrade Required</h3>
+    <p style="margin: 0 0 24px; font-size: 15px; color: #666; line-height: 1.6;">
+      The Chrome Extension is available for <strong>Extension-Only</strong> and <strong>Ultra</strong> subscribers.
+    </p>
+    <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 16px; border-radius: 12px; margin-bottom: 24px;">
+      <p style="margin: 0; font-size: 14px; color: #92400e;">
+        Your current plan: <strong>${planNames[currentPlan] || currentPlan}</strong>
+      </p>
+    </div>
+    <div style="display: flex; gap: 12px;">
+      <button id="sapienwrite-view-upgrade" style="flex: 1; padding: 14px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer;">
+        View Upgrade Options
+      </button>
+      <button id="sapienwrite-cancel-upgrade" style="flex: 1; padding: 14px; background: #f5f5f5; color: #666; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer;">
+        Cancel
+      </button>
+    </div>
+  `;
+  
+  // Add backdrop
+  const backdrop = document.createElement('div');
+  backdrop.id = 'sapienwrite-backdrop';
+  backdrop.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 999998;
+  `;
+  
+  document.body.appendChild(backdrop);
+  document.body.appendChild(dialog);
+  
+  // Event listeners
+  document.getElementById('sapienwrite-view-upgrade').onclick = () => {
+    window.open('https://sapienwrite.com/pricing?from=extension', '_blank');
+    closeDialog();
+  };
+  
+  document.getElementById('sapienwrite-cancel-upgrade').onclick = closeDialog;
+  backdrop.onclick = closeDialog;
+}
+
 // Listen for messages from background script
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('[Content] Message received:', message);
@@ -352,6 +429,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   
   if (message.action === 'replaceText') {
     replaceSelectedText(message.originalText, message.humanizedText);
+  }
+  
+  if (message.action === 'showUpgradeRequired') {
+    showUpgradeRequiredDialog(message.currentPlan);
   }
   
   sendResponse({ received: true });

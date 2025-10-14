@@ -48,10 +48,10 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       
       // Check if extension-only or ultra plan
       if (plan !== 'extension_only' && plan !== 'master' && plan !== 'ultra') {
+        // Show upgrade required dialog instead of just notification
         chrome.tabs.sendMessage(tab.id, {
-          action: 'showNotification',
-          message: 'Upgrade to Extension-Only or Ultra plan to use the Chrome Extension',
-          type: 'error'
+          action: 'showUpgradeRequired',
+          currentPlan: plan
         });
         return;
       }
