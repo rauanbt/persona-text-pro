@@ -12,7 +12,7 @@ import { ExtraWordsPackages } from '@/components/ExtraWordsPackages';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AIDetectionResults } from '@/components/AIDetectionResults';
-import { Loader2, Copy, Download, ExternalLink, Crown, Zap, Plus, Brain, Shield, Chrome, ChevronDown, Check } from 'lucide-react';
+import { Loader2, Copy, Download, ExternalLink, Crown, Zap, Plus, Brain, Shield, Chrome, ChevronDown, Check, HelpCircle } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useNavigate } from 'react-router-dom';
 
@@ -534,39 +534,75 @@ const Dashboard = () => {
                 {isExtensionOnlyPlan ? (
                   // Extension-Only Plan Display
                   <div className="space-y-4">
-                    <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-6 text-center">
-                      <Chrome className="w-12 h-12 mx-auto mb-3 text-blue-500" />
-                      <h3 className="font-semibold text-lg mb-2">Chrome Extension Access Only</h3>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Your plan includes 5,000 words/month for the Chrome Extension
-                      </p>
-                      <div className="text-3xl font-bold text-primary mb-2">
-                        {(5000 - extensionWordsUsed).toLocaleString()} words remaining
-                      </div>
-                      <Progress value={(extensionWordsUsed / 5000) * 100} className="mb-2" />
-                      <p className="text-xs text-muted-foreground">
-                        {extensionWordsUsed.toLocaleString()} of 5,000 words used
-                      </p>
-                      <Button 
-                        variant="outline" 
-                        className="mt-4"
-                        onClick={() => {
-                          const extensionConnected = localStorage.getItem('extensionConnected') === 'true';
-                          if (extensionConnected) {
+                    {localStorage.getItem('extensionConnected') === 'true' ? (
+                      // Extension Connected - Success State
+                      <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border-2 border-green-200 dark:border-green-800 rounded-lg p-6">
+                        <div className="flex items-center gap-3 mb-4">
+                          <Check className="h-8 w-8 text-green-600 flex-shrink-0" />
+                          <div>
+                            <h3 className="font-semibold text-lg text-green-900 dark:text-green-100">Extension Connected & Ready</h3>
+                            <p className="text-sm text-green-700 dark:text-green-300">
+                              Right-click any text on the web to humanize it instantly
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="text-3xl font-bold text-primary mb-2">
+                          {(5000 - extensionWordsUsed).toLocaleString()} words remaining
+                        </div>
+                        <Progress value={(extensionWordsUsed / 5000) * 100} className="mb-2" />
+                        <p className="text-xs text-muted-foreground mb-4">
+                          {extensionWordsUsed.toLocaleString()} of 5,000 words used
+                        </p>
+                        
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
                             toast({
-                              title: "Extension Connected",
-                              description: "Your Chrome Extension is already set up and ready to use!",
+                              title: "How to Use",
+                              description: "1. Select any text on any website\n2. Right-click the selection\n3. Choose 'Humanize with SapienWrite'",
                             });
-                          } else {
-                            navigate('/chrome-extension');
-                          }
-                        }}
-                      >
-                        {localStorage.getItem('extensionConnected') === 'true' 
-                          ? '✓ Extension Connected' 
-                          : 'View Extension Setup Instructions'}
-                      </Button>
-                    </div>
+                          }}
+                        >
+                          <HelpCircle className="w-4 h-4 mr-2" />
+                          How to Use
+                        </Button>
+                      </div>
+                    ) : (
+                      // Extension Not Detected - Setup Needed
+                      <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-6">
+                        <Chrome className="w-12 h-12 mx-auto mb-3 text-blue-500" />
+                        <h3 className="font-semibold text-lg mb-2 text-center">Chrome Extension Access Only</h3>
+                        <p className="text-sm text-muted-foreground mb-4 text-center">
+                          Your plan includes 5,000 words/month for the Chrome Extension
+                        </p>
+                        
+                        <div className="text-3xl font-bold text-primary mb-2 text-center">
+                          {(5000 - extensionWordsUsed).toLocaleString()} words remaining
+                        </div>
+                        <Progress value={(extensionWordsUsed / 5000) * 100} className="mb-2" />
+                        <p className="text-xs text-muted-foreground mb-4 text-center">
+                          {extensionWordsUsed.toLocaleString()} of 5,000 words used
+                        </p>
+                        
+                        <div className="p-4 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                          <p className="text-sm text-amber-800 dark:text-amber-200 mb-3">
+                            Set up your extension to start using your word balance
+                          </p>
+                          <Button 
+                            variant="default" 
+                            size="sm"
+                            onClick={() => setShowExtensionSetup(true)}
+                            className="w-full"
+                          >
+                            <Chrome className="w-4 h-4 mr-2" />
+                            View Setup Instructions
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    
                     <div className="bg-amber-50 dark:bg-amber-950/20 rounded-lg p-4 text-sm">
                       <p className="font-medium mb-2">Want web dashboard access?</p>
                       <p className="text-muted-foreground mb-3">
@@ -1089,6 +1125,75 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Extension Setup Dialog */}
+      <Dialog open={showExtensionSetup} onOpenChange={setShowExtensionSetup}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Chrome className="h-6 w-6 text-primary" />
+              Chrome Extension Setup
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {/* Step 1: Install Extension */}
+            <div className="flex items-start gap-4 p-4 bg-card rounded-lg border">
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold">
+                1
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold mb-1">Install the Chrome Extension</h3>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Get the SapienWrite extension from the Chrome Web Store
+                </p>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => window.open('https://chromewebstore.google.com/detail/sapienwrite-ai-humanizer/khkhchbmepbipcdlbgdkjdpfjbkcpbij', '_blank')}
+                >
+                  <Chrome className="w-4 h-4 mr-2" />
+                  Open Chrome Web Store
+                </Button>
+              </div>
+            </div>
+
+            {/* Step 2: Login */}
+            <div className="flex items-start gap-4 p-4 bg-card rounded-lg border">
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold">
+                2
+              </div>
+              <div>
+                <h3 className="font-semibold mb-1">Login to Extension</h3>
+                <p className="text-sm text-muted-foreground">
+                  Click the extension icon in your browser toolbar and log in with your SapienWrite account
+                </p>
+              </div>
+            </div>
+
+            {/* Step 3: Start Using */}
+            <div className="flex items-start gap-4 p-4 bg-card rounded-lg border">
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold">
+                3
+              </div>
+              <div>
+                <h3 className="font-semibold mb-1">Start Humanizing Text</h3>
+                <p className="text-sm text-muted-foreground">
+                  Right-click any selected text on any website and choose "Humanize with SapienWrite"
+                </p>
+              </div>
+            </div>
+
+            {/* Success note */}
+            <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
+              <p className="text-sm text-green-800 dark:text-green-200">
+                ✓ Your Extension-Only plan is active with <strong>5,000 words/month</strong>. 
+                Your word balance syncs in real-time!
+              </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
