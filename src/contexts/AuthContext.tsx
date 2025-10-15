@@ -37,13 +37,35 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [subscriptionData, setSubscriptionData] = useState({
-    subscribed: false,
-    plan: 'free',
-    product_id: null,
-    subscription_end: null
+  const [subscriptionData, setSubscriptionData] = useState(() => {
+    // Try to load cached subscription data from localStorage
+    const cachedData = localStorage.getItem('subscription_data');
+    if (cachedData) {
+      try {
+        const parsed = JSON.parse(cachedData);
+        console.log('[AuthContext] Loaded cached subscription:', parsed);
+        return parsed;
+      } catch (e) {
+        console.warn('[AuthContext] Failed to parse cached subscription');
+      }
+    }
+    
+    // Fallback to free plan
+    return {
+      subscribed: false,
+      plan: 'free',
+      product_id: null,
+      subscription_end: null
+    };
   });
   const [loading, setLoading] = useState(true);
+
+  // Helper to update subscription data and save to cache
+  const updateSubscriptionData = (newData: typeof subscriptionData) => {
+    setSubscriptionData(newData);
+    localStorage.setItem('subscription_data', JSON.stringify(newData));
+    console.log('[AuthContext] Saved subscription to cache:', newData);
+  };
 
   const checkSubscription = async (overrideSession?: Session | null) => {
     // Resolve the active session: use override or fetch fresh
@@ -76,7 +98,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (profileData?.current_plan) {
         console.log('[AuthContext] Primed plan from DB:', profileData.current_plan);
-        setSubscriptionData((prev) => ({
+        updateSubscriptionData((prev) => ({
           ...prev,
           plan: profileData.current_plan || 'free',
         }));
@@ -94,7 +116,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('[AuthContext] Subscription check result:', data);
       console.log('[AuthContext] Final plan set to:', data?.plan || profileData?.current_plan || 'free');
 
-      setSubscriptionData({
+      updateSubscriptionData({
         subscribed: Boolean(data?.subscribed),
         plan: data?.plan || profileData?.current_plan || 'free',
         product_id: data?.product_id || null,
@@ -111,7 +133,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           .maybeSingle();
 
         if (profileData?.current_plan) {
-          setSubscriptionData((prev) => ({
+          updateSubscriptionData((prev) => ({
             ...prev,
             plan: profileData.current_plan || 'free',
           }));
@@ -250,7 +272,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    setSubscriptionData({
+    localStorage.removeItem('subscription_data');
+    updateSubscriptionData({
       subscribed: false,
       plan: 'free',
       product_id: null,

@@ -919,67 +919,9 @@ const Dashboard = () => {
                     Chrome Extension Access
                   </CardTitle>
                   <Badge variant="secondary" className="w-fit">
-                    {currentPlan === 'ultra' ? 'Included in your plan' : 'Active'}
+                    Active - {currentPlan === 'ultra' ? '5,000 bonus words' : '5,000 words/month'}
                   </Badge>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    Access SapienWrite directly in Chrome on any website.
-                  </p>
-                  
-                  <Button 
-                    onClick={() => {
-                      const extensionConnected = localStorage.getItem('extensionConnected') === 'true';
-                      if (extensionConnected) {
-                        toast({
-                          title: "Extension Connected",
-                          description: "Your Chrome Extension is already set up and ready to use!",
-                        });
-                      } else {
-                        navigate('/chrome-extension');
-                      }
-                    }}
-                    variant="default"
-                    className="w-full"
-                  >
-                    {localStorage.getItem('extensionConnected') === 'true' ? (
-                      <>
-                        <Check className="mr-2 h-4 w-4" />
-                        Extension Connected
-                      </>
-                    ) : (
-                      <>
-                        <Download className="mr-2 h-4 w-4" />
-                        Download Extension
-                      </>
-                    )}
-                  </Button>
-
-                  <Collapsible open={showExtensionSetup} onOpenChange={setShowExtensionSetup}>
-                    <CollapsibleTrigger asChild>
-                      <Button variant="ghost" className="w-full justify-between">
-                        Setup Instructions
-                        <ChevronDown className={`h-4 w-4 transition-transform ${showExtensionSetup ? 'rotate-180' : ''}`} />
-                      </Button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="space-y-3 pt-3">
-                      <div className="text-sm space-y-2">
-                        <div className="flex items-start gap-2">
-                          <span className="font-semibold text-primary">1.</span>
-                          <span>Download and install the extension from Chrome Web Store</span>
-                        </div>
-                        <div className="flex items-start gap-2">
-                          <span className="font-semibold text-primary">2.</span>
-                          <span>Click the SapienWrite icon in your browser toolbar</span>
-                        </div>
-                        <div className="flex items-start gap-2">
-                          <span className="font-semibold text-primary">3.</span>
-                          <span>You're automatically logged in - start humanizing text!</span>
-                        </div>
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-                </CardContent>
               </Card>
             )}
 
