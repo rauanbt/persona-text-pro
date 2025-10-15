@@ -21,13 +21,24 @@ const Auth = () => {
     fullName: '',
   });
 
+  // Check if coming from extension
+  const searchParams = new URLSearchParams(location.search);
+  const fromExtension = searchParams.get('from') === 'extension';
+  const redirectParam = searchParams.get('redirect');
+
   // Redirect if already authenticated
   useEffect(() => {
     if (user && !loading) {
-      const from = location.state?.from?.pathname || '/dashboard';
-      navigate(from, { replace: true });
+      if (fromExtension) {
+        navigate('/extension-auth?from=extension', { replace: true });
+      } else if (redirectParam) {
+        navigate(`/${redirectParam}`, { replace: true });
+      } else {
+        const from = location.state?.from?.pathname || '/dashboard';
+        navigate(from, { replace: true });
+      }
     }
-  }, [user, loading, navigate, location]);
+  }, [user, loading, navigate, location, fromExtension, redirectParam]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({
@@ -45,8 +56,14 @@ const Auth = () => {
     setIsLoading(false);
     
     if (!error) {
-      const from = location.state?.from?.pathname || '/dashboard';
-      navigate(from, { replace: true });
+      if (fromExtension) {
+        navigate('/extension-auth?from=extension', { replace: true });
+      } else if (redirectParam) {
+        navigate(`/${redirectParam}`, { replace: true });
+      } else {
+        const from = location.state?.from?.pathname || '/dashboard';
+        navigate(from, { replace: true });
+      }
     }
   };
 
@@ -61,8 +78,12 @@ const Auth = () => {
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
-    await signInWithGoogle();
+    const { error } = await signInWithGoogle();
     setIsLoading(false);
+    
+    if (!error && fromExtension) {
+      navigate('/extension-auth?from=extension', { replace: true });
+    }
   };
 
   if (loading) {

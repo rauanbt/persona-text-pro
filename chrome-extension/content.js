@@ -404,6 +404,16 @@ function showUpgradeRequiredDialog(currentPlan) {
 }
 
 // Listen for messages from background script
+// Listen for SUBSCRIPTION_UPDATED message from web page
+window.addEventListener('message', (event) => {
+  if (event.origin !== window.location.origin) return;
+  
+  if (event.data.type === 'SUBSCRIPTION_UPDATED') {
+    console.log('[Content] Subscription updated, notifying background');
+    chrome.runtime.sendMessage({ action: 'subscriptionUpdated' });
+  }
+});
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('[Content] Message received:', message);
   

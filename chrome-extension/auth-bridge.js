@@ -25,6 +25,21 @@ window.addEventListener('message', (event) => {
       }
     });
   }
+  
+  if (event.data.type === 'SUBSCRIPTION_UPDATED') {
+    console.log('[AuthBridge] Subscription updated notification received');
+    
+    // Forward subscription update to extension background script
+    chrome.runtime.sendMessage({
+      action: 'subscriptionUpdated'
+    }, (response) => {
+      if (response?.success) {
+        console.log('[AuthBridge] Subscription update notification sent');
+      } else {
+        console.error('[AuthBridge] Failed to send subscription update');
+      }
+    });
+  }
 });
 
 console.log('[AuthBridge] Ready to receive session data');

@@ -16,6 +16,9 @@ const ExtensionAuth = () => {
       }
 
       try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const paymentSuccess = urlParams.get('payment') === 'success';
+
         // Send session data via postMessage to content script
         window.postMessage({
           type: 'SAPIENWRITE_SESSION',
@@ -29,6 +32,13 @@ const ExtensionAuth = () => {
             }
           }
         }, '*');
+
+        // If this is a payment success, also send subscription update message
+        if (paymentSuccess) {
+          window.postMessage({
+            type: 'SUBSCRIPTION_UPDATED'
+          }, '*');
+        }
 
         setStatus('success');
         
@@ -71,9 +81,15 @@ const ExtensionAuth = () => {
           {status === 'success' && (
             <>
               <CheckCircle className="w-16 h-16 mx-auto mb-4 text-green-500" />
-              <h1 className="text-2xl font-bold mb-2 text-green-600">Extension Connected!</h1>
+              <h1 className="text-2xl font-bold mb-2 text-green-600">
+                {new URLSearchParams(window.location.search).get('payment') === 'success' 
+                  ? 'Payment Successful!' 
+                  : 'Extension Connected!'}
+              </h1>
               <p className="text-muted-foreground mb-4">
-                Your SapienWrite Chrome Extension is now connected to your account.
+                {new URLSearchParams(window.location.search).get('payment') === 'success'
+                  ? 'Your subscription is now active. Extension is ready to use!'
+                  : 'Your SapienWrite Chrome Extension is now connected to your account.'}
               </p>
               <p className="text-sm text-muted-foreground">
                 This window will close automatically...

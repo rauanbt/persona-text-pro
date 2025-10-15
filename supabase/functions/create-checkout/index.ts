@@ -24,7 +24,7 @@ serve(async (req) => {
     const user = data.user;
     if (!user?.email) throw new Error("User not authenticated or email not available");
 
-    const { priceId } = await req.json();
+    const { priceId, fromExtension } = await req.json();
     if (!priceId) throw new Error("Price ID is required");
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", { apiVersion: "2025-08-27.basil" });
@@ -60,7 +60,9 @@ serve(async (req) => {
       ],
       mode: "subscription",
       allow_promotion_codes: true,
-      success_url: `${req.headers.get("origin")}/dashboard?success=true`,
+      success_url: fromExtension 
+        ? `${req.headers.get("origin")}/extension-auth?from=extension&payment=success`
+        : `${req.headers.get("origin")}/dashboard?success=true`,
       cancel_url: `${req.headers.get("origin")}/dashboard?canceled=true`,
     });
 

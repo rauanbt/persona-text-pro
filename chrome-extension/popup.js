@@ -269,11 +269,11 @@ document.getElementById('upgrade-button')?.addEventListener('click', () => {
 });
 
 document.getElementById('upgrade-extension-button')?.addEventListener('click', () => {
-  chrome.tabs.create({ url: `https://sapienwrite.com/pricing?from=extension&plan=extension` });
+  chrome.tabs.create({ url: `https://sapienwrite.com/auth?from=extension&redirect=pricing&plan=extension` });
 });
 
 document.getElementById('upgrade-ultra-button')?.addEventListener('click', () => {
-  chrome.tabs.create({ url: `https://sapienwrite.com/pricing?from=extension&plan=ultra` });
+  chrome.tabs.create({ url: `https://sapienwrite.com/auth?from=extension&redirect=pricing&plan=ultra` });
 });
 
 // Logout link
@@ -337,6 +337,11 @@ document.getElementById('humanize-button')?.addEventListener('click', async () =
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'sessionStored') {
     console.log('[Popup] Session stored, reloading user data');
+    loadUserData();
+  }
+  
+  if (message.action === 'subscriptionUpdated') {
+    console.log('[Popup] Subscription updated, refreshing data');
     loadUserData();
   }
 });

@@ -42,8 +42,15 @@ export const Pricing = () => {
   }, []);
 
   const handleUpgrade = async (priceId: string) => {
-    // For now, redirect to sign up - this could be enhanced to handle authenticated users
-    window.location.href = '/auth';
+    // Check if user came from extension
+    const extensionConnected = localStorage.getItem('extensionConnected') === 'true';
+    
+    // For now, redirect to sign up with extension flag
+    const url = new URL('/auth', window.location.origin);
+    if (extensionConnected || fromExtension) {
+      url.searchParams.set('from', 'extension');
+    }
+    window.location.href = url.toString();
   };
 
   const plans = [

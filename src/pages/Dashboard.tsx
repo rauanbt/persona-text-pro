@@ -12,7 +12,7 @@ import { ExtraWordsPackages } from '@/components/ExtraWordsPackages';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AIDetectionResults } from '@/components/AIDetectionResults';
-import { Loader2, Copy, Download, ExternalLink, Crown, Zap, Plus, Brain, Shield, Chrome, ChevronDown } from 'lucide-react';
+import { Loader2, Copy, Download, ExternalLink, Crown, Zap, Plus, Brain, Shield, Chrome, ChevronDown, Check } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useNavigate } from 'react-router-dom';
 
@@ -102,6 +102,9 @@ const Dashboard = () => {
     const planParam = urlParams.get('plan');
     
     if (fromExtension) {
+      // Store extension connection flag
+      localStorage.setItem('extensionConnected', 'true');
+      
       // Show toast notification for extension users
       toast({
         title: "Welcome from Extension!",
@@ -354,8 +357,14 @@ const Dashboard = () => {
 
   const handleUpgrade = async (priceId: string) => {
     try {
+      // Check if user came from extension
+      const extensionConnected = localStorage.getItem('extensionConnected') === 'true';
+      
       const { data, error } = await supabase.functions.invoke('create-checkout', {
-        body: { priceId },
+        body: { 
+          priceId,
+          fromExtension: extensionConnected 
+        },
         headers: {
           Authorization: `Bearer ${session?.access_token}`,
         },
@@ -541,9 +550,21 @@ const Dashboard = () => {
                       <Button 
                         variant="outline" 
                         className="mt-4"
-                        onClick={() => navigate('/chrome-extension')}
+                        onClick={() => {
+                          const extensionConnected = localStorage.getItem('extensionConnected') === 'true';
+                          if (extensionConnected) {
+                            toast({
+                              title: "Extension Connected",
+                              description: "Your Chrome Extension is already set up and ready to use!",
+                            });
+                          } else {
+                            navigate('/chrome-extension');
+                          }
+                        }}
                       >
-                        View Extension Setup Instructions
+                        {localStorage.getItem('extensionConnected') === 'true' 
+                          ? '✓ Extension Connected' 
+                          : 'View Extension Setup Instructions'}
                       </Button>
                     </div>
                     <div className="bg-amber-50 dark:bg-amber-950/20 rounded-lg p-4 text-sm">
@@ -871,12 +892,31 @@ const Dashboard = () => {
                   </p>
                   
                   <Button 
-                    onClick={() => navigate('/chrome-extension')}
+                    onClick={() => {
+                      const extensionConnected = localStorage.getItem('extensionConnected') === 'true';
+                      if (extensionConnected) {
+                        toast({
+                          title: "Extension Connected",
+                          description: "Your Chrome Extension is already set up and ready to use!",
+                        });
+                      } else {
+                        navigate('/chrome-extension');
+                      }
+                    }}
                     variant="default"
                     className="w-full"
                   >
-                    <Download className="mr-2 h-4 w-4" />
-                    Download Extension
+                    {localStorage.getItem('extensionConnected') === 'true' ? (
+                      <>
+                        <Check className="mr-2 h-4 w-4" />
+                        Extension Connected
+                      </>
+                    ) : (
+                      <>
+                        <Download className="mr-2 h-4 w-4" />
+                        Download Extension
+                      </>
+                    )}
                   </Button>
 
                   <Collapsible open={showExtensionSetup} onOpenChange={setShowExtensionSetup}>

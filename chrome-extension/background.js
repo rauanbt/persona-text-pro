@@ -144,6 +144,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .catch((error) => sendResponse({ success: false, error: error.message }));
     return true;
   }
+  
+  if (message.action === 'subscriptionUpdated') {
+    // Forward to popup if it's open
+    chrome.runtime.sendMessage({ action: 'subscriptionUpdated' });
+    sendResponse({ success: true });
+    return true;
+  }
 });
 
 // Handle humanize request with tone
