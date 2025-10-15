@@ -55,6 +55,7 @@ const Dashboard = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showExtensionSetup, setShowExtensionSetup] = useState(false);
   const [showResult, setShowResult] = useState(false);
+  const [highlightedPlan, setHighlightedPlan] = useState<string | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
@@ -95,6 +96,34 @@ const Dashboard = () => {
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
+    
+    // Check for extension deep link parameters
+    const fromExtension = urlParams.get('from') === 'extension';
+    const planParam = urlParams.get('plan');
+    
+    if (fromExtension) {
+      // Show toast notification for extension users
+      toast({
+        title: "Welcome from Extension!",
+        description: planParam === 'ultra' 
+          ? "Choose Ultra plan to unlock both web and extension access" 
+          : "Choose a plan to unlock extension access",
+        variant: "default"
+      });
+      
+      // Highlight the appropriate plan
+      if (planParam === 'extension' || planParam === 'ultra') {
+        setHighlightedPlan(planParam);
+        
+        // Scroll to upgrade section after a short delay
+        setTimeout(() => {
+          const upgradeSection = document.getElementById('upgrade-section');
+          if (upgradeSection) {
+            upgradeSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }, 500);
+      }
+    }
     
     // Check for subscription success
     if (urlParams.get('success') === 'true') {
@@ -880,7 +909,7 @@ const Dashboard = () => {
 
             {/* Upgrade Options */}
             {currentPlan !== 'ultra' && (
-              <Card>
+              <Card id="upgrade-section">
                 <CardHeader>
                   <CardTitle>Upgrade Your Plan</CardTitle>
                   <CardDescription>
@@ -918,30 +947,79 @@ const Dashboard = () => {
                   </div>
 
                   {currentPlan === 'free' && (
-                    <div className="border rounded-lg p-4">
-                      <div className="font-semibold">Pro Plan</div>
-                      <div className="text-2xl font-bold">
-                        ${isAnnualBilling ? PLAN_PRICES.pro.annual.price : PLAN_PRICES.pro.monthly.price}/mo
-                      </div>
-                      {isAnnualBilling && (
-                        <div className="text-sm text-muted-foreground">
-                          ${PLAN_PRICES.pro.annual.yearlyPrice}/year (billed annually)
+                    <>
+                      {/* Pro Plan */}
+                      <div className="border rounded-lg p-4">
+                        <div className="font-semibold">Pro Plan</div>
+                        <div className="text-2xl font-bold">
+                          ${isAnnualBilling ? PLAN_PRICES.pro.annual.price : PLAN_PRICES.pro.monthly.price}/mo
                         </div>
-                      )}
-                      <div className="text-sm text-muted-foreground mb-3">
-                        15,000 words/month
+                        {isAnnualBilling && (
+                          <div className="text-sm text-muted-foreground">
+                            ${PLAN_PRICES.pro.annual.yearlyPrice}/year (billed annually)
+                          </div>
+                        )}
+                        <div className="text-sm text-muted-foreground mb-3">
+                          15,000 words/month
+                        </div>
+                        <Button 
+                          onClick={() => handleUpgrade(isAnnualBilling ? PLAN_PRICES.pro.annual.priceId : PLAN_PRICES.pro.monthly.priceId)}
+                          className="w-full"
+                        >
+                          Upgrade to Pro
+                        </Button>
                       </div>
-                      <Button 
-                        onClick={() => handleUpgrade(isAnnualBilling ? PLAN_PRICES.pro.annual.priceId : PLAN_PRICES.pro.monthly.priceId)}
-                        className="w-full"
-                      >
-                        Upgrade to Pro
-                      </Button>
-                    </div>
+
+                      {/* Extension-Only Plan */}
+                      <div className={`border rounded-lg p-4 transition-all ${
+                        highlightedPlan === 'extension' ? 'border-2 border-primary shadow-lg' : ''
+                      }`}>
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="font-semibold flex items-center gap-2">
+                            <Chrome className="h-4 w-4" />
+                            Extension-Only
+                          </div>
+                          {highlightedPlan === 'extension' && (
+                            <Badge className="bg-primary text-primary-foreground text-xs">
+                              Recommended
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="text-2xl font-bold">
+                          ${PLAN_PRICES.extension_only.monthly.price}/mo
+                        </div>
+                        <div className="text-sm text-muted-foreground mb-3">
+                          5,000 extension words/month
+                        </div>
+                        <div className="text-xs text-muted-foreground mb-3">
+                          Chrome Extension access only • No web dashboard
+                        </div>
+                        <Button 
+                          onClick={() => handleUpgrade(PLAN_PRICES.extension_only.monthly.priceId)}
+                          className="w-full"
+                          variant="outline"
+                        >
+                          Get Extension-Only
+                        </Button>
+                      </div>
+                    </>
                   )}
                   
-                  <div className="border rounded-lg p-4">
-                    <div className="font-semibold">Ultra Plan</div>
+                  {/* Ultra Plan */}
+                  <div className={`border rounded-lg p-4 transition-all ${
+                    highlightedPlan === 'ultra' ? 'border-2 border-primary shadow-lg' : ''
+                  }`}>
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="font-semibold flex items-center gap-2">
+                        <Crown className="h-4 w-4" />
+                        Ultra Plan
+                      </div>
+                      {highlightedPlan === 'ultra' && (
+                        <Badge className="bg-primary text-primary-foreground text-xs">
+                          Recommended
+                        </Badge>
+                      )}
+                    </div>
                     <div className="text-2xl font-bold">
                       ${isAnnualBilling ? PLAN_PRICES.ultra.annual.price : PLAN_PRICES.ultra.monthly.price}/mo
                     </div>
@@ -950,8 +1028,12 @@ const Dashboard = () => {
                         ${PLAN_PRICES.ultra.annual.yearlyPrice}/year (billed annually)
                       </div>
                     )}
-                    <div className="text-sm text-muted-foreground mb-3">
-                      30,000 words/month
+                    <div className="text-sm text-muted-foreground mb-1">
+                      30,000 web words/month
+                    </div>
+                    <div className="text-xs text-muted-foreground mb-3 flex items-center gap-1">
+                      <Chrome className="h-3 w-3" />
+                      Includes 5,000 extension bonus words
                     </div>
                     <Button 
                       onClick={() => handleUpgrade(isAnnualBilling ? PLAN_PRICES.ultra.annual.priceId : PLAN_PRICES.ultra.monthly.priceId)}

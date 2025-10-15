@@ -1,11 +1,45 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check } from "lucide-react";
+import { Check, Chrome } from "lucide-react";
+import { toast } from "@/components/ui/use-toast";
 
 export const Pricing = () => {
   const [isAnnual, setIsAnnual] = useState(false);
+  const [highlightedPlan, setHighlightedPlan] = useState<string | null>(null);
+  const [fromExtension, setFromExtension] = useState(false);
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const from = urlParams.get('from');
+    const plan = urlParams.get('plan');
+
+    if (from === 'extension') {
+      setFromExtension(true);
+      
+      if (plan) {
+        setHighlightedPlan(plan);
+        
+        // Show welcome toast
+        toast({
+          title: "Choose Your Plan",
+          description: plan === 'ultra' 
+            ? "Ultra plan includes both web dashboard and Chrome extension access"
+            : "Extension-Only plan gives you Chrome extension access",
+          variant: "default"
+        });
+
+        // Scroll to pricing section
+        setTimeout(() => {
+          const pricingSection = document.getElementById('pricing');
+          if (pricingSection) {
+            pricingSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }, 500);
+      }
+    }
+  }, []);
 
   const handleUpgrade = async (priceId: string) => {
     // For now, redirect to sign up - this could be enhanced to handle authenticated users
@@ -151,28 +185,44 @@ export const Pricing = () => {
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
-          {plans.map((plan, index) => (
-            <Card key={index} className={`relative ${plan.popular ? 'border-primary shadow-lg scale-105' : ''}`}>
-              {plan.popular && (
-                <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-primary text-primary-foreground">
-                  Most Popular
-                </Badge>
-              )}
-              {getSavingsText(plan) && (
-                <Badge className="absolute -top-3 right-4 bg-success text-success-foreground">
-                  {getSavingsText(plan)}
-                </Badge>
-              )}
-              {!plan.isFree && (
-                <div className="absolute top-4 right-4">
-                  <p className="text-xs text-muted-foreground">
-                    All sales final
-                  </p>
-                </div>
-              )}
-              <CardHeader className="text-center pb-4">
-                <CardTitle className="text-xl font-bold">{plan.name}</CardTitle>
-                <CardDescription className="text-sm">{plan.description}</CardDescription>
+          {plans.map((plan, index) => {
+            const isHighlighted = highlightedPlan === plan.name.toLowerCase().replace('-only', '_only');
+            const showExtensionBadge = fromExtension && (plan.name === 'Extension-Only' || plan.name === 'Ultra');
+            
+            return (
+              <Card 
+                key={index} 
+                className={`relative transition-all ${
+                  isHighlighted 
+                    ? 'border-2 border-primary shadow-lg scale-105' 
+                    : plan.popular 
+                    ? 'border-primary shadow-lg scale-105' 
+                    : ''
+                }`}
+              >
+                {(plan.popular || isHighlighted) && (
+                  <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-primary text-primary-foreground">
+                    {isHighlighted && fromExtension ? 'Perfect for Extension' : 'Most Popular'}
+                  </Badge>
+                )}
+                {getSavingsText(plan) && (
+                  <Badge className="absolute -top-3 right-4 bg-success text-success-foreground">
+                    {getSavingsText(plan)}
+                  </Badge>
+                )}
+                {!plan.isFree && (
+                  <div className="absolute top-4 right-4">
+                    <p className="text-xs text-muted-foreground">
+                      All sales final
+                    </p>
+                  </div>
+                )}
+                <CardHeader className="text-center pb-4">
+                  <CardTitle className="text-xl font-bold flex items-center justify-center gap-2">
+                    {plan.name}
+                    {showExtensionBadge && <Chrome className="h-4 w-4 text-primary" />}
+                  </CardTitle>
+                  <CardDescription className="text-sm">{plan.description}</CardDescription>
                 <div className="mt-4">
                   <span className="text-3xl font-bold text-foreground">{getPrice(plan)}</span>
                   {!plan.isFree && <span className="text-muted-foreground ml-1">/{plan.period}</span>}
@@ -210,7 +260,8 @@ export const Pricing = () => {
                 </Button>
               </CardFooter>
             </Card>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>
