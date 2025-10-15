@@ -61,10 +61,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   // Helper to update subscription data and save to cache
-  const updateSubscriptionData = (newData: typeof subscriptionData) => {
-    setSubscriptionData(newData);
-    localStorage.setItem('subscription_data', JSON.stringify(newData));
-    console.log('[AuthContext] Saved subscription to cache:', newData);
+  const updateSubscriptionData = (
+    updater: typeof subscriptionData | ((prev: typeof subscriptionData) => typeof subscriptionData)
+  ) => {
+    setSubscriptionData((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      try {
+        localStorage.setItem('subscription_data', JSON.stringify(next));
+        console.log('[AuthContext] Saved subscription to cache:', next);
+      } catch (e) {
+        console.warn('[AuthContext] Failed to cache subscription:', e);
+      }
+      return next;
+    });
   };
 
   const checkSubscription = async (overrideSession?: Session | null) => {
@@ -85,7 +94,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('[AuthContext] Checking subscription for user:', activeSession.user.id);
       console.log('[AuthContext] Using session token:', activeSession.access_token ? 'Present' : 'Missing');
 
-      // 1) Prime from DB so UI shows the best-known plan immediately
+      // 1) Prime from DB so UI shows the best-known plan immediately (only if no cache)
+      const hadCache = !!localStorage.getItem('subscription_data');
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('current_plan')
@@ -96,7 +106,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.warn('[AuthContext] profiles query error:', profileError.message);
       }
 
-      if (profileData?.current_plan) {
+      if (profileData?.current_plan && !hadCache) {
         console.log('[AuthContext] Primed plan from DB:', profileData.current_plan);
         updateSubscriptionData((prev) => ({
           ...prev,
@@ -116,11 +126,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('[AuthContext] Subscription check result:', data);
       console.log('[AuthContext] Final plan set to:', data?.plan || profileData?.current_plan || 'free');
 
-      updateSubscriptionData({
+      // Only update if something actually changed
+      const next = {
         subscribed: Boolean(data?.subscribed),
         plan: data?.plan || profileData?.current_plan || 'free',
         product_id: data?.product_id || null,
         subscription_end: data?.subscription_end || null,
+      };
+      
+      updateSubscriptionData((prev) => {
+        if (
+          prev.subscribed !== next.subscribed ||
+          prev.plan !== next.plan ||
+          prev.product_id !== next.product_id ||
+          prev.subscription_end !== next.subscription_end
+        ) {
+          return next;
+        }
+        return prev;
       });
     } catch (error) {
       console.error('[AuthContext] Error checking subscription:', error);

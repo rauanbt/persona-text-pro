@@ -404,9 +404,17 @@ function showUpgradeRequiredDialog(currentPlan) {
 }
 
 // Listen for messages from background script
-// Listen for SUBSCRIPTION_UPDATED message from web page
+// Listen for messages from web page (fallback for session handoff)
 window.addEventListener('message', (event) => {
   if (event.origin !== window.location.origin) return;
+  
+  if (event.data.type === 'SAPIENWRITE_SESSION') {
+    console.log('[Content] Received session from web app (fallback)');
+    chrome.runtime.sendMessage({
+      action: 'storeSession',
+      session: event.data.session
+    });
+  }
   
   if (event.data.type === 'SUBSCRIPTION_UPDATED') {
     console.log('[Content] Subscription updated, notifying background');

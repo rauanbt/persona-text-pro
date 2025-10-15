@@ -23,7 +23,12 @@
       "css": ["styles.css"]
     },
     {
-      "matches": ["https://nycrxoppbsakpkkeiqzb.supabase.co/*", "http://localhost:8080/*"],
+      "matches": [
+        "https://sapienwrite.com/*",
+        "https://*.sapienwrite.com/*",
+        "https://*.lovableproject.com/*",
+        "http://localhost:5173/*"
+      ],
       "js": ["auth-bridge.js"]
     }
   ],
