@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Check, Star, Crown, Zap, Chrome } from "lucide-react";
+import { PLAN_PRICES, getSavingsText } from "@/lib/pricing";
 
 export const WritingJourneyPricing = () => {
   const [isAnnual, setIsAnnual] = useState(false);
@@ -37,8 +38,8 @@ export const WritingJourneyPricing = () => {
     {
       name: "Pro",
       subtitle: "For professional creators",
-      monthlyPrice: "$24.95",
-      annualPrice: "$14.97",
+      monthlyPrice: PLAN_PRICES.pro.monthly.display,
+      annualPrice: PLAN_PRICES.pro.annual.display,
       period: isAnnual ? "per month (billed annually)" : "per month",
       description: "Elevate your content with advanced writing intelligence",
       icon: <Zap className="w-8 h-8 text-blue-500" />,
@@ -53,16 +54,16 @@ export const WritingJourneyPricing = () => {
       buttonText: "Choose Pro",
       popular: true,
       isFree: false,
-      monthlyPriceId: "price_1SD818H8HT0u8xph48V9GxXG",
-      annualPriceId: "price_1SGMnjH8HT0u8xphJXTgm1Ii",
+      monthlyPriceId: PLAN_PRICES.pro.monthly.priceId,
+      annualPriceId: PLAN_PRICES.pro.annual.priceId,
       bgGradient: "from-blue-50/50 to-indigo-50/50 dark:from-blue-950/20 dark:to-indigo-950/20",
       borderColor: "border-blue-200 dark:border-blue-800"
     },
     {
       name: "Ultra",
       subtitle: "For content powerhouses",
-      monthlyPrice: "$54.95",
-      annualPrice: "$32.97",
+      monthlyPrice: PLAN_PRICES.ultra.monthly.display,
+      annualPrice: PLAN_PRICES.ultra.annual.display,
       period: isAnnual ? "per month (billed annually)" : "per month",
       description: "Unlimited creativity with our most advanced tools",
       icon: <Crown className="w-8 h-8 text-purple-500" />,
@@ -78,16 +79,16 @@ export const WritingJourneyPricing = () => {
       buttonText: "Become an Ultra",
       popular: false,
       isFree: false,
-      monthlyPriceId: "price_1SD81xH8HT0u8xphuqiq8xet",
-      annualPriceId: "price_1SGMo6H8HT0u8xphytzP4SFR",
+      monthlyPriceId: PLAN_PRICES.ultra.monthly.priceId,
+      annualPriceId: PLAN_PRICES.ultra.annual.priceId,
       bgGradient: "from-purple-50/50 to-indigo-50/50 dark:from-purple-950/20 dark:to-indigo-950/20",
       borderColor: "border-purple-200 dark:border-purple-800"
     },
     {
       name: "Extension-Only",
       subtitle: "Browser convenience",
-      monthlyPrice: "$12.95",
-      annualPrice: "$12.95",
+      monthlyPrice: PLAN_PRICES.extension_only.monthly.display,
+      annualPrice: PLAN_PRICES.extension_only.annual.display,
       period: "per month",
       description: "Humanize text anywhere on the web",
       icon: <Chrome className="w-8 h-8 text-green-500" />,
@@ -101,7 +102,7 @@ export const WritingJourneyPricing = () => {
       buttonText: "Get Extension",
       popular: false,
       isFree: false,
-      monthlyPriceId: "price_1SGNtsH8HT0u8xphEd7pG9Po",
+      monthlyPriceId: PLAN_PRICES.extension_only.monthly.priceId,
       bgGradient: "from-green-50/50 to-emerald-50/50 dark:from-green-950/20 dark:to-emerald-950/20",
       borderColor: "border-green-200 dark:border-green-800"
     }
@@ -111,12 +112,11 @@ export const WritingJourneyPricing = () => {
     return isAnnual ? journey.annualPrice : journey.monthlyPrice;
   };
 
-  const getSavingsText = (journey: typeof journeys[0]) => {
-    if (!isAnnual || journey.isFree) return null;
-    const monthlyCost = parseFloat(journey.monthlyPrice.replace('$', '')) * 12;
-    const annualCost = parseFloat(journey.annualPrice.replace('$', '')) * 12;
-    const savings = Math.round(((monthlyCost - annualCost) / monthlyCost) * 100);
-    return `Save ${savings}%`;
+  const getJourneySavingsText = (journey: typeof journeys[0]) => {
+    if (!isAnnual || journey.isFree || journey.monthlyPrice === journey.annualPrice) return null;
+    const monthlyVal = parseFloat(journey.monthlyPrice.replace('$', ''));
+    const annualVal = parseFloat(journey.annualPrice.replace('$', ''));
+    return getSavingsText(monthlyVal, annualVal);
   };
 
   return (
@@ -169,9 +169,9 @@ export const WritingJourneyPricing = () => {
                   Most Popular Journey ⭐
                 </Badge>
               )}
-              {getSavingsText(journey) && (
+              {getJourneySavingsText(journey) && (
                 <Badge className="absolute top-4 right-4 bg-green-500 text-white z-10">
-                  {getSavingsText(journey)}
+                  {getJourneySavingsText(journey)}
                 </Badge>
               )}
               
@@ -194,7 +194,7 @@ export const WritingJourneyPricing = () => {
                 <div className="mt-6">
                   <span className="text-4xl font-bold text-foreground">{getPrice(journey)}</span>
                   {!journey.isFree && <span className="text-muted-foreground ml-1 text-sm">/{journey.period}</span>}
-                  {isAnnual && !journey.isFree && (
+                  {isAnnual && !journey.isFree && journey.monthlyPrice !== journey.annualPrice && (
                     <div className="text-sm text-muted-foreground line-through mt-1">
                       {journey.monthlyPrice}/month
                     </div>

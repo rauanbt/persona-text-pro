@@ -1,15 +1,16 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 /**
  * Global bridge that posts session data to Chrome extension
- * whenever the app is opened from the extension (from=extension param)
+ * Supports both new extensions (that request session) and old extensions (that passively listen)
  */
 export const ExtensionSessionBridge = () => {
   const { session } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const hasBroadcastOnMount = useRef(false);
 
   // Listen for session requests from extension
   useEffect(() => {
@@ -139,29 +140,72 @@ export const ExtensionSessionBridge = () => {
     return () => clearInterval(retryInterval);
   }, [session]);
 
-  // Opportunistic broadcast on mount for already logged-in users
+  // Aggressive broadcast on mount - supports older extension versions that don't request session
+  useEffect(() => {
+    if (!session || hasBroadcastOnMount.current) return;
+    
+    hasBroadcastOnMount.current = true;
+    console.log('[ExtensionBridge] Starting mount broadcast sequence for older extensions');
+
+    const broadcastSession = () => {
+      window.postMessage({
+        type: 'SAPIENWRITE_SESSION',
+        session: {
+          access_token: session.access_token,
+          refresh_token: session.refresh_token,
+          expires_at: session.expires_at,
+          user: {
+            email: session.user.email,
+            id: session.user.id
+          }
+        }
+      }, '*');
+    };
+
+    // Broadcast immediately
+    broadcastSession();
+
+    // Retry multiple times to ensure extension receives it (service worker wake-up delay)
+    let attempts = 0;
+    const maxAttempts = 8;
+    const retryInterval = setInterval(() => {
+      attempts++;
+      if (attempts >= maxAttempts) {
+        clearInterval(retryInterval);
+        console.log('[ExtensionBridge] Mount broadcast sequence complete');
+      } else {
+        broadcastSession();
+      }
+    }, 1000);
+
+    return () => clearInterval(retryInterval);
+  }, [session]); // Run when session becomes available
+
+  // Re-broadcast when tab becomes visible (covers extension waking after tab was hidden)
   useEffect(() => {
     if (!session) return;
-    
-    const extensionConnected = localStorage.getItem('extensionConnected') === 'true';
-    if (extensionConnected) return;
 
-    console.log('[ExtensionBridge] Opportunistic session broadcast on mount');
-    window.postMessage({
-      type: 'SAPIENWRITE_SESSION',
-      session: {
-        access_token: session.access_token,
-        refresh_token: session.refresh_token,
-        expires_at: session.expires_at,
-        user: {
-          email: session.user.email,
-          id: session.user.id
-        }
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log('[ExtensionBridge] Tab visible - broadcasting session');
+        window.postMessage({
+          type: 'SAPIENWRITE_SESSION',
+          session: {
+            access_token: session.access_token,
+            refresh_token: session.refresh_token,
+            expires_at: session.expires_at,
+            user: {
+              email: session.user.email,
+              id: session.user.id
+            }
+          }
+        }, '*');
       }
-    }, '*');
+    };
 
-    localStorage.setItem('extensionConnected', 'true');
-  }, []); // Only run once on mount
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [session]);
 
   return null;
 };

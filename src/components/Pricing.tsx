@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from "@/components/ui/badge";
 import { Check, Chrome } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
+import { PLAN_PRICES, getSavingsText } from "@/lib/pricing";
 
 export const Pricing = () => {
   const [isAnnual, setIsAnnual] = useState(false);
@@ -74,8 +75,8 @@ export const Pricing = () => {
     },
     {
       name: "Pro",
-      monthlyPrice: "$27.98",
-      annualPrice: "$16.79",
+      monthlyPrice: PLAN_PRICES.pro.monthly.display,
+      annualPrice: PLAN_PRICES.pro.annual.display,
       period: isAnnual ? "per month (billed annually)" : "per month",
       description: "Perfect for professionals and content creators",
       features: [
@@ -91,13 +92,13 @@ export const Pricing = () => {
       buttonText: "Choose Pro",
       popular: true,
       isFree: false,
-      monthlyPriceId: "price_1SCfkBH8HT0u8xpho4UsDBf8",
-      annualPriceId: "price_1SGMoHH8HT0u8xphAjovqefe"
+      monthlyPriceId: PLAN_PRICES.pro.monthly.priceId,
+      annualPriceId: PLAN_PRICES.pro.annual.priceId
     },
     {
       name: "Extension-Only",
-      monthlyPrice: "$12.95",
-      annualPrice: "$12.95",
+      monthlyPrice: PLAN_PRICES.extension_only.monthly.display,
+      annualPrice: PLAN_PRICES.extension_only.annual.display,
       period: "per month",
       description: "Chrome Extension access only",
       features: [
@@ -110,13 +111,13 @@ export const Pricing = () => {
       buttonText: "Get Extension-Only",
       popular: false,
       isFree: false,
-      monthlyPriceId: "price_1SGNtsH8HT0u8xphEd7pG9Po",
-      annualPriceId: "price_1SGNtsH8HT0u8xphEd7pG9Po"
+      monthlyPriceId: PLAN_PRICES.extension_only.monthly.priceId,
+      annualPriceId: PLAN_PRICES.extension_only.annual.priceId
     },
     {
       name: "Ultra",
-      monthlyPrice: "$57.98",
-      annualPrice: "$34.79",
+      monthlyPrice: PLAN_PRICES.ultra.monthly.display,
+      annualPrice: PLAN_PRICES.ultra.annual.display,
       period: isAnnual ? "per month (billed annually)" : "per month",
       description: "For teams and heavy users",
       features: [
@@ -133,8 +134,8 @@ export const Pricing = () => {
       buttonText: "Choose Ultra",
       popular: false,
       isFree: false,
-      monthlyPriceId: "price_1SCfkUH8HT0u8xphj7aOiKux",
-      annualPriceId: "price_1SGMqDH8HT0u8xphDw6HRQz6"
+      monthlyPriceId: PLAN_PRICES.ultra.monthly.priceId,
+      annualPriceId: PLAN_PRICES.ultra.annual.priceId
     }
   ];
 
@@ -142,12 +143,11 @@ export const Pricing = () => {
     return isAnnual ? plan.annualPrice : plan.monthlyPrice;
   };
 
-  const getSavingsText = (plan: typeof plans[0]) => {
-    if (!isAnnual || plan.isFree) return null;
-    const monthlyCost = parseFloat(plan.monthlyPrice.replace('$', '')) * 12;
-    const annualCost = parseFloat(plan.annualPrice.replace('$', '')) * 12;
-    const savings = Math.round(((monthlyCost - annualCost) / monthlyCost) * 100);
-    return `Save ${savings}%`;
+  const getPlanSavingsText = (plan: typeof plans[0]) => {
+    if (!isAnnual || plan.isFree || plan.monthlyPrice === plan.annualPrice) return null;
+    const monthlyVal = parseFloat(plan.monthlyPrice.replace('$', ''));
+    const annualVal = parseFloat(plan.annualPrice.replace('$', ''));
+    return getSavingsText(monthlyVal, annualVal);
   };
 
   return (
@@ -212,9 +212,9 @@ export const Pricing = () => {
                     {isHighlighted && fromExtension ? 'Perfect for Extension' : 'Most Popular'}
                   </Badge>
                 )}
-                {getSavingsText(plan) && (
+                {getPlanSavingsText(plan) && (
                   <Badge className="absolute -top-3 right-4 bg-success text-success-foreground">
-                    {getSavingsText(plan)}
+                    {getPlanSavingsText(plan)}
                   </Badge>
                 )}
                 {!plan.isFree && (
@@ -233,7 +233,7 @@ export const Pricing = () => {
                 <div className="mt-4">
                   <span className="text-3xl font-bold text-foreground">{getPrice(plan)}</span>
                   {!plan.isFree && <span className="text-muted-foreground ml-1">/{plan.period}</span>}
-                  {isAnnual && !plan.isFree && (
+                  {isAnnual && !plan.isFree && plan.monthlyPrice !== plan.annualPrice && (
                     <div className="text-sm text-muted-foreground line-through mt-1">
                       {plan.monthlyPrice}/month
                     </div>

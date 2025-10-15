@@ -16,26 +16,7 @@ import { Loader2, Copy, Download, ExternalLink, Crown, Zap, Plus, Brain, Shield,
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useNavigate } from 'react-router-dom';
 
-const PLAN_LIMITS = {
-  free: 750,
-  pro: 15000,
-  ultra: 30000,
-  extension_only: 5000
-};
-
-const PLAN_PRICES = {
-  pro: {
-    monthly: { price: 24.95, priceId: 'price_1SD818H8HT0u8xph48V9GxXG' },
-    annual: { price: 17.47, priceId: 'price_1SD81lH8HT0u8xph8dYBxkqi', yearlyPrice: 209.64 }
-  },
-  ultra: { 
-    monthly: { price: 54.95, priceId: 'price_1SD81xH8HT0u8xphuqiq8xet' },
-    annual: { price: 38.47, priceId: 'price_1SD828H8HT0u8xphUaDaMTDV', yearlyPrice: 461.64 }
-  },
-  extension_only: {
-    monthly: { price: 12.95, priceId: 'price_1SGNtsH8HT0u8xphEd7pG9Po' }
-  }
-};
+import { PLAN_LIMITS, PLAN_PRICES } from '@/lib/pricing';
 
 const Dashboard = () => {
   const { user, session, signOut, subscriptionData, checkSubscription, loading: authLoading } = useAuth();
@@ -959,7 +940,7 @@ const Dashboard = () => {
                     </span>
                     {isAnnualBilling && (
                       <Badge className="bg-success text-success-foreground ml-2 text-xs">
-                        Save 30%
+                        Save 40%
                       </Badge>
                     )}
                   </div>
@@ -970,11 +951,11 @@ const Dashboard = () => {
                       <div className="border rounded-lg p-4">
                         <div className="font-semibold">Pro Plan</div>
                         <div className="text-2xl font-bold">
-                          ${isAnnualBilling ? PLAN_PRICES.pro.annual.price : PLAN_PRICES.pro.monthly.price}/mo
+                          {isAnnualBilling ? PLAN_PRICES.pro.annual.display : PLAN_PRICES.pro.monthly.display}/mo
                         </div>
                         {isAnnualBilling && (
                           <div className="text-sm text-muted-foreground">
-                            ${PLAN_PRICES.pro.annual.yearlyPrice}/year (billed annually)
+                            ${PLAN_PRICES.pro.annual.yearlyTotal}/year (billed annually)
                           </div>
                         )}
                         <div className="text-sm text-muted-foreground mb-3">
@@ -1004,7 +985,7 @@ const Dashboard = () => {
                           )}
                         </div>
                         <div className="text-2xl font-bold">
-                          ${PLAN_PRICES.extension_only.monthly.price}/mo
+                          {PLAN_PRICES.extension_only.monthly.display}/mo
                         </div>
                         <div className="text-sm text-muted-foreground mb-3">
                           5,000 extension words/month
@@ -1039,11 +1020,11 @@ const Dashboard = () => {
                       )}
                     </div>
                     <div className="text-2xl font-bold">
-                      ${isAnnualBilling ? PLAN_PRICES.ultra.annual.price : PLAN_PRICES.ultra.monthly.price}/mo
+                      {isAnnualBilling ? PLAN_PRICES.ultra.annual.display : PLAN_PRICES.ultra.monthly.display}/mo
                     </div>
                     {isAnnualBilling && (
                       <div className="text-sm text-muted-foreground">
-                        ${PLAN_PRICES.ultra.annual.yearlyPrice}/year (billed annually)
+                        ${PLAN_PRICES.ultra.annual.yearlyTotal}/year (billed annually)
                       </div>
                     )}
                     <div className="text-sm text-muted-foreground mb-1">
