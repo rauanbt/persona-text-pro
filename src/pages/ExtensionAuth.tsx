@@ -52,13 +52,12 @@ const ExtensionAuth = () => {
       }
     };
 
-    // Check if this page was opened from extension
-    const urlParams = new URLSearchParams(window.location.search);
-    const fromExtension = urlParams.get('from') === 'extension';
-
-    if (fromExtension && session) {
+    // If session exists, send it to extension (regardless of URL params)
+    // This makes the handoff more resilient
+    if (session) {
       sendSessionToExtension();
-    } else if (!fromExtension) {
+    } else if (session === null) {
+      // Only show error if we know there's no session
       setStatus('error');
     }
   }, [session]);
