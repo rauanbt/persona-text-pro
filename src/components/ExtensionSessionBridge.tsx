@@ -47,6 +47,12 @@ export const ExtensionSessionBridge = () => {
     const fromExtension = urlParams.get('from') === 'extension';
     const paymentSuccess = urlParams.get('payment') === 'success';
 
+    // Persist extension handoff intent before cleaning URL
+    if (fromExtension) {
+      sessionStorage.setItem('extension_handoff_pending', '1');
+      console.log('[ExtensionBridge] Extension handoff pending');
+    }
+
     if (!session) return;
 
     // If opened from extension, post session immediately
@@ -66,8 +72,8 @@ export const ExtensionSessionBridge = () => {
         }
       }, '*');
 
-      // Mark that extension has been connected
       localStorage.setItem('extensionConnected', 'true');
+      sessionStorage.removeItem('extension_handoff_pending');
     }
 
     // If payment was successful, notify extension to refresh subscription
@@ -87,6 +93,75 @@ export const ExtensionSessionBridge = () => {
       navigate(newUrl, { replace: true });
     }
   }, [session, location.search, navigate, location.pathname]);
+
+  // Broadcast session after login if extension handoff is pending
+  useEffect(() => {
+    if (!session) return;
+    
+    const handoffPending = sessionStorage.getItem('extension_handoff_pending') === '1';
+    if (!handoffPending) return;
+
+    console.log('[ExtensionBridge] Broadcasting session for pending extension handoff');
+
+    const broadcastSession = () => {
+      window.postMessage({
+        type: 'SAPIENWRITE_SESSION',
+        session: {
+          access_token: session.access_token,
+          refresh_token: session.refresh_token,
+          expires_at: session.expires_at,
+          user: {
+            email: session.user.email,
+            id: session.user.id
+          }
+        }
+      }, '*');
+    };
+
+    // Broadcast immediately
+    broadcastSession();
+    localStorage.setItem('extensionConnected', 'true');
+
+    // Retry a few times in case extension service worker is waking up
+    let attempts = 0;
+    const maxAttempts = 5;
+    const retryInterval = setInterval(() => {
+      attempts++;
+      if (attempts >= maxAttempts) {
+        clearInterval(retryInterval);
+        sessionStorage.removeItem('extension_handoff_pending');
+        console.log('[ExtensionBridge] Handoff complete');
+      } else {
+        broadcastSession();
+      }
+    }, 1000);
+
+    return () => clearInterval(retryInterval);
+  }, [session]);
+
+  // Opportunistic broadcast on mount for already logged-in users
+  useEffect(() => {
+    if (!session) return;
+    
+    const extensionConnected = localStorage.getItem('extensionConnected') === 'true';
+    if (extensionConnected) return;
+
+    console.log('[ExtensionBridge] Opportunistic session broadcast on mount');
+    window.postMessage({
+      type: 'SAPIENWRITE_SESSION',
+      session: {
+        access_token: session.access_token,
+        refresh_token: session.refresh_token,
+        expires_at: session.expires_at,
+        user: {
+          email: session.user.email,
+          id: session.user.id
+        }
+      }
+    }, '*');
+
+    localStorage.setItem('extensionConnected', 'true');
+  }, []); // Only run once on mount
 
   return null;
 };
