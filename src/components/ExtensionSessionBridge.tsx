@@ -11,6 +11,37 @@ export const ExtensionSessionBridge = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Listen for session requests from extension
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      // Security: only respond to same-origin requests
+      if (event.origin !== window.location.origin) return;
+
+      if (event.data.type === 'SAPIENWRITE_REQUEST_SESSION' && session) {
+        console.log('[ExtensionBridge] Responding to session request from extension');
+        
+        window.postMessage({
+          type: 'SAPIENWRITE_SESSION',
+          session: {
+            access_token: session.access_token,
+            refresh_token: session.refresh_token,
+            expires_at: session.expires_at,
+            user: {
+              email: session.user.email,
+              id: session.user.id
+            }
+          }
+        }, '*');
+
+        localStorage.setItem('extensionConnected', 'true');
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [session]);
+
+  // Handle URL params (from=extension, payment=success)
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
     const fromExtension = urlParams.get('from') === 'extension';

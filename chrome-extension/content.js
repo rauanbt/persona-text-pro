@@ -2,6 +2,12 @@
 
 console.log('[Content] SapienWrite content script loaded');
 
+// Request session from web app on load
+console.log('[Content] Requesting session from web app');
+window.postMessage({
+  type: 'SAPIENWRITE_REQUEST_SESSION'
+}, '*');
+
 // Create notification container
 function createNotificationContainer() {
   if (document.getElementById('sapienwrite-notification-container')) {

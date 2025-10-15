@@ -140,7 +140,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   
   if (message.action === 'storeSession') {
     storeSession(message.session)
-      .then(() => sendResponse({ success: true }))
+      .then(() => {
+        // Notify popup that session is stored
+        chrome.runtime.sendMessage({ action: 'sessionStored' }).catch(() => {
+          // Popup might not be open, that's fine
+        });
+        sendResponse({ success: true });
+      })
       .catch((error) => sendResponse({ success: false, error: error.message }));
     return true;
   }
