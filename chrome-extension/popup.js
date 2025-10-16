@@ -17,7 +17,7 @@ let wordBalance = 0;
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('[Popup] Initializing...');
   
-  // Safety timeout with auto-recovery
+  // Safety timeout with auto-recovery (4s to allow token refresh)
   const timeoutId = setTimeout(() => {
     console.log('[Popup] Timeout reached - auto-opening auth handshake window');
     showLoginView();
@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       url: 'https://sapienwrite.com/auth?from=extension',
       active: true
     });
-  }, 2000);
+  }, 4000);
   
   try {
     const authenticated = await isAuthenticated();

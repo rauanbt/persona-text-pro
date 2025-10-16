@@ -15,6 +15,51 @@ async function storeSession(session) {
   console.log('[Auth] Session stored successfully');
 }
 
+// Refresh session using refresh_token
+async function refreshSession() {
+  const data = await chrome.storage.sync.get(['refresh_token', 'user_email', 'user_id']);
+  if (!data.refresh_token) {
+    console.log('[Auth] No refresh_token available');
+    return null;
+  }
+  
+  try {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY
+      },
+      body: JSON.stringify({ refresh_token: data.refresh_token })
+    });
+    
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error('[Auth] Refresh failed:', errText);
+      return null;
+    }
+    
+    const json = await res.json();
+    const expires_at = Math.floor(Date.now() / 1000) + (json.expires_in || 3600);
+    const newSession = {
+      access_token: json.access_token,
+      refresh_token: json.refresh_token || data.refresh_token,
+      expires_at,
+      user: {
+        email: json.user?.email || data.user_email || '',
+        id: json.user?.id || data.user_id || ''
+      }
+    };
+    
+    await storeSession(newSession);
+    console.log('[Auth] Session refreshed successfully');
+    return newSession;
+  } catch (error) {
+    console.error('[Auth] Refresh error:', error);
+    return null;
+  }
+}
+
 // Get session from chrome.storage.sync
 async function getSession() {
   const data = await chrome.storage.sync.get([
@@ -30,15 +75,19 @@ async function getSession() {
     return null;
   }
   
-  // Check if token is expired
   const now = Math.floor(Date.now() / 1000);
-  if (data.expires_at && now >= data.expires_at) {
-    console.log('[Auth] Session expired');
+  
+  // Refresh if expiring within 60 seconds
+  if (data.expires_at && now >= (data.expires_at - 60)) {
+    console.log('[Auth] Access token expired/near-expiry - refreshing...');
+    const refreshed = await refreshSession();
+    if (refreshed) return refreshed;
     await clearSession();
     return null;
   }
   
-  console.log('[Auth] Session retrieved');
+  // Valid session
+  console.log('[Auth] Session retrieved (valid)');
   return {
     access_token: data.access_token,
     refresh_token: data.refresh_token,
