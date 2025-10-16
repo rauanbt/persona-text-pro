@@ -19,7 +19,7 @@ export const HeroSection = () => {
   const { toast } = useToast();
 
   const wordCount = text.trim().split(/\s+/).filter(word => word.length > 0).length;
-  const maxWords = 500;
+  const maxWords = 750;
   const isOverLimit = wordCount > maxWords;
 
   const handleTryForFree = () => {

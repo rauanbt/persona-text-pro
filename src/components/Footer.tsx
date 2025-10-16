@@ -20,7 +20,7 @@ export const Footer = () => {
             Start for free
           </Button>
           <p className="text-sm text-muted-foreground mt-4">
-            500 words for free. No credit card required
+            750 words for free. No credit card required
           </p>
         </div>
       </section>
