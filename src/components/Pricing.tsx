@@ -128,7 +128,7 @@ export const Pricing = () => {
         "My Writing Style",
         "Advanced Humanization Engine",
         "Ultra-human writing output",
-        "Chrome Extension (5,000 bonus words)",
+        "Chrome Extension included (shared pool)",
         "Priority support"
       ],
       buttonText: "Choose Ultra",

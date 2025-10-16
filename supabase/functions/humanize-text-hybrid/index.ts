@@ -22,12 +22,12 @@ const PLAN_LIMITS = {
   ultra: 30000        // Web (+ 5k extension bonus)
 };
 
-// Extension word limits (separate tracking for Ultra/Master + Extension-Only plans)
+// Extension word limits
 const EXTENSION_LIMITS = {
   free: 750,           // Shared with web pool
-  extension_only: 5000, // Extension only
-  ultra: 5000,          // Bonus pool for extension
-  master: 5000          // Bonus pool for extension (legacy)
+  extension_only: 5000, // Extension only plan
+  ultra: 30000,         // Shared pool with web (no separate bonus)
+  master: 30000         // Shared pool with web (no separate bonus, legacy)
 };
 
 // Lightweight ISO 639-1 language name map for logs/prompts
@@ -132,7 +132,7 @@ serve(async (req) => {
     // Determine word limit and usage column based on source and plan
     const isExtensionRequest = source === 'extension';
     const isExtensionOnlyPlan = userPlan === 'extension_only';
-    const hasExtensionBonus = userPlan === 'ultra' || userPlan === 'master';
+    const hasExtensionAccess = userPlan === 'ultra' || userPlan === 'master';
     const isFreePlan = userPlan === 'free';
     
     // Get or create usage tracking for current month
@@ -170,23 +170,11 @@ serve(async (req) => {
       planLimit = PLAN_LIMITS.free;
       currentUsage = webWordsUsed + extensionWordsUsed; // Combined usage for free plan
       totalAvailableWords = planLimit - currentUsage + extraWords;
-    } else if (isExtensionRequest && hasExtensionBonus) {
-      // Ultra/Master using extension: 5000 bonus extension words + fallback to web pool
-      const extensionLimit = EXTENSION_LIMITS[userPlan as keyof typeof EXTENSION_LIMITS] || 5000;
-      const extensionRemaining = Math.max(0, extensionLimit - extensionWordsUsed);
-      
-      if (extensionRemaining > 0) {
-        // Still have extension bonus words available
-        planLimit = extensionLimit;
-        currentUsage = extensionWordsUsed;
-        totalAvailableWords = extensionRemaining;
-      } else {
-        // Extension bonus exhausted - fallback to web pool
-        const webLimit = PLAN_LIMITS[userPlan as keyof typeof PLAN_LIMITS] || 30000;
-        planLimit = webLimit;
-        currentUsage = webWordsUsed;
-        totalAvailableWords = webLimit - webWordsUsed + extraWords;
-      }
+    } else if (hasExtensionAccess) {
+      // Ultra/Master: 30,000 shared words (web + extension combined)
+      planLimit = PLAN_LIMITS[userPlan as keyof typeof PLAN_LIMITS] || 30000;
+      currentUsage = webWordsUsed + extensionWordsUsed; // Combined usage for shared pool
+      totalAvailableWords = planLimit - currentUsage + extraWords;
     } else if (isExtensionRequest) {
       // Pro/Wordsmith: No extension access
       return new Response(JSON.stringify({ 
@@ -197,7 +185,7 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     } else {
-      // Web request for Pro/Wordsmith/Ultra/Master
+      // Web request for Pro/Wordsmith
       planLimit = PLAN_LIMITS[userPlan as keyof typeof PLAN_LIMITS] || PLAN_LIMITS.free;
       currentUsage = webWordsUsed;
       totalAvailableWords = planLimit - currentUsage + extraWords;
@@ -746,9 +734,12 @@ async function finalizeResponse(
   userPlan: string = 'free'
 ) {
   const isExtensionRequest = source === 'extension';
+  const hasExtensionAccess = ['ultra', 'master'].includes(userPlan);
+  const isFreePlan = userPlan === 'free';
   
-  // Update usage tracking and deduct from extra words if needed (only for web requests with extra words)
-  const wordsToDeductFromExtra = !isExtensionRequest ? Math.max(0, (currentUsage + wordCount) - planLimit) : 0;
+  // For plans with shared pools (Free, Ultra, Master), deduct from extra words if needed
+  const hasSharedPool = isFreePlan || hasExtensionAccess;
+  const wordsToDeductFromExtra = hasSharedPool ? Math.max(0, (currentUsage + wordCount) - planLimit) : 0;
   const newExtraWordsBalance = extraWords - wordsToDeductFromExtra;
   
   if (usage) {
@@ -758,30 +749,11 @@ async function finalizeResponse(
     };
     
     if (isExtensionRequest) {
-      // Check if this is an extension request that needs fallback
-      const hasExtensionBonus = ['ultra', 'master'].includes(userPlan);
-      
-      if (hasExtensionBonus) {
-        const extensionLimit = EXTENSION_LIMITS[userPlan as keyof typeof EXTENSION_LIMITS] || 5000;
-        const extensionRemaining = Math.max(0, extensionLimit - (usage.extension_words_used || 0));
-        
-        if (extensionRemaining >= wordCount) {
-          // Deduct from extension pool
-          updateData.extension_words_used = (usage.extension_words_used || 0) + wordCount;
-        } else if (extensionRemaining > 0) {
-          // Split between extension and web pool
-          updateData.extension_words_used = (usage.extension_words_used || 0) + extensionRemaining;
-          updateData.words_used = (usage.words_used || 0) + (wordCount - extensionRemaining);
-        } else {
-          // Deduct entirely from web pool
-          updateData.words_used = (usage.words_used || 0) + wordCount;
-        }
-      } else {
-        // Extension-Only plan
-        updateData.extension_words_used = (usage.extension_words_used || 0) + wordCount;
-      }
+      // Extension requests always update extension_words_used column
+      updateData.extension_words_used = (usage.extension_words_used || 0) + wordCount;
     } else {
-      updateData.words_used = currentUsage + wordCount;
+      // Web requests always update words_used column
+      updateData.words_used = (usage.words_used || 0) + wordCount;
     }
     
     await supabase
@@ -835,36 +807,21 @@ async function finalizeResponse(
     }
   }
 
-  // Calculate pool tracking for Ultra/Master extension users
-  const hasExtensionBonus = ['ultra', 'master'].includes(userPlan);
-  let extensionPoolRemaining: number | undefined;
-  let webPoolRemaining: number | undefined;
-  let usingFallback = false;
-  
-  if (isExtensionRequest && hasExtensionBonus) {
-    const extensionLimit = EXTENSION_LIMITS[userPlan as keyof typeof EXTENSION_LIMITS] || 5000;
-    const webLimit = PLAN_LIMITS[userPlan as keyof typeof PLAN_LIMITS] || 30000;
-    const extensionWordsUsed = usage?.extension_words_used || 0;
-    const webWordsUsed = usage?.words_used || 0;
-    
-    extensionPoolRemaining = Math.max(0, extensionLimit - extensionWordsUsed - (extensionWordsUsed < extensionLimit ? wordCount : 0));
-    webPoolRemaining = Math.max(0, webLimit - webWordsUsed - (extensionWordsUsed >= extensionLimit ? wordCount : 0));
-    usingFallback = extensionWordsUsed >= extensionLimit;
-  }
+  // Calculate remaining words for response (simplified for shared pools)
+  const totalRemaining = hasSharedPool 
+    ? Math.max(0, planLimit - (currentUsage + wordCount)) + newExtraWordsBalance
+    : Math.max(0, planLimit - (currentUsage + wordCount)) + (!isExtensionRequest ? newExtraWordsBalance : 0);
 
   return new Response(JSON.stringify({
     humanized_text: humanizedText,
     word_count: wordCount,
     remaining_words: Math.max(0, planLimit - (currentUsage + wordCount)),
     extra_words_remaining: newExtraWordsBalance,
-    total_remaining: Math.max(0, planLimit - (currentUsage + wordCount)) + (isExtensionRequest ? 0 : newExtraWordsBalance),
+    total_remaining: totalRemaining,
     passes_completed: passesCompleted,
     engine: enginesUsed,
     editor_note: editorNote || undefined,
-    source: source,
-    extension_pool_remaining: extensionPoolRemaining,
-    web_pool_remaining: webPoolRemaining,
-    using_fallback: usingFallback
+    source: source
   }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });

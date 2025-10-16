@@ -52,7 +52,7 @@ export const PLAN_LIMITS = {
   extension_only: 5000
 } as const;
 
-export const EXTENSION_BONUS_WORDS = 5000;
+// Ultra and Pro plans share their word pool across web and extension (no separate bonus)
 
 /**
  * Calculate annual savings percentage

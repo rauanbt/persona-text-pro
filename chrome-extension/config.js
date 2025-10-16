@@ -10,8 +10,8 @@ const LOGIN_URL = "https://sapienwrite.com/auth";
 const EXTENSION_LIMITS = {
   free: 750,           // Shared pool with web
   extension_only: 5000, // Extension only
-  ultra: 5000,          // Bonus extension words
-  master: 5000          // Bonus extension words (legacy)
+  ultra: 30000,         // Shared pool with web (no separate bonus)
+  master: 30000         // Shared pool with web (no separate bonus, legacy)
 };
 
 // Web dashboard limits (for reference)

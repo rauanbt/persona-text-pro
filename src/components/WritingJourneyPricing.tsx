@@ -74,7 +74,7 @@ export const WritingJourneyPricing = () => {
         "All 6 tone personalities",
         "Premium triple-engine humanization (Gemini + ChatGPT + Claude)",
         "50+ languages supported",
-        "✅ Chrome Extension Included FREE (5,000 bonus words)"
+        "✅ Chrome Extension Included (30k shared pool)"
       ],
       buttonText: "Become an Ultra",
       popular: false,
