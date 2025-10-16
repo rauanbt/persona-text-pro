@@ -30,6 +30,8 @@ const Auth = () => {
   useEffect(() => {
     if (user && !loading) {
       if (fromExtension) {
+        // Set pending handoff flag
+        sessionStorage.setItem('extension_handoff_pending', '1');
         navigate('/extension-auth?from=extension', { replace: true });
       } else if (redirectParam) {
         navigate(`/${redirectParam}`, { replace: true });
@@ -57,6 +59,8 @@ const Auth = () => {
     
     if (!error) {
       if (fromExtension) {
+        // Set pending handoff flag
+        sessionStorage.setItem('extension_handoff_pending', '1');
         navigate('/extension-auth?from=extension', { replace: true });
       } else if (redirectParam) {
         navigate(`/${redirectParam}`, { replace: true });
@@ -82,6 +86,8 @@ const Auth = () => {
     setIsLoading(false);
     
     if (!error && fromExtension) {
+      // Set pending handoff flag
+      sessionStorage.setItem('extension_handoff_pending', '1');
       navigate('/extension-auth?from=extension', { replace: true });
     }
   };

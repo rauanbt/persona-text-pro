@@ -19,35 +19,59 @@ const ExtensionAuth = () => {
         const urlParams = new URLSearchParams(window.location.search);
         const paymentSuccess = urlParams.get('payment') === 'success';
 
-        // Send session data via postMessage to content script
-        window.postMessage({
-          type: 'SAPIENWRITE_SESSION',
-          session: {
-            access_token: session.access_token,
-            refresh_token: session.refresh_token,
-            expires_at: session.expires_at,
-            user: {
-              email: session.user.email,
-              id: session.user.id
-            }
-          }
-        }, '*');
-
-        // If this is a payment success, also send subscription update message
-        if (paymentSuccess) {
+        console.log('[ExtensionAuth] Starting aggressive session broadcast...');
+        
+        // Aggressively broadcast session every 500ms, 20 times (10 seconds total)
+        let attempts = 0;
+        const maxAttempts = 20;
+        
+        const broadcast = () => {
+          attempts++;
+          console.log(`[ExtensionAuth] Broadcast attempt ${attempts}/${maxAttempts}`);
+          
+          // Send session data via postMessage to content script
           window.postMessage({
-            type: 'SUBSCRIPTION_UPDATED'
+            type: 'SAPIENWRITE_SESSION',
+            session: {
+              access_token: session.access_token,
+              refresh_token: session.refresh_token,
+              expires_at: session.expires_at,
+              user: {
+                email: session.user.email,
+                id: session.user.id
+              }
+            }
           }, '*');
-        }
+
+          // If this is a payment success, also send subscription update message
+          if (paymentSuccess) {
+            window.postMessage({
+              type: 'SUBSCRIPTION_UPDATED'
+            }, '*');
+          }
+        };
+        
+        // Immediate first broadcast
+        broadcast();
+        
+        // Continue broadcasting
+        const interval = setInterval(() => {
+          if (attempts < maxAttempts) {
+            broadcast();
+          } else {
+            clearInterval(interval);
+            console.log('[ExtensionAuth] Broadcast complete');
+          }
+        }, 500);
 
         setStatus('success');
         
-        // Auto-close after 3 seconds
+        // Auto-close after at least 2 seconds (ensure SW wakes)
         setTimeout(() => {
           window.close();
-        }, 3000);
+        }, 2000);
       } catch (error) {
-        console.error('Error sending session:', error);
+        console.error('[ExtensionAuth] Error sending session:', error);
         setStatus('error');
       }
     };
@@ -60,6 +84,32 @@ const ExtensionAuth = () => {
       // Only show error if we know there's no session
       setStatus('error');
     }
+  }, [session]);
+  
+  // Re-broadcast on visibility change
+  useEffect(() => {
+    if (!session) return;
+    
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('[ExtensionAuth] Tab became visible, broadcasting session...');
+        window.postMessage({
+          type: 'SAPIENWRITE_SESSION',
+          session: {
+            access_token: session.access_token,
+            refresh_token: session.refresh_token,
+            expires_at: session.expires_at,
+            user: {
+              email: session.user.email,
+              id: session.user.id
+            }
+          }
+        }, '*');
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [session]);
 
   return (

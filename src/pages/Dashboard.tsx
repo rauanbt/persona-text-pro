@@ -621,7 +621,7 @@ const Dashboard = () => {
                     </div>
                     
                     {/* Extension Bonus Words for Ultra Plan */}
-                    {hasExtensionBonus && (
+                     {hasExtensionBonus && (
                       <div className="mt-4 pt-4 border-t">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
@@ -636,6 +636,37 @@ const Dashboard = () => {
                         <p className="text-xs text-muted-foreground">
                           Separate 5,000-word pool for Chrome Extension use only
                         </p>
+                        
+                        <div className="flex gap-2 mt-3">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => setShowExtensionSetup(true)}
+                          >
+                            <Chrome className="w-3 h-3 mr-1" />
+                            View Setup
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => {
+                              toast({
+                                title: "Connecting Extension...",
+                                description: "Opening connection window",
+                              });
+                              window.open(
+                                '/extension-auth?from=extension',
+                                'extensionAuth',
+                                'width=500,height=600,noopener,noreferrer'
+                              );
+                            }}
+                          >
+                            <ExternalLink className="w-3 h-3 mr-1" />
+                            Connect Extension
+                          </Button>
+                        </div>
                         
                         {extensionRemainingWords === 0 && (
                           <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mt-2">

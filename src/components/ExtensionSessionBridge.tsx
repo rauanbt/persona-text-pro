@@ -15,11 +15,11 @@ export const ExtensionSessionBridge = () => {
   // Listen for session requests from extension
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      // Security: only respond to same-origin requests
-      if (event.origin !== window.location.origin) return;
+      // Relaxed security check - verify it's from the same window
+      if (event.source !== window) return;
 
-      if (event.data.type === 'SAPIENWRITE_REQUEST_SESSION' && session) {
-        console.log('[ExtensionBridge] Responding to session request from extension');
+      if (event.data?.type === 'SAPIENWRITE_REQUEST_SESSION' && session) {
+        console.log('[ExtensionBridge] Session request received, responding...');
         
         window.postMessage({
           type: 'SAPIENWRITE_SESSION',
@@ -35,6 +35,7 @@ export const ExtensionSessionBridge = () => {
         }, '*');
 
         localStorage.setItem('extensionConnected', 'true');
+        console.log('[ExtensionBridge] Session responded');
       }
     };
 
@@ -56,10 +57,18 @@ export const ExtensionSessionBridge = () => {
 
     if (!session) return;
 
-    // If opened from extension, post session immediately
+    // If opened from extension, open dedicated handoff window + post session
     if (fromExtension) {
-      console.log('[ExtensionBridge] Posting session to extension');
+      console.log('[ExtensionBridge] Opening extension handoff window...');
       
+      // Open dedicated handoff page in small window
+      window.open(
+        '/extension-auth?from=extension',
+        'extensionAuth',
+        'width=500,height=600,noopener,noreferrer'
+      );
+      
+      // Also post inline for extra reliability
       window.postMessage({
         type: 'SAPIENWRITE_SESSION',
         session: {
@@ -74,7 +83,6 @@ export const ExtensionSessionBridge = () => {
       }, '*');
 
       localStorage.setItem('extensionConnected', 'true');
-      sessionStorage.removeItem('extension_handoff_pending');
     }
 
     // If payment was successful, notify extension to refresh subscription
@@ -123,11 +131,12 @@ export const ExtensionSessionBridge = () => {
     broadcastSession();
     localStorage.setItem('extensionConnected', 'true');
 
-    // Retry a few times in case extension service worker is waking up
+    // Retry multiple times for service worker wake-up
     let attempts = 0;
-    const maxAttempts = 5;
+    const maxAttempts = 8;
     const retryInterval = setInterval(() => {
       attempts++;
+      console.log(`[ExtensionBridge] Retry broadcast attempt ${attempts}/${maxAttempts}`);
       if (attempts >= maxAttempts) {
         clearInterval(retryInterval);
         sessionStorage.removeItem('extension_handoff_pending');
@@ -165,14 +174,15 @@ export const ExtensionSessionBridge = () => {
     // Broadcast immediately
     broadcastSession();
 
-    // Retry multiple times to ensure extension receives it (service worker wake-up delay)
+    // Retry multiple times to ensure extension receives it
     let attempts = 0;
     const maxAttempts = 8;
     const retryInterval = setInterval(() => {
       attempts++;
+      console.log(`[ExtensionBridge] Mount broadcast attempt ${attempts}/${maxAttempts}`);
       if (attempts >= maxAttempts) {
         clearInterval(retryInterval);
-        console.log('[ExtensionBridge] Mount broadcast sequence complete');
+        console.log('[ExtensionBridge] Mount broadcast complete');
       } else {
         broadcastSession();
       }
@@ -181,13 +191,13 @@ export const ExtensionSessionBridge = () => {
     return () => clearInterval(retryInterval);
   }, [session]); // Run when session becomes available
 
-  // Re-broadcast when tab becomes visible (covers extension waking after tab was hidden)
+  // Re-broadcast when tab becomes visible
   useEffect(() => {
     if (!session) return;
 
     const handleVisibilityChange = () => {
       if (!document.hidden) {
-        console.log('[ExtensionBridge] Tab visible - broadcasting session');
+        console.log('[ExtensionBridge] Tab became visible, re-broadcasting session');
         window.postMessage({
           type: 'SAPIENWRITE_SESSION',
           session: {
