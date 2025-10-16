@@ -17,12 +17,26 @@ let wordBalance = 0;
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('[Popup] Initializing...');
   
-  const authenticated = await isAuthenticated();
-  
-  if (!authenticated) {
+  // Safety timeout to prevent infinite loading
+  const timeoutId = setTimeout(() => {
+    console.log('[Popup] Timeout reached, showing login view');
     showLoginView();
-  } else {
-    await loadUserData();
+  }, 2000);
+  
+  try {
+    const authenticated = await isAuthenticated();
+    
+    clearTimeout(timeoutId);
+    
+    if (!authenticated) {
+      showLoginView();
+    } else {
+      await loadUserData();
+    }
+  } catch (error) {
+    console.error('[Popup] Error during initialization:', error);
+    clearTimeout(timeoutId);
+    showLoginView();
   }
 });
 

@@ -20,7 +20,9 @@
     {
       "matches": ["<all_urls>"],
       "js": ["content.js"],
-      "css": ["styles.css"]
+      "css": ["styles.css"],
+      "run_at": "document_start",
+      "all_frames": true
     },
     {
       "matches": [
@@ -29,7 +31,9 @@
         "https://*.lovableproject.com/*",
         "http://localhost:5173/*"
       ],
-      "js": ["auth-bridge.js"]
+      "js": ["auth-bridge.js"],
+      "run_at": "document_start",
+      "all_frames": true
     }
   ],
   "icons": {

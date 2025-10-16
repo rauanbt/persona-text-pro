@@ -5,8 +5,10 @@ console.log('[AuthBridge] Content script loaded');
 
 // Listen for session data from the web app
 window.addEventListener('message', (event) => {
-  // Security: verify origin
-  if (event.origin !== window.location.origin) {
+  console.log('[AuthBridge] Message received:', event.data?.type);
+  
+  // Security: verify message is from same window
+  if (event.source !== window) {
     return;
   }
 

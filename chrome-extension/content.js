@@ -412,7 +412,10 @@ function showUpgradeRequiredDialog(currentPlan) {
 // Listen for messages from background script
 // Listen for messages from web page (fallback for session handoff)
 window.addEventListener('message', (event) => {
-  if (event.origin !== window.location.origin) return;
+  console.log('[Content] Message received:', event.data?.type);
+  
+  // Security: verify message is from same window
+  if (event.source !== window) return;
   
   if (event.data.type === 'SAPIENWRITE_SESSION') {
     console.log('[Content] Received session from web app (fallback)');
