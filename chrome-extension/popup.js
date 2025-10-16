@@ -18,15 +18,28 @@ document.addEventListener('DOMContentLoaded', async () => {
   console.log('[Popup] Initializing...');
   
   // Safety timeout with auto-recovery (4s to allow token refresh)
-  const timeoutId = setTimeout(() => {
-    console.log('[Popup] Timeout reached - auto-opening auth handshake window');
-    showLoginView();
+  const timeoutId = setTimeout(async () => {
+    console.log('[Popup] Timeout reached - checking rate limit');
     
-    // Auto-open auth window to force handshake
-    chrome.tabs.create({
-      url: 'https://sapienwrite.com/auth?from=extension',
-      active: true
-    });
+    // Rate-limit: only auto-open if not opened in last 30 seconds
+    const result = await chrome.storage.local.get(['handshake_opened_at']);
+    const lastOpened = result.handshake_opened_at || 0;
+    const now = Date.now();
+    
+    if (now - lastOpened > 30000) { // 30 seconds
+      console.log('[Popup] Auto-opening auth handshake window');
+      await chrome.storage.local.set({ handshake_opened_at: now });
+      showLoginView();
+      
+      // Auto-open auth window to force handshake
+      chrome.tabs.create({
+        url: 'https://sapienwrite.com/auth?from=extension',
+        active: true
+      });
+    } else {
+      console.log('[Popup] Rate-limited: handshake opened recently');
+      showLoginView();
+    }
   }, 4000);
   
   try {
@@ -261,12 +274,20 @@ function updateWordBalanceUI(remaining, total) {
 }
 
 // Login button - open with extension parameter
-document.getElementById('login-button')?.addEventListener('click', () => {
+document.getElementById('login-button')?.addEventListener('click', async () => {
+  await chrome.storage.local.set({ handshake_opened_at: Date.now() });
   chrome.tabs.create({ url: `${LOGIN_URL}?from=extension` });
 });
 
-document.getElementById('signup-link')?.addEventListener('click', (e) => {
+// Connect Extension button - for users already logged in
+document.getElementById('connect-extension-button')?.addEventListener('click', async () => {
+  await chrome.storage.local.set({ handshake_opened_at: Date.now() });
+  chrome.tabs.create({ url: 'https://sapienwrite.com/extension-auth?from=extension' });
+});
+
+document.getElementById('signup-link')?.addEventListener('click', async (e) => {
   e.preventDefault();
+  await chrome.storage.local.set({ handshake_opened_at: Date.now() });
   chrome.tabs.create({ url: LOGIN_URL });
 });
 

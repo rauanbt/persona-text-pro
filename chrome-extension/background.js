@@ -111,7 +111,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   }
 });
 
-// Listen for humanize requests from dialog
+// Handle messages from popup, content scripts, and auth bridge
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('[Background] Message received:', message);
   
@@ -210,24 +210,3 @@ async function handleHumanizeRequest(text, tone, tabId) {
     });
   }
 }
-
-// Handle messages from popup or content scripts
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  console.log('[Background] Message received:', message);
-  
-  if (message.action === 'checkAuth') {
-    isAuthenticated().then(authenticated => {
-      sendResponse({ authenticated });
-    });
-    return true; // Keep channel open for async response
-  }
-  
-  if (message.action === 'getSubscription') {
-    checkSubscription().then(data => {
-      sendResponse(data);
-    }).catch(error => {
-      sendResponse({ error: error.message });
-    });
-    return true;
-  }
-});

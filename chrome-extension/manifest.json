@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "SapienWrite - AI Text Humanizer",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Humanize AI-generated text anywhere on the web. Requires SapienWrite subscription.",
   "permissions": ["storage", "activeTab", "contextMenus"],
   "host_permissions": ["https://nycrxoppbsakpkkeiqzb.supabase.co/*"],

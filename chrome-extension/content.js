@@ -2,11 +2,23 @@
 
 console.log('[Content] SapienWrite content script loaded');
 
-// Request session from web app on load
-console.log('[Content] Requesting session from web app');
-window.postMessage({
-  type: 'SAPIENWRITE_REQUEST_SESSION'
-}, '*');
+// Request session from web app on load - repeat for 5 seconds
+console.log('[Content] Starting session request broadcast (10 attempts over 5s)');
+let requestAttempts = 0;
+const maxAttempts = 10;
+const requestInterval = setInterval(() => {
+  if (requestAttempts >= maxAttempts) {
+    console.log('[Content] Session request broadcast complete');
+    clearInterval(requestInterval);
+    return;
+  }
+  
+  requestAttempts++;
+  console.log(`[Content] Requesting session from web app (attempt ${requestAttempts}/${maxAttempts})`);
+  window.postMessage({
+    type: 'SAPIENWRITE_REQUEST_SESSION'
+  }, '*');
+}, 500);
 
 // Create notification container
 function createNotificationContainer() {
