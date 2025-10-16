@@ -123,37 +123,56 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   
   if (message.action === 'checkAuth') {
+    console.log('[Background] Checking authentication...');
     isAuthenticated().then(authenticated => {
+      console.log('[Background] Auth result:', authenticated);
       sendResponse({ authenticated });
     });
     return true;
   }
   
   if (message.action === 'getSubscription') {
+    console.log('[Background] Getting subscription...');
     checkSubscription().then(data => {
+      console.log('[Background] Subscription data:', data);
       sendResponse(data);
     }).catch(error => {
+      console.error('[Background] Subscription error:', error);
       sendResponse({ error: error.message });
     });
     return true;
   }
   
   if (message.action === 'storeSession') {
+    console.log('[Background] Storing session...');
     storeSession(message.session)
       .then(() => {
+        console.log('[Background] Session stored successfully');
+        // Verify storage
+        chrome.storage.sync.get(['access_token'], (result) => {
+          console.log('[Background] Verified storage - has access_token:', !!result.access_token);
+        });
+        
         // Notify popup that session is stored
         chrome.runtime.sendMessage({ action: 'sessionStored' }).catch(() => {
           // Popup might not be open, that's fine
+          console.log('[Background] Could not notify popup (likely closed)');
         });
         sendResponse({ success: true });
       })
-      .catch((error) => sendResponse({ success: false, error: error.message }));
+      .catch((error) => {
+        console.error('[Background] Failed to store session:', error);
+        sendResponse({ success: false, error: error.message });
+      });
     return true;
   }
   
   if (message.action === 'subscriptionUpdated') {
+    console.log('[Background] Subscription updated notification received');
     // Forward to popup if it's open
-    chrome.runtime.sendMessage({ action: 'subscriptionUpdated' });
+    chrome.runtime.sendMessage({ action: 'subscriptionUpdated' }).catch(() => {
+      console.log('[Background] Could not forward to popup (likely closed)');
+    });
     sendResponse({ success: true });
     return true;
   }

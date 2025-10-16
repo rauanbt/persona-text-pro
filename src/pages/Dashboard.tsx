@@ -654,13 +654,22 @@ const Dashboard = () => {
                             onClick={() => {
                               toast({
                                 title: "Connecting Extension...",
-                                description: "Opening connection window",
+                                description: "Syncing your account with extension",
                               });
-                              window.open(
+                              
+                              const authWindow = window.open(
                                 '/extension-auth?from=extension',
                                 'extensionAuth',
                                 'width=500,height=600,noopener,noreferrer'
                               );
+                              
+                              // Show success toast after window closes or after delay
+                              setTimeout(() => {
+                                toast({
+                                  title: "Connected!",
+                                  description: "Extension is now synced with your account",
+                                });
+                              }, 3000);
                             }}
                           >
                             <ExternalLink className="w-3 h-3 mr-1" />

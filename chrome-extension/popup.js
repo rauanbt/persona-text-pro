@@ -17,20 +17,29 @@ let wordBalance = 0;
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('[Popup] Initializing...');
   
-  // Safety timeout to prevent infinite loading
+  // Safety timeout with auto-recovery
   const timeoutId = setTimeout(() => {
-    console.log('[Popup] Timeout reached, showing login view');
+    console.log('[Popup] Timeout reached - auto-opening auth handshake window');
     showLoginView();
+    
+    // Auto-open auth window to force handshake
+    chrome.tabs.create({
+      url: 'https://sapienwrite.com/auth?from=extension',
+      active: true
+    });
   }, 2000);
   
   try {
     const authenticated = await isAuthenticated();
+    console.log('[Popup] Authentication check result:', authenticated);
     
     clearTimeout(timeoutId);
     
     if (!authenticated) {
+      console.log('[Popup] Not authenticated - showing login view');
       showLoginView();
     } else {
+      console.log('[Popup] Authenticated - loading user data');
       await loadUserData();
     }
   } catch (error) {

@@ -21,9 +21,9 @@ const ExtensionAuth = () => {
 
         console.log('[ExtensionAuth] Starting aggressive session broadcast...');
         
-        // Aggressively broadcast session every 500ms, 20 times (10 seconds total)
+        // Aggressively broadcast session every 500ms, 30 times (15 seconds total)
         let attempts = 0;
-        const maxAttempts = 20;
+        const maxAttempts = 30;
         
         const broadcast = () => {
           attempts++;
@@ -61,6 +61,11 @@ const ExtensionAuth = () => {
           } else {
             clearInterval(interval);
             console.log('[ExtensionAuth] Broadcast complete');
+            
+            // Show warning if handshake may have failed
+            if (attempts >= maxAttempts) {
+              console.warn('[ExtensionAuth] Max broadcast attempts reached - extension may not have received session');
+            }
           }
         }, 500);
 
