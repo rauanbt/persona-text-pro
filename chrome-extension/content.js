@@ -2,6 +2,27 @@
 
 console.log('[Content] SapienWrite content script loaded');
 
+// Safe DOM append helpers
+function safeAppendToHead(node) {
+  if (document.head) {
+    document.head.appendChild(node);
+  } else {
+    document.addEventListener('DOMContentLoaded', () => {
+      if (document.head) document.head.appendChild(node);
+    }, { once: true });
+  }
+}
+
+function safeAppendToBody(node) {
+  if (document.body) {
+    document.body.appendChild(node);
+  } else {
+    document.addEventListener('DOMContentLoaded', () => {
+      if (document.body) document.body.appendChild(node);
+    }, { once: true });
+  }
+}
+
 // Request session from web app on load - repeat for 5 seconds
 console.log('[Content] Starting session request broadcast (10 attempts over 5s)');
 let requestAttempts = 0;
@@ -22,9 +43,8 @@ const requestInterval = setInterval(() => {
 
 // Create notification container
 function createNotificationContainer() {
-  if (document.getElementById('sapienwrite-notification-container')) {
-    return document.getElementById('sapienwrite-notification-container');
-  }
+  const existing = document.getElementById('sapienwrite-notification-container');
+  if (existing) return existing;
   
   const container = document.createElement('div');
   container.id = 'sapienwrite-notification-container';
@@ -35,7 +55,7 @@ function createNotificationContainer() {
     z-index: 999999;
     pointer-events: none;
   `;
-  document.body.appendChild(container);
+  safeAppendToBody(container);
   return container;
 }
 
@@ -99,7 +119,7 @@ style.textContent = `
     }
   }
 `;
-document.head.appendChild(style);
+safeAppendToHead(style);
 
 // Track last selected range
 let lastSelection = null;
@@ -251,8 +271,8 @@ function createDialog(text, wordCount, wordBalance) {
     z-index: 999998;
   `;
   
-  document.body.appendChild(backdrop);
-  document.body.appendChild(dialog);
+  safeAppendToBody(backdrop);
+  safeAppendToBody(dialog);
   
   // Event listeners
   document.getElementById('sapienwrite-close').onclick = closeDialog;
@@ -292,7 +312,7 @@ function showProcessing() {
     const style = document.createElement('style');
     style.id = 'sapienwrite-spin-style';
     style.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';
-    document.head.appendChild(style);
+    safeAppendToHead(style);
   }
 }
 
@@ -408,8 +428,8 @@ function showUpgradeRequiredDialog(currentPlan) {
     z-index: 999998;
   `;
   
-  document.body.appendChild(backdrop);
-  document.body.appendChild(dialog);
+  safeAppendToBody(backdrop);
+  safeAppendToBody(dialog);
   
   // Event listeners
   document.getElementById('sapienwrite-view-upgrade').onclick = () => {

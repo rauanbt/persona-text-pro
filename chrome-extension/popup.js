@@ -1,14 +1,9 @@
 // Popup Script - Clean initialization with guaranteed UI
 
-// Extension word limits (must match config.js)
-const EXTENSION_LIMITS = {
-  free: 750,
-  extension_only: 5000,
-  ultra: 5000,
-  master: 5000,
-  pro: 0,
-  wordsmith: 0
-};
+// Use extension limits from config.js (loaded globally via popup.html)
+const EXT_LIMITS = (typeof EXTENSION_LIMITS !== 'undefined') 
+  ? EXTENSION_LIMITS 
+  : { free: 750, extension_only: 5000, ultra: 30000, master: 30000, pro: 0, wordsmith: 0 };
 
 let subscriptionData = null;
 let wordBalance = 0;
@@ -251,7 +246,7 @@ async function fetchWordBalance() {
   try {
     const session = await getSession();
     const plan = subscriptionData.plan || 'free';
-    const extensionLimit = EXTENSION_LIMITS[plan] || 750;
+    const extensionLimit = EXT_LIMITS[plan] || 750;
     
     const response = await fetch(
       `${SUPABASE_URL}/rest/v1/usage_tracking?user_id=eq.${session.user.id}&select=words_used,extension_words_used`,
@@ -269,6 +264,7 @@ async function fetchWordBalance() {
     const usageData = data[0] || { words_used: 0, extension_words_used: 0 };
     
     // Calculate balance based on plan
+    let totalLimit = extensionLimit;
     if (plan === 'free') {
       const totalUsed = (usageData.words_used || 0) + (usageData.extension_words_used || 0);
       wordBalance = Math.max(0, extensionLimit - totalUsed);
@@ -279,11 +275,12 @@ async function fetchWordBalance() {
       const extensionRemaining = Math.max(0, 5000 - (usageData.extension_words_used || 0));
       const webRemaining = Math.max(0, 30000 - (usageData.words_used || 0));
       wordBalance = extensionRemaining + webRemaining;
+      totalLimit = 35000; // 5k extension + 30k web for progress bar
     } else {
       wordBalance = 0;
     }
     
-    updateWordBalanceUI(wordBalance, extensionLimit);
+    updateWordBalanceUI(wordBalance, totalLimit);
     
     if (wordBalance <= 0 && plan !== 'pro' && plan !== 'wordsmith') {
       document.getElementById('upgrade-prompt').classList.remove('hidden');
@@ -297,7 +294,7 @@ async function fetchWordBalance() {
 // Update word balance UI
 function updateWordBalanceUI(remaining, total) {
   document.getElementById('word-count').textContent = remaining.toLocaleString();
-  const percentage = (remaining / total) * 100;
+  const percentage = Math.max(0, Math.min(100, (remaining / total) * 100));
   document.getElementById('progress-fill').style.width = `${percentage}%`;
 }
 
