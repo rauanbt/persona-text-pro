@@ -13,6 +13,28 @@ const EXTENSION_LIMITS = {
 let subscriptionData = null;
 let wordBalance = 0;
 
+// chrome.storage.local promise wrappers
+function localGet(keys) {
+  return new Promise((resolve) => {
+    try {
+      chrome.storage.local.get(keys, (items) => resolve(items || {}));
+    } catch (e) {
+      console.error('[Popup] localGet error:', e);
+      resolve({});
+    }
+  });
+}
+function localSet(items) {
+  return new Promise((resolve) => {
+    try {
+      chrome.storage.local.set(items, () => resolve());
+    } catch (e) {
+      console.error('[Popup] localSet error:', e);
+      resolve();
+    }
+  });
+}
+
 // Initialize popup
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('[Popup] Initializing...');
@@ -22,26 +44,33 @@ document.addEventListener('DOMContentLoaded', async () => {
   const uiFallbackId = setTimeout(() => {
     try { showLoginView(); } catch (e) { console.warn('[Popup] UI fallback error', e); }
   }, 1500);
-  const timeoutId = setTimeout(async () => {
+const timeoutId = setTimeout(async () => {
     console.log('[Popup] Timeout reached - checking rate limit');
-    
-    // Rate-limit: only auto-open if not opened in last 30 seconds
-    const result = await chrome.storage.local.get(['handshake_opened_at']);
-    const lastOpened = result.handshake_opened_at || 0;
-    const now = Date.now();
-    
-    if (now - lastOpened > 30000) { // 30 seconds
-      console.log('[Popup] Auto-opening auth handshake window');
-      await chrome.storage.local.set({ handshake_opened_at: now });
-      showLoginView();
+    try {
+      const { handshake_opened_at = 0, last_connected_at = 0 } = await localGet(['handshake_opened_at', 'last_connected_at']);
+      const now = Date.now();
       
-      // Auto-open auth window to force handshake
-      chrome.tabs.create({
-        url: 'https://sapienwrite.com/auth?from=extension',
-        active: true
-      });
-    } else {
-      console.log('[Popup] Rate-limited: handshake opened recently');
+      const twentyFourHours = 24 * 60 * 60 * 1000;
+      const thirtySeconds = 30 * 1000;
+
+      // If we recently connected, skip auto handoff to avoid loops
+      if (now - last_connected_at < twentyFourHours) {
+        console.log('[Popup] Recently connected - skipping auto handoff');
+        showLoginView();
+        return;
+      }
+
+      if (now - handshake_opened_at > thirtySeconds) {
+        console.log('[Popup] Auto-opening auth handshake window');
+        await localSet({ handshake_opened_at: now });
+        showLoginView();
+        chrome.tabs.create({ url: 'https://sapienwrite.com/auth?from=extension', active: true });
+      } else {
+        console.log('[Popup] Rate-limited: handshake opened recently');
+        showLoginView();
+      }
+    } catch (e) {
+      console.warn('[Popup] Auto-handshake check failed:', e);
       showLoginView();
     }
   }, 4000);
@@ -393,6 +422,8 @@ document.getElementById('humanize-button')?.addEventListener('click', async () =
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'sessionStored') {
     console.log('[Popup] Session stored, reloading user data');
+    // Mark last connection time to reduce auto-handoff loops
+    try { localSet({ last_connected_at: Date.now() }); } catch (e) { /* noop */ }
     loadUserData();
   }
   

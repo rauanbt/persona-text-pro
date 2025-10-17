@@ -44,6 +44,11 @@ async function storeSession(session) {
     user_id: session.user?.id || ''
   });
   
+  // Mark last connection time to reduce auto-handoff loops
+  try { chrome.storage.local.set({ last_connected_at: Date.now() }); } catch (e) {
+    console.warn('[Auth] Failed to set last_connected_at:', e);
+  }
+  
   console.log('[Auth] Session stored successfully');
 }
 
@@ -68,7 +73,6 @@ async function refreshSession() {
     if (!res.ok) {
       const errText = await res.text();
       console.error('[Auth] Refresh failed:', errText);
-      try { await clearSession(); } catch (e) { /* noop */ }
       return null;
     }
     
@@ -89,7 +93,6 @@ async function refreshSession() {
     return newSession;
   } catch (error) {
     console.error('[Auth] Refresh error:', error);
-    try { await clearSession(); } catch (e) { /* noop */ }
     return null;
   }
 }
@@ -111,13 +114,18 @@ async function getSession() {
   
   const now = Math.floor(Date.now() / 1000);
   
-  // Refresh if expiring within 60 seconds
-  if (data.expires_at && now >= (data.expires_at - 60)) {
+  // Refresh only if actually expired or within a very small skew
+  const skew = 5; // seconds
+  if (data.expires_at && now >= (data.expires_at - skew)) {
     console.log('[Auth] Access token expired/near-expiry - refreshing...');
     const refreshed = await refreshSession();
     if (refreshed) return refreshed;
-    await clearSession();
-    return null;
+    
+    // If truly expired and refresh failed, clear; otherwise keep current session
+    if (data.expires_at && now >= data.expires_at) {
+      await clearSession();
+      return null;
+    }
   }
   
   // Valid session
