@@ -1,10 +1,42 @@
 // Authentication Helper Functions
 
+// Chrome storage promise wrappers
+function storageGet(keys) {
+  return new Promise((resolve) => {
+    try {
+      chrome.storage.sync.get(keys, (items) => resolve(items || {}));
+    } catch (e) {
+      console.error('[Auth] storageGet error:', e);
+      resolve({});
+    }
+  });
+}
+function storageSet(items) {
+  return new Promise((resolve) => {
+    try {
+      chrome.storage.sync.set(items, () => resolve());
+    } catch (e) {
+      console.error('[Auth] storageSet error:', e);
+      resolve();
+    }
+  });
+}
+function storageRemove(keys) {
+  return new Promise((resolve) => {
+    try {
+      chrome.storage.sync.remove(keys, () => resolve());
+    } catch (e) {
+      console.error('[Auth] storageRemove error:', e);
+      resolve();
+    }
+  });
+}
+
 // Store session in chrome.storage.sync
 async function storeSession(session) {
   if (!session) return;
   
-  await chrome.storage.sync.set({
+  await storageSet({
     access_token: session.access_token,
     refresh_token: session.refresh_token,
     expires_at: session.expires_at,
@@ -17,7 +49,7 @@ async function storeSession(session) {
 
 // Refresh session using refresh_token
 async function refreshSession() {
-  const data = await chrome.storage.sync.get(['refresh_token', 'user_email', 'user_id']);
+  const data = await storageGet(['refresh_token', 'user_email', 'user_id']);
   if (!data.refresh_token) {
     console.log('[Auth] No refresh_token available');
     return null;
@@ -36,6 +68,7 @@ async function refreshSession() {
     if (!res.ok) {
       const errText = await res.text();
       console.error('[Auth] Refresh failed:', errText);
+      try { await clearSession(); } catch (e) { /* noop */ }
       return null;
     }
     
@@ -56,13 +89,14 @@ async function refreshSession() {
     return newSession;
   } catch (error) {
     console.error('[Auth] Refresh error:', error);
+    try { await clearSession(); } catch (e) { /* noop */ }
     return null;
   }
 }
 
 // Get session from chrome.storage.sync
 async function getSession() {
-  const data = await chrome.storage.sync.get([
+  const data = await storageGet([
     'access_token',
     'refresh_token',
     'expires_at',
@@ -101,7 +135,7 @@ async function getSession() {
 
 // Clear session from storage
 async function clearSession() {
-  await chrome.storage.sync.remove([
+  await storageRemove([
     'access_token',
     'refresh_token',
     'expires_at',

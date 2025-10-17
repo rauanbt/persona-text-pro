@@ -18,6 +18,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   console.log('[Popup] Initializing...');
   
   // Safety timeout with auto-recovery (4s to allow token refresh)
+  // UI fallback to avoid spinner lock
+  const uiFallbackId = setTimeout(() => {
+    try { showLoginView(); } catch (e) { console.warn('[Popup] UI fallback error', e); }
+  }, 1500);
   const timeoutId = setTimeout(async () => {
     console.log('[Popup] Timeout reached - checking rate limit');
     
@@ -47,6 +51,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('[Popup] Authentication check result:', authenticated);
     
     clearTimeout(timeoutId);
+    clearTimeout(uiFallbackId);
     
     if (!authenticated) {
       console.log('[Popup] Not authenticated - showing login view');
@@ -58,22 +63,29 @@ document.addEventListener('DOMContentLoaded', async () => {
   } catch (error) {
     console.error('[Popup] Error during initialization:', error);
     clearTimeout(timeoutId);
+    clearTimeout(uiFallbackId);
     showLoginView();
   }
 });
 
 // Show login view
 function showLoginView() {
-  document.getElementById('loading-view').classList.add('hidden');
-  document.getElementById('login-view').classList.remove('hidden');
-  document.getElementById('main-view').classList.add('hidden');
+  const loading = document.getElementById('loading-view');
+  const login = document.getElementById('login-view');
+  const main = document.getElementById('main-view');
+  loading?.classList.add('hidden');
+  login?.classList.remove('hidden');
+  main?.classList.add('hidden');
 }
 
 // Show main view
 function showMainView() {
-  document.getElementById('loading-view').classList.add('hidden');
-  document.getElementById('login-view').classList.add('hidden');
-  document.getElementById('main-view').classList.remove('hidden');
+  const loading = document.getElementById('loading-view');
+  const login = document.getElementById('login-view');
+  const main = document.getElementById('main-view');
+  loading?.classList.add('hidden');
+  login?.classList.add('hidden');
+  main?.classList.remove('hidden');
 }
 
 // Show error message

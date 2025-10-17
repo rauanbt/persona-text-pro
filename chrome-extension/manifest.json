@@ -4,7 +4,7 @@
   "version": "1.0.2",
   "description": "Humanize AI-generated text anywhere on the web. Requires SapienWrite subscription.",
   "permissions": ["storage", "activeTab", "contextMenus"],
-  "host_permissions": ["https://nycrxoppbsakpkkeiqzb.supabase.co/*"],
+  "host_permissions": ["https://nycrxoppbsakpkkeiqzb.supabase.co/*", "https://sapienwrite.com/*"],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
