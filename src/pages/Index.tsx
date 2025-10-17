@@ -2,7 +2,7 @@ import { Header } from "@/components/Header";
 import { HeroSection } from "@/components/HeroSection"; 
 import { CaveEvolutionStory } from "@/components/CaveEvolutionStory";
 import { UseCasesDemo } from "@/components/UseCasesDemo";
-import { SapienWriteDifference } from "@/components/SapienWriteDifference";
+import { ChromeExtensionDemo } from "@/components/ChromeExtensionDemo";
 import { WritingJourneyPricing } from "@/components/WritingJourneyPricing";
 import { FAQ } from "@/components/FAQ";
 import { Footer } from "@/components/Footer";
@@ -15,7 +15,7 @@ const Index = () => {
         <HeroSection />
         <CaveEvolutionStory />
         <UseCasesDemo />
-        <SapienWriteDifference />
+        <ChromeExtensionDemo />
         <WritingJourneyPricing />
         <FAQ />
       </main>
