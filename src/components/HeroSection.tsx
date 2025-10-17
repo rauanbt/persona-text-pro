@@ -103,7 +103,7 @@ export const HeroSection = () => {
 
             {/* Em-dash humor */}
             <p className="text-sm md:text-base text-muted-foreground/80 mb-8 italic">
-              Fun fact: We don't use those suspiciously perfect em-dashes — like this one — that scream "AI wrote this!" We stick to good old-fashioned hyphens and the occasional comma splice, like a real human would write.
+              Fun fact: We don't use those suspiciously perfect em-dashes - like this one - that scream "AI wrote this!" We stick to good old-fashioned hyphens and the occasional comma splice, like a real human would write.
             </p>
 
             {/* CTA Button */}

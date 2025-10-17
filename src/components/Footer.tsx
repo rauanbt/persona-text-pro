@@ -10,7 +10,7 @@ export const Footer = () => {
       <section className="py-16 bg-hero-bg">
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-            Make Your Text Sound Human — Instantly
+            Make Your Text Sound Human - Instantly
           </h2>
           <p className="text-lg text-muted-foreground mb-8 max-w-3xl mx-auto">
             Turn robotic, AI-generated content into clear, natural writing that sounds like a real person. Whether it's from ChatGPT or another tool, SapienWrite helps you bypass AI detectors and add personality with custom tones in just one click.

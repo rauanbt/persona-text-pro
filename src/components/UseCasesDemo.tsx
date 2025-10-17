@@ -26,7 +26,7 @@ export const UseCasesDemo = () => {
           </h2>
           <div className="space-y-4 text-muted-foreground leading-relaxed">
             <p>
-              Last summer, I stumbled upon a tiny village in northern Vietnam that completely changed how I think about travel. There were no tourist buses, no souvenir shops—just genuine human connection and breathtaking mountain views that made me realize why I started traveling in the first place.
+              Last summer, I stumbled upon a tiny village in northern Vietnam that completely changed how I think about travel. There were no tourist buses, no souvenir shops - just genuine human connection and breathtaking mountain views that made me realize why I started traveling in the first place.
             </p>
             <p>
               The locals welcomed me with warm smiles and homemade rice wine, sharing stories about their families and traditions. These authentic moments, away from the typical tourist trail, reminded me that the best travel experiences often happen when you venture off the beaten path.
@@ -95,7 +95,7 @@ export const UseCasesDemo = () => {
               Really excited to share that our team just launched a campaign that's been months in the making! 🚀
             </p>
             <p>
-              What I've learned from this project: authentic storytelling beats flashy gimmicks every single time. Our customers don't want to be sold to—they want to connect with brands that genuinely understand their challenges.
+              What I've learned from this project: authentic storytelling beats flashy gimmicks every single time. Our customers don't want to be sold to - they want to connect with brands that genuinely understand their challenges.
             </p>
             <p>
               Huge thanks to everyone who contributed. This kind of work doesn't happen without collaboration and trust. 💡

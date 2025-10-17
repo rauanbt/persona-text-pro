@@ -5,7 +5,7 @@ export const HowItWorks = () => {
     {
       step: "Step 1",
       title: "Paste Your Text",
-      description: "Paste any content — homework, assignment, or AI-generated draft",
+      description: "Paste any content - homework, assignment, or AI-generated draft",
       icon: <FileText className="w-12 h-12 text-primary" />
     },
     {
