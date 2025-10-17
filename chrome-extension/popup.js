@@ -35,51 +35,91 @@ function localSet(items) {
   });
 }
 
+// chrome.storage.sync promise wrapper
+function syncGet(keys) {
+  return new Promise((resolve) => {
+    try {
+      chrome.storage.sync.get(keys, (items) => resolve(items || {}));
+    } catch (e) {
+      console.error('[Popup] syncGet error:', e);
+      resolve({});
+    }
+  });
+}
+
+// Diagnostics helpers
+function formatTimestamp(ts) {
+  if (!ts) return '—';
+  const age = Date.now() - ts;
+  const secs = Math.round(age / 1000);
+  try {
+    return `${new Date(ts).toLocaleString()} (${secs}s ago)`;
+  } catch {
+    return `${ts} (${secs}s ago)`;
+  }
+}
+
+async function populateDiagnostics() {
+  try {
+    const { connected = false, handshake_opened_at = 0, last_connected_at = 0 } = await localGet([
+      'connected',
+      'handshake_opened_at',
+      'last_connected_at'
+    ]);
+    const sync = await syncGet(['access_token', 'refresh_token']);
+
+    const setText = (id, text) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = text;
+    };
+
+    setText('diag-connected', String(!!connected));
+    setText('diag-last-connected', formatTimestamp(last_connected_at));
+    setText('diag-handshake', formatTimestamp(handshake_opened_at));
+    setText('diag-at', sync.access_token ? 'present' : 'missing');
+    setText('diag-rt', sync.refresh_token ? 'present' : 'missing');
+  } catch (e) {
+    console.warn('[Popup] populateDiagnostics error', e);
+  }
+}
+
+async function initDiagnostics() {
+  try {
+    const manifest = chrome.runtime.getManifest?.();
+    const versionEl = document.getElementById('version-label');
+    if (versionEl && manifest?.version) versionEl.textContent = `v${manifest.version}`;
+
+    const toggle = document.getElementById('toggle-diagnostics');
+    const diag = document.getElementById('diagnostics');
+    if (toggle && diag) {
+      toggle.addEventListener('click', async (e) => {
+        e.preventDefault();
+        diag.classList.toggle('hidden');
+        await populateDiagnostics();
+      });
+    }
+
+    await populateDiagnostics();
+  } catch (e) {
+    console.warn('[Popup] initDiagnostics error', e);
+  }
+}
 // Initialize popup
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('[Popup] Initializing...');
   
-  // Safety timeout with auto-recovery (4s to allow token refresh)
-  // UI fallback to avoid spinner lock
+  // Safety UI fallback: switch to login after 300ms if nothing else rendered
   const uiFallbackId = setTimeout(() => {
     try { showLoginView(); } catch (e) { console.warn('[Popup] UI fallback error', e); }
-  }, 1500);
-const timeoutId = setTimeout(async () => {
-    console.log('[Popup] Timeout reached - checking rate limit');
-    try {
-      const { handshake_opened_at = 0, last_connected_at = 0 } = await localGet(['handshake_opened_at', 'last_connected_at']);
-      const now = Date.now();
-      
-      const twentyFourHours = 24 * 60 * 60 * 1000;
-      const thirtySeconds = 30 * 1000;
+  }, 300);
 
-      // If we recently connected, skip auto handoff to avoid loops
-      if (now - last_connected_at < twentyFourHours) {
-        console.log('[Popup] Recently connected - skipping auto handoff');
-        showLoginView();
-        return;
-      }
-
-      if (now - handshake_opened_at > thirtySeconds) {
-        console.log('[Popup] Auto-opening auth handshake window');
-        await localSet({ handshake_opened_at: now });
-        showLoginView();
-        chrome.tabs.create({ url: 'https://sapienwrite.com/auth?from=extension', active: true });
-      } else {
-        console.log('[Popup] Rate-limited: handshake opened recently');
-        showLoginView();
-      }
-    } catch (e) {
-      console.warn('[Popup] Auto-handshake check failed:', e);
-      showLoginView();
-    }
-  }, 4000);
+  // Initialize diagnostics panel/version label
+  try { await initDiagnostics(); } catch (e) { console.warn('[Popup] Diagnostics init failed', e); }
   
   try {
     const authenticated = await isAuthenticated();
     console.log('[Popup] Authentication check result:', authenticated);
     
-    clearTimeout(timeoutId);
     clearTimeout(uiFallbackId);
     
     if (!authenticated) {
@@ -91,7 +131,6 @@ const timeoutId = setTimeout(async () => {
     }
   } catch (error) {
     console.error('[Popup] Error during initialization:', error);
-    clearTimeout(timeoutId);
     clearTimeout(uiFallbackId);
     showLoginView();
   }
@@ -422,13 +461,15 @@ document.getElementById('humanize-button')?.addEventListener('click', async () =
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'sessionStored') {
     console.log('[Popup] Session stored, reloading user data');
-    // Mark last connection time to reduce auto-handoff loops
-    try { localSet({ last_connected_at: Date.now() }); } catch (e) { /* noop */ }
+    // Mark connected and last connection time to prevent loops
+    try { localSet({ connected: true, last_connected_at: Date.now() }); } catch (e) { /* noop */ }
+    try { populateDiagnostics?.(); } catch (e) { /* noop */ }
     loadUserData();
   }
   
   if (message.action === 'subscriptionUpdated') {
     console.log('[Popup] Subscription updated, refreshing data');
+    try { populateDiagnostics?.(); } catch (e) { /* noop */ }
     loadUserData();
   }
 });

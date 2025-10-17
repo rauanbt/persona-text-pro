@@ -358,6 +358,23 @@
         </button>
       </div>
     </div>
+
+    <div class="divider"></div>
+    <div style="text-align: center; color: white; font-size: 12px; opacity: 0.9; margin-top: 8px;">
+      <span id="version-label"></span>
+      &nbsp;·&nbsp;
+      <a href="#" class="link" id="toggle-diagnostics" style="color: white;">Diagnostics</a>
+    </div>
+    <div id="diagnostics" class="card hidden" style="margin-top: 10px;">
+      <div style="font-weight: 600; margin-bottom: 8px;">Diagnostics</div>
+      <div style="font-size: 12px; color: #374151;">
+        <div>Connected: <span id="diag-connected">-</span></div>
+        <div>Last Connected At: <span id="diag-last-connected">-</span></div>
+        <div>Handshake Opened At: <span id="diag-handshake">-</span></div>
+        <div>Access Token: <span id="diag-at">-</span></div>
+        <div>Refresh Token: <span id="diag-rt">-</span></div>
+      </div>
+    </div>
   </div>
 
   <script src="config.js"></script>

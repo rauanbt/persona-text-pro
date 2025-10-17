@@ -154,7 +154,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         });
         
         // Mark last connection time to prevent auto-handoff loops
-        try { chrome.storage.local.set({ last_connected_at: Date.now() }); } catch (e) { /* noop */ }
+        try { chrome.storage.local.set({ connected: true, last_connected_at: Date.now() }); } catch (e) { /* noop */ }
         
         // Notify popup that session is stored
         chrome.runtime.sendMessage({ action: 'sessionStored' }).catch(() => {
