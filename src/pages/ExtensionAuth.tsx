@@ -19,17 +19,10 @@ const ExtensionAuth = () => {
         const urlParams = new URLSearchParams(window.location.search);
         const paymentSuccess = urlParams.get('payment') === 'success';
 
-        console.log('[ExtensionAuth] Starting aggressive session broadcast...');
+        console.log('[ExtensionAuth] Broadcasting session (3 times)');
         
-        // Aggressively broadcast session every 500ms, 30 times (15 seconds total)
-        let attempts = 0;
-        const maxAttempts = 30;
-        
+        // Simple, reliable broadcast - 3 times, 1 second apart
         const broadcast = () => {
-          attempts++;
-          console.log(`[ExtensionAuth] Broadcast attempt ${attempts}/${maxAttempts}`);
-          
-          // Send session data via postMessage to content script
           window.postMessage({
             type: 'SAPIENWRITE_SESSION',
             session: {
@@ -43,78 +36,33 @@ const ExtensionAuth = () => {
             }
           }, '*');
 
-          // If this is a payment success, also send subscription update message
           if (paymentSuccess) {
-            window.postMessage({
-              type: 'SUBSCRIPTION_UPDATED'
-            }, '*');
+            window.postMessage({ type: 'SUBSCRIPTION_UPDATED' }, '*');
           }
         };
         
-        // Immediate first broadcast
+        // Broadcast 3 times
         broadcast();
-        
-        // Continue broadcasting
-        const interval = setInterval(() => {
-          if (attempts < maxAttempts) {
-            broadcast();
-          } else {
-            clearInterval(interval);
-            console.log('[ExtensionAuth] Broadcast complete');
-            
-            // Show warning if handshake may have failed
-            if (attempts >= maxAttempts) {
-              console.warn('[ExtensionAuth] Max broadcast attempts reached - extension may not have received session');
-            }
-          }
-        }, 500);
+        setTimeout(broadcast, 1000);
+        setTimeout(broadcast, 2000);
 
         setStatus('success');
         
-        // Auto-close after at least 2 seconds (ensure SW wakes)
+        // Auto-close after 3 seconds
         setTimeout(() => {
           window.close();
-        }, 2000);
+        }, 3000);
       } catch (error) {
-        console.error('[ExtensionAuth] Error sending session:', error);
+        console.error('[ExtensionAuth] Error:', error);
         setStatus('error');
       }
     };
 
-    // If session exists, send it to extension (regardless of URL params)
-    // This makes the handoff more resilient
     if (session) {
       sendSessionToExtension();
     } else if (session === null) {
-      // Only show error if we know there's no session
       setStatus('error');
     }
-  }, [session]);
-  
-  // Re-broadcast on visibility change
-  useEffect(() => {
-    if (!session) return;
-    
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        console.log('[ExtensionAuth] Tab became visible, broadcasting session...');
-        window.postMessage({
-          type: 'SAPIENWRITE_SESSION',
-          session: {
-            access_token: session.access_token,
-            refresh_token: session.refresh_token,
-            expires_at: session.expires_at,
-            user: {
-              email: session.user.email,
-              id: session.user.id
-            }
-          }
-        }, '*');
-      }
-    };
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [session]);
 
   return (
@@ -127,7 +75,7 @@ const ExtensionAuth = () => {
               <Loader2 className="w-16 h-16 mx-auto mb-4 text-primary animate-spin" />
               <h1 className="text-2xl font-bold mb-2">Connecting Extension</h1>
               <p className="text-muted-foreground">
-                Syncing your account with SapienWrite Chrome Extension...
+                Syncing your account with Chrome Extension...
               </p>
             </>
           )}
@@ -142,8 +90,8 @@ const ExtensionAuth = () => {
               </h1>
               <p className="text-muted-foreground mb-4">
                 {new URLSearchParams(window.location.search).get('payment') === 'success'
-                  ? 'Your subscription is now active. Extension is ready to use!'
-                  : 'Your SapienWrite Chrome Extension is now connected to your account.'}
+                  ? 'Your subscription is active. Extension is ready!'
+                  : 'Your Chrome Extension is now connected.'}
               </p>
               <p className="text-sm text-muted-foreground">
                 This window will close automatically...
@@ -158,7 +106,7 @@ const ExtensionAuth = () => {
               </div>
               <h1 className="text-2xl font-bold mb-2 text-destructive">Connection Failed</h1>
               <p className="text-muted-foreground mb-4">
-                Unable to connect extension. Please try logging in again from the extension.
+                Unable to connect. Please try again from the extension.
               </p>
               <button
                 onClick={() => window.close()}

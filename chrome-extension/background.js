@@ -1,11 +1,10 @@
-// Background Service Worker - Handles context menus and messages
+// Background Service Worker - Simple and Reliable
 
 console.log('[Background] Service worker initialized');
 
-// Import config and auth (service workers need to use importScripts)
 self.importScripts('config.js', 'auth.js');
 
-// Create context menu on installation
+// Create context menu
 chrome.runtime.onInstalled.addListener(() => {
   console.log('[Background] Extension installed');
   
@@ -24,15 +23,10 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     console.log('[Background] Context menu clicked');
     
     const selectedText = info.selectionText;
-    if (!selectedText) {
-      console.log('[Background] No text selected');
-      return;
-    }
+    if (!selectedText) return;
     
-    // Check authentication
     const authenticated = await isAuthenticated();
     if (!authenticated) {
-      console.log('[Background] User not authenticated');
       chrome.tabs.sendMessage(tab.id, {
         action: 'showNotification',
         message: 'Please login to use SapienWrite extension',
@@ -42,13 +36,10 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     }
     
     try {
-      // Check subscription and word balance
       const subscriptionData = await checkSubscription();
       const plan = subscriptionData.plan || 'free';
       
-      // Check if extension-only or ultra plan
       if (plan !== 'extension_only' && plan !== 'master' && plan !== 'ultra') {
-        // Show upgrade required dialog instead of just notification
         chrome.tabs.sendMessage(tab.id, {
           action: 'showUpgradeRequired',
           currentPlan: plan
@@ -56,10 +47,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         return;
       }
       
-      // Get word count
       const wordCount = selectedText.trim().split(/\s+/).length;
-      
-      // Fetch word balance
       const session = await getSession();
       const extensionLimit = EXTENSION_LIMITS[plan] || 750;
       
@@ -76,7 +64,6 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       const data = await response.json();
       const usageData = data[0] || { words_used: 0, extension_words_used: 0 };
       
-      // Calculate word balance
       let wordBalance;
       if (plan === 'free') {
         const totalUsed = (usageData.words_used || 0) + (usageData.extension_words_used || 0);
@@ -92,7 +79,6 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         wordBalance = 0;
       }
       
-      // Show dialog instead of immediately processing
       chrome.tabs.sendMessage(tab.id, {
         action: 'showDialog',
         text: selectedText,
@@ -111,9 +97,9 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   }
 });
 
-// Handle messages from popup, content scripts, and auth bridge
+// Handle messages
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  console.log('[Background] Message received:', message);
+  console.log('[Background] Message received:', message.action);
   
   if (message.action === 'humanizeWithTone') {
     handleHumanizeRequest(message.text, message.tone, sender.tab?.id)
@@ -123,21 +109,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   
   if (message.action === 'checkAuth') {
-    console.log('[Background] Checking authentication...');
     isAuthenticated().then(authenticated => {
-      console.log('[Background] Auth result:', authenticated);
       sendResponse({ authenticated });
     });
     return true;
   }
   
   if (message.action === 'getSubscription') {
-    console.log('[Background] Getting subscription...');
     checkSubscription().then(data => {
-      console.log('[Background] Subscription data:', data);
       sendResponse(data);
     }).catch(error => {
-      console.error('[Background] Subscription error:', error);
       sendResponse({ error: error.message });
     });
     return true;
@@ -148,18 +129,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     storeSession(message.session)
       .then(() => {
         console.log('[Background] Session stored successfully');
-        // Verify storage
-        chrome.storage.sync.get(['access_token'], (result) => {
-          console.log('[Background] Verified storage - has access_token:', !!result.access_token);
-        });
         
-        // Mark last connection time to prevent auto-handoff loops
-        try { chrome.storage.local.set({ connected: true, last_connected_at: Date.now() }); } catch (e) { /* noop */ }
-        
-        // Notify popup that session is stored
+        // Notify popup
         chrome.runtime.sendMessage({ action: 'sessionStored' }).catch(() => {
-          // Popup might not be open, that's fine
-          console.log('[Background] Could not notify popup (likely closed)');
+          console.log('[Background] Popup not open');
         });
         sendResponse({ success: true });
       })
@@ -171,25 +144,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   
   if (message.action === 'subscriptionUpdated') {
-    console.log('[Background] Subscription updated notification received');
-    // Forward to popup if it's open
+    console.log('[Background] Subscription updated');
     chrome.runtime.sendMessage({ action: 'subscriptionUpdated' }).catch(() => {
-      console.log('[Background] Could not forward to popup (likely closed)');
+      console.log('[Background] Popup not open');
     });
     sendResponse({ success: true });
     return true;
   }
 });
 
-// Handle humanize request with tone
+// Handle humanize request
 async function handleHumanizeRequest(text, tone, tabId) {
   try {
-    // Show processing notification
-    chrome.tabs.sendMessage(tabId, {
-      action: 'showProcessing'
-    });
+    chrome.tabs.sendMessage(tabId, { action: 'showProcessing' });
     
-    // Call humanize function
     const result = await callSupabaseFunction('humanize-text-hybrid', {
       text: text,
       tone: tone,
@@ -198,7 +166,6 @@ async function handleHumanizeRequest(text, tone, tabId) {
     
     console.log('[Background] Text humanized successfully');
     
-    // Send result to dialog
     chrome.tabs.sendMessage(tabId, {
       action: 'showResult',
       originalText: text,
