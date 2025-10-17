@@ -1,33 +1,119 @@
 // Authentication Helper Functions
 
-// Chrome storage promise wrappers
-function storageGet(keys) {
-  return new Promise((resolve) => {
+// Chrome storage promise wrappers with fallback to local
+async function storageGet(keys) {
+  return new Promise(async (resolve) => {
+    // Try sync first
     try {
-      chrome.storage.sync.get(keys, (items) => resolve(items || {}));
+      chrome.storage.sync.get(keys, async (items) => {
+        if (chrome.runtime.lastError) {
+          console.warn('[Auth] storageGet sync failed, falling back to local:', chrome.runtime.lastError);
+          // Fallback to local
+          try {
+            chrome.storage.local.get(['storageType', ...keys], (localItems) => {
+              console.log('[Auth] Using local storage fallback');
+              chrome.storage.local.set({ storageType: 'local' });
+              resolve(localItems || {});
+            });
+          } catch (e) {
+            console.error('[Auth] storageGet local fallback error:', e);
+            resolve({});
+          }
+        } else {
+          chrome.storage.local.set({ storageType: 'sync' });
+          resolve(items || {});
+        }
+      });
     } catch (e) {
-      console.error('[Auth] storageGet error:', e);
-      resolve({});
+      console.warn('[Auth] storageGet sync exception, falling back to local:', e);
+      // Fallback to local
+      try {
+        chrome.storage.local.get(['storageType', ...keys], (localItems) => {
+          console.log('[Auth] Using local storage fallback');
+          chrome.storage.local.set({ storageType: 'local' });
+          resolve(localItems || {});
+        });
+      } catch (localError) {
+        console.error('[Auth] storageGet complete failure:', localError);
+        resolve({});
+      }
     }
   });
 }
-function storageSet(items) {
-  return new Promise((resolve) => {
+
+async function storageSet(items) {
+  return new Promise(async (resolve) => {
+    // Try sync first
     try {
-      chrome.storage.sync.set(items, () => resolve());
+      chrome.storage.sync.set(items, async () => {
+        if (chrome.runtime.lastError) {
+          console.warn('[Auth] storageSet sync failed, falling back to local:', chrome.runtime.lastError);
+          // Fallback to local
+          try {
+            chrome.storage.local.set({ ...items, storageType: 'local' }, () => {
+              console.log('[Auth] Stored in local storage');
+              resolve();
+            });
+          } catch (e) {
+            console.error('[Auth] storageSet local fallback error:', e);
+            resolve();
+          }
+        } else {
+          chrome.storage.local.set({ storageType: 'sync' });
+          console.log('[Auth] Stored in sync storage');
+          resolve();
+        }
+      });
     } catch (e) {
-      console.error('[Auth] storageSet error:', e);
-      resolve();
+      console.warn('[Auth] storageSet sync exception, falling back to local:', e);
+      // Fallback to local
+      try {
+        chrome.storage.local.set({ ...items, storageType: 'local' }, () => {
+          console.log('[Auth] Stored in local storage');
+          resolve();
+        });
+      } catch (localError) {
+        console.error('[Auth] storageSet complete failure:', localError);
+        resolve();
+      }
     }
   });
 }
-function storageRemove(keys) {
-  return new Promise((resolve) => {
+
+async function storageRemove(keys) {
+  return new Promise(async (resolve) => {
+    // Try sync first
     try {
-      chrome.storage.sync.remove(keys, () => resolve());
+      chrome.storage.sync.remove(keys, async () => {
+        if (chrome.runtime.lastError) {
+          console.warn('[Auth] storageRemove sync failed, falling back to local:', chrome.runtime.lastError);
+          // Fallback to local
+          try {
+            chrome.storage.local.remove(keys, () => {
+              console.log('[Auth] Removed from local storage');
+              resolve();
+            });
+          } catch (e) {
+            console.error('[Auth] storageRemove local fallback error:', e);
+            resolve();
+          }
+        } else {
+          console.log('[Auth] Removed from sync storage');
+          resolve();
+        }
+      });
     } catch (e) {
-      console.error('[Auth] storageRemove error:', e);
-      resolve();
+      console.warn('[Auth] storageRemove sync exception, falling back to local:', e);
+      // Fallback to local
+      try {
+        chrome.storage.local.remove(keys, () => {
+          console.log('[Auth] Removed from local storage');
+          resolve();
+        });
+      } catch (localError) {
+        console.error('[Auth] storageRemove complete failure:', localError);
+        resolve();
+      }
     }
   });
 }

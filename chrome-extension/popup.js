@@ -61,10 +61,11 @@ function formatTimestamp(ts) {
 
 async function populateDiagnostics() {
   try {
-    const { connected = false, handshake_opened_at = 0, last_connected_at = 0 } = await localGet([
+    const local = await localGet([
       'connected',
       'handshake_opened_at',
-      'last_connected_at'
+      'last_connected_at',
+      'storageType'
     ]);
     const sync = await syncGet(['access_token', 'refresh_token']);
 
@@ -73,11 +74,22 @@ async function populateDiagnostics() {
       if (el) el.textContent = text;
     };
 
-    setText('diag-connected', String(!!connected));
-    setText('diag-last-connected', formatTimestamp(last_connected_at));
-    setText('diag-handshake', formatTimestamp(handshake_opened_at));
+    setText('diag-connected', String(!!local.connected));
+    setText('diag-last-connected', formatTimestamp(local.last_connected_at));
+    setText('diag-handshake', formatTimestamp(local.handshake_opened_at));
     setText('diag-at', sync.access_token ? 'present' : 'missing');
     setText('diag-rt', sync.refresh_token ? 'present' : 'missing');
+    setText('diag-storage-type', local.storageType || 'unknown');
+
+    // Storage quota check
+    if (navigator.storage && navigator.storage.estimate) {
+      const estimate = await navigator.storage.estimate();
+      const usageInMB = ((estimate.usage || 0) / (1024 * 1024)).toFixed(2);
+      const quotaInMB = ((estimate.quota || 0) / (1024 * 1024)).toFixed(2);
+      setText('diag-storage-quota', `${usageInMB}MB / ${quotaInMB}MB`);
+    } else {
+      setText('diag-storage-quota', 'N/A');
+    }
   } catch (e) {
     console.warn('[Popup] populateDiagnostics error', e);
   }
@@ -99,6 +111,25 @@ async function initDiagnostics() {
       });
     }
 
+    // Clear all storage button
+    const clearBtn = document.getElementById('clear-storage-button');
+    if (clearBtn) {
+      clearBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        if (confirm('Clear all extension storage? You will need to reconnect.')) {
+          try {
+            await chrome.storage.sync.clear();
+            await chrome.storage.local.clear();
+            console.log('[Popup] All storage cleared');
+            showLoginView();
+            await populateDiagnostics();
+          } catch (e) {
+            console.error('[Popup] Failed to clear storage:', e);
+          }
+        }
+      });
+    }
+
     await populateDiagnostics();
   } catch (e) {
     console.warn('[Popup] initDiagnostics error', e);
@@ -108,10 +139,11 @@ async function initDiagnostics() {
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('[Popup] Initializing...');
   
-  // Safety UI fallback: switch to login after 300ms if nothing else rendered
+  // Safety UI fallback: force login view after 2s if nothing else rendered
   const uiFallbackId = setTimeout(() => {
+    console.warn('[Popup] UI fallback triggered - forcing login view');
     try { showLoginView(); } catch (e) { console.warn('[Popup] UI fallback error', e); }
-  }, 300);
+  }, 2000);
 
   // Initialize diagnostics panel/version label
   try { await initDiagnostics(); } catch (e) { console.warn('[Popup] Diagnostics init failed', e); }
@@ -120,6 +152,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const authenticated = await isAuthenticated();
     console.log('[Popup] Authentication check result:', authenticated);
     
+    // Only clear timeout if we successfully got a result
     clearTimeout(uiFallbackId);
     
     if (!authenticated) {
@@ -131,7 +164,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   } catch (error) {
     console.error('[Popup] Error during initialization:', error);
-    clearTimeout(uiFallbackId);
+    // Don't clear timeout on error - let it trigger the fallback
     showLoginView();
   }
 });
@@ -363,6 +396,23 @@ document.getElementById('login-button')?.addEventListener('click', async () => {
 document.getElementById('connect-extension-button')?.addEventListener('click', async () => {
   await chrome.storage.local.set({ handshake_opened_at: Date.now() });
   chrome.tabs.create({ url: 'https://sapienwrite.com/extension-auth?from=extension' });
+});
+
+// Refresh Connection button - force re-check storage
+document.getElementById('refresh-connection-button')?.addEventListener('click', async () => {
+  console.log('[Popup] Manual refresh triggered');
+  try {
+    const authenticated = await isAuthenticated();
+    if (authenticated) {
+      await loadUserData();
+    } else {
+      showLoginView();
+    }
+    await populateDiagnostics();
+  } catch (e) {
+    console.error('[Popup] Refresh failed:', e);
+    showError('Failed to refresh connection. Check diagnostics.');
+  }
 });
 
 document.getElementById('signup-link')?.addEventListener('click', async (e) => {

@@ -275,6 +275,9 @@
       <button class="button button-secondary" id="connect-extension-button" style="margin-top: 5px;">
         Connect Extension (already logged in)
       </button>
+      <button class="button button-secondary" id="refresh-connection-button" style="margin-top: 5px; background: #dbeafe; color: #1e40af;">
+        🔄 Refresh Connection
+      </button>
       <div class="login-text" style="margin-top: 15px;">
         Don't have an account? 
         <a href="#" class="link" id="signup-link">Sign up free</a>
@@ -367,13 +370,18 @@
     </div>
     <div id="diagnostics" class="card hidden" style="margin-top: 10px;">
       <div style="font-weight: 600; margin-bottom: 8px;">Diagnostics</div>
-      <div style="font-size: 12px; color: #374151;">
+      <div style="font-size: 12px; color: #374151; margin-bottom: 10px;">
         <div>Connected: <span id="diag-connected">-</span></div>
         <div>Last Connected At: <span id="diag-last-connected">-</span></div>
         <div>Handshake Opened At: <span id="diag-handshake">-</span></div>
         <div>Access Token: <span id="diag-at">-</span></div>
         <div>Refresh Token: <span id="diag-rt">-</span></div>
+        <div>Storage Type: <span id="diag-storage-type">-</span></div>
+        <div>Storage Quota: <span id="diag-storage-quota">-</span></div>
       </div>
+      <button class="button button-secondary" id="clear-storage-button" style="font-size: 12px; padding: 8px;">
+        Clear All Storage
+      </button>
     </div>
   </div>
 

@@ -131,9 +131,9 @@ export const ExtensionSessionBridge = () => {
     broadcastSession();
     localStorage.setItem('extensionConnected', 'true');
 
-    // Retry multiple times for service worker wake-up
+    // Retry with exponential backoff (reduced to 3 attempts)
     let attempts = 0;
-    const maxAttempts = 8;
+    const maxAttempts = 3;
     const retryInterval = setInterval(() => {
       attempts++;
       console.log(`[ExtensionBridge] Retry broadcast attempt ${attempts}/${maxAttempts}`);
@@ -144,14 +144,20 @@ export const ExtensionSessionBridge = () => {
       } else {
         broadcastSession();
       }
-    }, 1000);
+    }, 2000); // Increased to 2 seconds
 
     return () => clearInterval(retryInterval);
   }, [session]);
 
-  // Aggressive broadcast on mount - supports older extension versions that don't request session
+  // Reduced broadcast on mount - supports older extension versions (3 attempts)
   useEffect(() => {
     if (!session || hasBroadcastOnMount.current) return;
+    
+    // Validate session has required fields before broadcasting
+    if (!session.access_token || !session.refresh_token || !session.user?.email) {
+      console.warn('[ExtensionBridge] Incomplete session, skipping mount broadcast');
+      return;
+    }
     
     hasBroadcastOnMount.current = true;
     console.log('[ExtensionBridge] Starting mount broadcast sequence for older extensions');
@@ -174,9 +180,9 @@ export const ExtensionSessionBridge = () => {
     // Broadcast immediately
     broadcastSession();
 
-    // Retry multiple times to ensure extension receives it
+    // Reduced retry attempts with exponential backoff
     let attempts = 0;
-    const maxAttempts = 8;
+    const maxAttempts = 3;
     const retryInterval = setInterval(() => {
       attempts++;
       console.log(`[ExtensionBridge] Mount broadcast attempt ${attempts}/${maxAttempts}`);
@@ -186,7 +192,7 @@ export const ExtensionSessionBridge = () => {
       } else {
         broadcastSession();
       }
-    }, 1000);
+    }, 2000); // Increased to 2 seconds
 
     return () => clearInterval(retryInterval);
   }, [session]); // Run when session becomes available
