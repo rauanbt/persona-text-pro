@@ -10,8 +10,8 @@ async function storageGet(keys) {
           console.warn('[Auth] storageGet sync failed, falling back to local:', chrome.runtime.lastError);
           // Fallback to local
           try {
-            chrome.storage.local.get(['storageType', ...keys], (localItems) => {
-              console.log('[Auth] Using local storage fallback');
+            chrome.storage.local.get(keys, (localItems) => {
+              console.log('[Auth] Using local storage fallback (sync error)');
               chrome.storage.local.set({ storageType: 'local' });
               resolve(localItems || {});
             });
@@ -20,8 +20,33 @@ async function storageGet(keys) {
             resolve({});
           }
         } else {
-          chrome.storage.local.set({ storageType: 'sync' });
-          resolve(items || {});
+          // Determine which storage actually has the requested keys
+          const keysArray = Array.isArray(keys) ? keys : [keys];
+          const syncPresentCount = keysArray.reduce((acc, k) => acc + (items && items[k] !== undefined ? 1 : 0), 0);
+
+          // If sync has nothing, try local as secondary source
+          if (syncPresentCount === 0) {
+            try {
+              chrome.storage.local.get(keysArray, (localItems) => {
+                const localPresentCount = keysArray.reduce((acc, k) => acc + (localItems && localItems[k] !== undefined ? 1 : 0), 0);
+                if (localPresentCount > syncPresentCount) {
+                  console.log('[Auth] Using local storage (had data, sync empty)');
+                  chrome.storage.local.set({ storageType: 'local' });
+                  resolve(localItems || {});
+                } else {
+                  chrome.storage.local.set({ storageType: 'sync' });
+                  resolve(items || {});
+                }
+              });
+            } catch (e) {
+              console.warn('[Auth] Local check failed, defaulting to sync results');
+              chrome.storage.local.set({ storageType: 'sync' });
+              resolve(items || {});
+            }
+          } else {
+            chrome.storage.local.set({ storageType: 'sync' });
+            resolve(items || {});
+          }
         }
       });
     } catch (e) {
