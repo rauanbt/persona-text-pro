@@ -55,14 +55,6 @@ export const ChromeExtensionDemo = () => {
                   <div className="absolute left-1/2 top-full mt-2 z-20 animate-in fade-in duration-300">
                     <Card className="w-64 shadow-xl border-2 bg-popover">
                       <div className="py-1">
-                        <div className="px-3 py-2 text-sm text-muted-foreground hover:bg-muted/50 cursor-pointer">
-                          Copy
-                        </div>
-                        <div className="px-3 py-2 text-sm text-muted-foreground hover:bg-muted/50 cursor-pointer">
-                          Paste
-                        </div>
-                        <div className="border-t my-1"></div>
-                        
                         {/* SapienWrite Menu Item */}
                         <div className="relative group">
                           <div className="px-3 py-2.5 text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer flex items-center justify-between rounded-sm mx-1">
