@@ -65,7 +65,7 @@ export const ChromeExtensionDemo = () => {
                         
                         {/* SapienWrite Menu Item */}
                         <div className="relative group">
-                          <div className="px-3 py-2 text-sm font-medium text-primary hover:bg-primary/10 cursor-pointer flex items-center justify-between">
+                          <div className="px-3 py-2.5 text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer flex items-center justify-between rounded-sm mx-1">
                             <div className="flex items-center gap-2">
                               <Sparkles className="w-4 h-4" />
                               <span>Humanize with SapienWrite</span>
