@@ -79,6 +79,28 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     return;
   }
   
+  // Preflight check: can we replace text in this editor?
+  try {
+    const preflightResponse = await chrome.tabs.sendMessage(tab.id, {
+      action: 'preflightReplace'
+    }, { frameId: info.frameId });
+    
+    if (!preflightResponse?.ok) {
+      console.log('[Background] Preflight failed:', preflightResponse?.reason);
+      await safeSendMessage(tab.id, {
+        action: 'showNotification',
+        message: 'This editor may not support automatic replacement. Results will be copied to clipboard.',
+        type: 'info'
+      }, { frameId: info.frameId });
+      // Continue anyway - we'll try replacement and fallback to clipboard
+    } else {
+      console.log('[Background] Preflight OK, method:', preflightResponse.method);
+    }
+  } catch (preflightError) {
+    console.log('[Background] Preflight check failed:', preflightError.message);
+    // Continue anyway
+  }
+  
   try {
     const subscriptionData = await checkSubscription();
     const plan = subscriptionData.plan || 'free';

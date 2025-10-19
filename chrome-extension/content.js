@@ -176,6 +176,28 @@ document.addEventListener('mouseup', () => {
   }
 });
 
+// Keep selection fresh on selection change for contenteditable
+document.addEventListener('selectionchange', () => {
+  const sel = window.getSelection();
+  if (sel && sel.rangeCount > 0 && sel.toString().trim()) {
+    const range = sel.getRangeAt(0);
+    let container = range.commonAncestorContainer;
+    let currentNode = container.nodeType === 3 ? container.parentElement : container;
+    
+    while (currentNode) {
+      if (currentNode.isContentEditable) {
+        lastSelection = {
+          text: sel.toString(),
+          range: range.cloneRange(),
+          container: currentNode
+        };
+        break;
+      }
+      currentNode = currentNode.parentElement;
+    }
+  }
+});
+
 // Track selections in INPUT/TEXTAREA
 document.addEventListener('select', (e) => {
   const t = e.target;
@@ -219,6 +241,13 @@ document.addEventListener('contextmenu', () => {
       }
       
       if (editableElement) {
+        // Focus the editable element to prevent focus loss
+        try {
+          editableElement.focus({ preventScroll: true });
+        } catch (e) {
+          console.log('[Content] Could not focus element:', e.message);
+        }
+        
         // Capture exact DOM paths for reliable restoration
         const sc = range.startContainer;
         const ec = range.endContainer;
@@ -308,6 +337,13 @@ function replaceSelectedText(originalText, humanizedText) {
     const end = lastInputSelection?.end ?? useEl?.selectionEnd;
     
     if (useEl && typeof start === 'number' && typeof end === 'number' && end >= start) {
+      // Ensure focus
+      try {
+        useEl.focus();
+      } catch (e) {
+        console.log('[Content] Could not focus input element');
+      }
+      
       const value = useEl.value;
       useEl.value = value.substring(0, start) + humanizedText + value.substring(end);
       useEl.selectionStart = useEl.selectionEnd = start + humanizedText.length;
@@ -322,7 +358,7 @@ function replaceSelectedText(originalText, humanizedText) {
         startIndex: start,
         endIndex: start + humanizedText.length
       };
-      console.log('[Content] ✓ Replaced in INPUT/TEXTAREA');
+      console.log('[Content] ✓ input replacement');
       showNotification('Text replaced successfully!', 'success');
       return true;
     }
@@ -332,6 +368,13 @@ function replaceSelectedText(originalText, humanizedText) {
       const editableElement = lastSelection.container;
       
       console.log('[Content] Trying path-based restoration');
+      
+      // Ensure focus on editable element
+      try {
+        editableElement.focus({ preventScroll: true });
+      } catch (e) {
+        console.log('[Content] Could not focus editable element');
+      }
       
       let startNode = getNodeFromPath(editableElement, lastSelection.startPath);
       let endNode = getNodeFromPath(editableElement, lastSelection.endPath);
@@ -1029,7 +1072,52 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     showUpgradeRequiredDialog(message.currentPlan);
   }
   
+  if (message.action === 'preflightReplace') {
+    const result = checkReplacementPossible();
+    sendResponse(result);
+    return true;
+  }
+  
   sendResponse({ received: true });
 });
+
+// Preflight check: can we replace text?
+function checkReplacementPossible() {
+  // Check INPUT/TEXTAREA
+  const useEl = lastInputSelection?.element ?? (
+    (document.activeElement?.tagName === 'TEXTAREA' || document.activeElement?.tagName === 'INPUT') 
+      ? document.activeElement 
+      : null
+  );
+  const start = lastInputSelection?.start ?? useEl?.selectionStart;
+  const end = lastInputSelection?.end ?? useEl?.selectionEnd;
+  
+  if (useEl && typeof start === 'number' && typeof end === 'number' && end >= start) {
+    return { ok: true, method: 'input' };
+  }
+  
+  // Check path-based for contenteditable
+  if (lastSelection?.container && lastSelection?.startPath && lastSelection?.endPath) {
+    const editableElement = lastSelection.container;
+    const startNode = getNodeFromPath(editableElement, lastSelection.startPath);
+    const endNode = getNodeFromPath(editableElement, lastSelection.endPath);
+    
+    if (startNode && endNode) {
+      return { ok: true, method: 'path' };
+    }
+  }
+  
+  // Check context-based for contenteditable
+  if (lastSelection?.container && lastSelection?.text) {
+    const editableElement = lastSelection.container;
+    const fullText = editableElement.innerText || editableElement.textContent || '';
+    
+    if (fullText.includes(lastSelection.text)) {
+      return { ok: true, method: 'context' };
+    }
+  }
+  
+  return { ok: false, method: 'none', reason: 'No valid selection or editor state found' };
+}
 
 console.log('[Content] SapienWrite ready');
