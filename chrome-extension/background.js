@@ -138,7 +138,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('[Background] Message received:', message.action);
   
   if (message.action === 'humanizeWithTone') {
-    handleHumanizeRequest(message.text, message.tone, sender.tab?.id)
+    handleHumanizeRequest(message.text, message.tone, sender.tab?.id, sender.frameId)
       .then(() => sendResponse({ success: true }))
       .catch((error) => sendResponse({ success: false, error: error.message }));
     return true;
