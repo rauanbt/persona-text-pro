@@ -1066,6 +1066,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const replaced = replaceSelectedText(message.originalText, message.humanizedText);
     if (replaced) {
       showReplacementNotification(message.originalText, message.humanizedText);
+    } else {
+      // If replacement failed, show the result dialog so user can copy
+      console.log('[Content] Replacement failed, showing result dialog');
+      showResult(message.originalText, message.humanizedText);
     }
   }
   
