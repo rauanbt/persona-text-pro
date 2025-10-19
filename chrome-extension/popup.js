@@ -174,7 +174,9 @@ async function loadUserData() {
     const session = await getSession();
     
     if (!session) {
-      console.log('[Popup] No session found');
+      console.log('[Popup] No session found - requesting from web app');
+      // Try to get session from web app
+      await requestSessionFromWebApp();
       showLoginView();
       return;
     }
@@ -183,14 +185,28 @@ async function loadUserData() {
     if (!session.user || !session.access_token) {
       console.log('[Popup] Invalid session - missing fields');
       await clearSession();
+      await requestSessionFromWebApp();
       showLoginView();
       return;
     }
     
     document.getElementById('user-email').textContent = session.user.email;
     
-    subscriptionData = await checkSubscription();
-    console.log('[Popup] Subscription:', subscriptionData);
+    try {
+      subscriptionData = await checkSubscription();
+      console.log('[Popup] Subscription:', subscriptionData);
+    } catch (subError) {
+      // Handle refresh_token_already_used error
+      if (subError.message?.includes('refresh_token_already_used') || 
+          subError.message?.includes('Invalid Refresh Token')) {
+        console.log('[Popup] Token error - requesting fresh session');
+        await clearSession();
+        await requestSessionFromWebApp();
+        showLoginView();
+        return;
+      }
+      throw subError;
+    }
     
     const plan = subscriptionData.plan || 'free';
     updatePlanBadge(plan);
@@ -415,6 +431,39 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
     loadUserData().catch(() => showLoginView());
   }
 });
+
+// Helper to request session from web app
+async function requestSessionFromWebApp() {
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage({ action: 'requestSessionFromWebApp' }, (response) => {
+      console.log('[Popup] Request session response:', response);
+      
+      if (!response?.success || response.tabsFound === 0) {
+        console.log('[Popup] No SapienWrite tabs open');
+        resolve(false);
+        return;
+      }
+      
+      // Wait 2 seconds for session to arrive
+      const listener = (message) => {
+        if (message.action === 'sessionStored') {
+          chrome.runtime.onMessage.removeListener(listener);
+          clearTimeout(timeout);
+          console.log('[Popup] Session received');
+          resolve(true);
+        }
+      };
+      
+      chrome.runtime.onMessage.addListener(listener);
+      
+      const timeout = setTimeout(() => {
+        chrome.runtime.onMessage.removeListener(listener);
+        console.log('[Popup] Session timeout');
+        resolve(false);
+      }, 2000);
+    });
+  });
+}
 
 // Listen for messages from background
 chrome.runtime.onMessage.addListener((message) => {

@@ -668,11 +668,12 @@ function createDialog(text, wordCount, wordBalance) {
     <div style="margin-bottom: 16px;">
       <label style="display: block; font-size: 14px; font-weight: 600; color: #333; margin-bottom: 8px;">Tone</label>
       <select id="sapienwrite-tone" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; background: white; cursor: pointer;">
-        <option value="regular">Regular</option>
-        <option value="professional">Professional</option>
-        <option value="casual">Casual</option>
-        <option value="academic">Academic</option>
-        <option value="creative">Creative</option>
+        <option value="regular">Regular - Natural, balanced</option>
+        <option value="formal">Formal - Professional, scholarly</option>
+        <option value="persuasive">Persuasive - Compelling, convincing</option>
+        <option value="empathetic">Empathetic - Understanding, caring</option>
+        <option value="sarcastic">Sarcastic - Witty, ironic</option>
+        <option value="funny">Funny - Humorous, entertaining</option>
       </select>
     </div>
     

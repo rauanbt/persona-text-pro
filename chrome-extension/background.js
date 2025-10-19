@@ -16,6 +16,69 @@ async function safeSendMessage(tabId, message, options = {}) {
   }
 }
 
+// Ensure we have a fresh session - self-healing flow
+async function ensureFreshSession() {
+  const authenticated = await isAuthenticated();
+  if (!authenticated) {
+    console.log('[Background] No session - requesting from web app');
+    
+    // Try to get session from open SapienWrite tabs
+    return new Promise((resolve) => {
+      chrome.tabs.query({}, async (tabs) => {
+        const sapienWriteTabs = tabs.filter(tab => 
+          tab.url && (
+            tab.url.includes('sapienwrite.com') ||
+            tab.url.includes('lovableproject.com') ||
+            tab.url.includes('localhost:5173')
+          )
+        );
+        
+        if (sapienWriteTabs.length === 0) {
+          resolve({ success: false, reason: 'no_tabs' });
+          return;
+        }
+        
+        // Request session from all matching tabs
+        sapienWriteTabs.forEach(tab => {
+          chrome.tabs.sendMessage(tab.id, {
+            type: 'SAPIENWRITE_REQUEST_SESSION'
+          }).catch(() => {});
+        });
+        
+        // Wait up to 2 seconds for session
+        const sessionListener = (message) => {
+          if (message.action === 'sessionStored') {
+            chrome.runtime.onMessage.removeListener(sessionListener);
+            clearTimeout(timeout);
+            resolve({ success: true });
+          }
+        };
+        
+        chrome.runtime.onMessage.addListener(sessionListener);
+        
+        const timeout = setTimeout(() => {
+          chrome.runtime.onMessage.removeListener(sessionListener);
+          resolve({ success: false, reason: 'timeout' });
+        }, 2000);
+      });
+    });
+  }
+  
+  return { success: true };
+}
+
+// Map legacy tone names to supported tones
+function mapToneToSupported(tone) {
+  const toneMap = {
+    'professional': 'formal',
+    'casual': 'regular',
+    'academic': 'formal',
+    'creative': 'regular'
+  };
+  
+  return toneMap[tone] || tone;
+}
+
 // Create context menu with tone submenu
 chrome.runtime.onInstalled.addListener(() => {
   console.log('[Background] Extension installed');
@@ -80,25 +143,46 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   }
   
   // Preflight check: can we replace text in this editor?
+  let preflightOk = false;
   try {
     const preflightResponse = await chrome.tabs.sendMessage(tab.id, {
       action: 'preflightReplace'
     }, { frameId: info.frameId });
     
-    if (!preflightResponse?.ok) {
+    preflightOk = preflightResponse?.ok === true;
+    
+    if (!preflightOk) {
       console.log('[Background] Preflight failed:', preflightResponse?.reason);
+      // STRICT GATING: Don't call AI if replacement won't work
       await safeSendMessage(tab.id, {
         action: 'showNotification',
-        message: 'This editor may not support automatic replacement. Results will be copied to clipboard.',
+        message: 'This editor blocks automatic replacement. Open the extension to humanize and copy manually.',
         type: 'info'
       }, { frameId: info.frameId });
-      // Continue anyway - we'll try replacement and fallback to clipboard
+      return; // Stop here - no credit waste
     } else {
       console.log('[Background] Preflight OK, method:', preflightResponse.method);
     }
   } catch (preflightError) {
     console.log('[Background] Preflight check failed:', preflightError.message);
-    // Continue anyway
+    // If preflight check itself fails, assume it won't work
+    await safeSendMessage(tab.id, {
+      action: 'showNotification',
+      message: 'Cannot replace text in this editor.',
+      type: 'error'
+    }, { frameId: info.frameId });
+    return;
+  }
+  
+  // Ensure we have a fresh session before checking subscription
+  const sessionResult = await ensureFreshSession();
+  if (!sessionResult.success) {
+    await safeSendMessage(tab.id, {
+      action: 'showNotification',
+      message: 'Reconnect required. Open sapienwrite.com to refresh your session.',
+      type: 'error'
+    }, { frameId: info.frameId });
+    return;
   }
   
   try {
@@ -184,7 +268,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('[Background] Message received:', message.action);
   
   if (message.action === 'humanizeWithTone') {
-    handleHumanizeRequest(message.text, message.tone, sender.tab?.id, sender.frameId)
+    // Map legacy tone names to supported tones
+    const mappedTone = mapToneToSupported(message.tone);
+    console.log('[Background] Tone mapping:', message.tone, '->', mappedTone);
+    
+    handleHumanizeRequest(message.text, mappedTone, sender.tab?.id, sender.frameId)
       .then(() => sendResponse({ success: true }))
       .catch((error) => sendResponse({ success: false, error: error.message }));
     return true;
