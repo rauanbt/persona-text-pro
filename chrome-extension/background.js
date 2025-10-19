@@ -306,9 +306,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'humanizeWithTone') {
     // Map legacy tone names to supported tones
     const mappedTone = mapToneToSupported(message.tone);
-    console.log('[Background] ✅ TONE SELECTED:', message.tone, mappedTone !== message.tone ? `→ ${mappedTone}` : '');
+    const intensity = message.toneIntensity || 'strong';
+    console.log('[Background] ✅ TONE SELECTED:', message.tone, mappedTone !== message.tone ? `→ ${mappedTone}` : '', '| intensity:', intensity);
     
-    handleHumanizeRequest(message.text, mappedTone, sender.tab?.id, sender.frameId)
+    handleHumanizeRequest(message.text, mappedTone, intensity, sender.tab?.id, sender.frameId)
       .then(() => sendResponse({ success: true }))
       .catch((error) => sendResponse({ success: false, error: error.message }));
     return true;
@@ -411,18 +412,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 // Handle humanize request
-async function handleHumanizeRequest(text, tone, tabId, frameId) {
+async function handleHumanizeRequest(text, tone, toneIntensity, tabId, frameId) {
   try {
-    console.log(`[Background] 📤 Sending to edge function with tone: "${tone}"`);
+    console.log(`[Background] 📤 Sending to edge function with tone: "${tone}" | intensity: "${toneIntensity}"`);
     await safeSendMessage(tabId, { action: 'showProcessing' }, { frameId });
     
     const result = await callSupabaseFunction('humanize-text-hybrid', {
       text: text,
       tone: tone,
+      tone_intensity: toneIntensity,
       source: 'extension'
     });
     
-    console.log('[Background] ✅ Text humanized successfully with tone:', tone);
+    console.log('[Background] ✅ Text humanized successfully with tone:', tone, '| intensity:', toneIntensity);
     
     // Extract humanized text (edge function returns snake_case)
     const humanizedText = result.humanized_text || result.humanizedText;

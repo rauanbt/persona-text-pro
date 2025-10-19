@@ -160,6 +160,7 @@ let lastSelection = null;
 let lastReplacement = null; // Track last replacement for undo
 let lastInputSelection = null; // { element, start, end, valueSnapshot }
 let selectedTone = 'regular'; // Track currently selected tone for display
+let selectedToneIntensity = 'strong'; // Track selected tone intensity
 
 // Track selections in contenteditable
 document.addEventListener('mouseup', () => {
@@ -453,6 +454,15 @@ function createDialog(text, wordCount, wordBalance, selectedTone = null) {
         <option value="funny">Funny - Humorous, entertaining</option>
       </select>
     </div>
+
+    <div style="margin-bottom: 16px;">
+      <label style="display: block; font-size: 14px; font-weight: 600; color: #333; margin-bottom: 8px;">Tone intensity</label>
+      <select id="sapienwrite-tone-intensity" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; background: white; cursor: pointer;">
+        <option value="strong">Strong — clear changes</option>
+        <option value="medium">Medium — balanced</option>
+        <option value="light">Light — subtle</option>
+      </select>
+    </div>
     
     <div id="sapienwrite-dialog-content" style="min-height: 50px;">
       <div style="display: flex; gap: 12px;">
@@ -490,6 +500,12 @@ function createDialog(text, wordCount, wordBalance, selectedTone = null) {
     }
   }
   
+  // Preselect default tone intensity
+  const intensitySelect = document.getElementById('sapienwrite-tone-intensity');
+  if (intensitySelect) {
+    intensitySelect.value = 'strong';
+  }
+  
   // Event listeners
   document.getElementById('sapienwrite-close').onclick = closeDialog;
   document.getElementById('sapienwrite-cancel').onclick = closeDialog;
@@ -497,12 +513,15 @@ function createDialog(text, wordCount, wordBalance, selectedTone = null) {
   
   document.getElementById('sapienwrite-humanize').onclick = () => {
     const tone = document.getElementById('sapienwrite-tone').value;
+    const toneIntensity = document.getElementById('sapienwrite-tone-intensity')?.value || 'strong';
     selectedTone = tone; // Store globally so we can display it in result
-    console.log(`[Content] 🎨 User selected tone: "${tone}"`);
+    selectedToneIntensity = toneIntensity;
+    console.log(`[Content] 🎨 User selected tone: "${tone}" — intensity: "${toneIntensity}"`);
     safeChromeMessage({
       action: 'humanizeWithTone',
       text: text,
-      tone: tone
+      tone: tone,
+      toneIntensity: toneIntensity
     });
   };
 }
@@ -590,12 +609,19 @@ function showResult(originalText, humanizedText) {
     'funny': 'Funny'
   };
   
+  const intensityDisplayNames = {
+    'strong': 'Strong',
+    'medium': 'Medium',
+    'light': 'Light'
+  };
+  
   const toneDisplay = toneDisplayNames[selectedTone] || selectedTone;
+  const intensityDisplay = intensityDisplayNames[selectedToneIntensity] || selectedToneIntensity;
   
   content.innerHTML = `
     <div style="margin-bottom: 16px;">
       <div style="background: #dbeafe; border-left: 4px solid #2563eb; padding: 8px 12px; border-radius: 6px; margin-bottom: 8px;">
-        <p style="margin: 0; font-size: 12px; color: #1e40af; font-weight: 600;">✓ Humanized with ${toneDisplay} tone</p>
+        <p style=\"margin: 0; font-size: 12px; color: #1e40af; font-weight: 600;\">✓ Humanized with ${toneDisplay} tone — ${intensityDisplay}</p>`
       </div>
       <div style="background: #f0fdf4; border-left: 4px solid #22c55e; padding: 12px; border-radius: 8px; margin-bottom: 12px;">
         <p style="margin: 0; font-size: 13px; color: #166534; line-height: 1.5;">${humanizedText}</p>

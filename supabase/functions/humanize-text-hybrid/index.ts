@@ -65,6 +65,26 @@ async function detectLanguageIso(sample: string): Promise<{ code: string; name: 
   }
 }
 
+// Simple Jaccard similarity between word sets
+function jaccardSimilarity(a: string, b: string): number {
+  try {
+    const aw = new Set(a.toLowerCase().split(/\s+/).filter(Boolean));
+    const bw = new Set(b.toLowerCase().split(/\s+/).filter(Boolean));
+    if (aw.size === 0 && bw.size === 0) return 1;
+    const inter = [...aw].filter((w) => bw.has(w)).length;
+    const union = new Set([...aw, ...bw]).size;
+    return union === 0 ? 0 : inter / union;
+  } catch {
+    return 0;
+  }
+}
+
+const INTENSITY_THRESHOLDS: Record<string, number> = {
+  light: 0.85,
+  medium: 0.75,
+  strong: 0.6,
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
