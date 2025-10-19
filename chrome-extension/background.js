@@ -198,7 +198,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   const tone = toneMap[info.menuItemId];
   if (!tone) return; // Not a tone item
   
-  console.log(`[Background] Context menu → starting humanize immediately (tone=${tone}, intensity=strong, force=true)`);
+  console.log(`[Background] Context menu → starting humanize immediately (tone=${tone}, intensity=medium, force=true)`);
   
   const selectedText = info.selectionText;
   if (!selectedText) return;
@@ -292,8 +292,8 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     
     console.log('[Background] Usage check passed:', { plan, wordBalance, wordCount });
     
-    // IMMEDIATELY start humanization - don't wait for dialog button
-    await handleHumanizeRequest(selectedText, tone, 'strong', true, tab.id, info.frameId);
+    // IMMEDIATELY start humanization - don't wait for dialog button (using medium intensity for speed)
+    await handleHumanizeRequest(selectedText, tone, 'medium', true, tab.id, info.frameId);
     
   } catch (error) {
     console.error('[Background] Error in context menu handler:', error);

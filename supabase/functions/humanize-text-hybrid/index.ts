@@ -498,8 +498,16 @@ Fix ONLY what's grammatically wrong. If input is already correct, return it almo
       }
 
     } else if (userPlan === 'ultra' || userPlan === 'master') {
-      // ULTRA PLAN: Gemini + OpenAI + Claude (3 passes)
-      console.log('[HYBRID-HUMANIZE] Ultra plan - Triple-engine humanization');
+      // ULTRA PLAN: Fast track for extension, full pipeline for web
+      const isExtensionRequest = source === 'extension';
+      
+      if (isExtensionRequest) {
+        // EXTENSION FAST TRACK: 2 passes only (Gemini + OpenAI) - Skip Claude & Cleanup
+        console.log('[HYBRID-HUMANIZE] Ultra plan - Extension fast track (2 passes)');
+      } else {
+        // WEB FULL PIPELINE: All 4 passes (Gemini + OpenAI + Claude + Cleanup)
+        console.log('[HYBRID-HUMANIZE] Ultra plan - Web full pipeline (4 passes)');
+      }
       
       // Pass 1: Gemini for creative foundation
       const pass1Response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -562,54 +570,64 @@ Fix ONLY what's grammatically wrong. If input is already correct, return it almo
         const pass2LineBreaks = (pass2Result.match(/\n/g) || []).length;
         console.log(`[HYBRID-HUMANIZE] Pass 2 (OpenAI) complete - Line breaks: output=${pass2LineBreaks}`);
 
-        // Pass 3: Claude for final tone mastery
-        const pass3Response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${lovableApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'anthropic/claude-sonnet-4-20250514',
-            messages: [
-              { role: 'system', content: `${systemPrompt}\n\nYou are the final polishing layer. Perfect the tone, add nuanced personality, and ensure authentic human voice.` },
-              { role: 'user', content: `${langRule}\n\nABSOLUTELY CRITICAL:\n- Keep EVERY line break exactly where it appears\n- If there are numbered lists, preserve that exact format\n- FORBIDDEN to merge separate lines into paragraphs\n\nInput text:\n${pass2Result}` }
-            ],
-          }),
-        });
-
-        if (!pass3Response.ok) {
-          // Use Pass 2 result if Pass 3 fails
+        // FORK HERE: Extension skips Pass 3 & 4, Web continues
+        if (isExtensionRequest) {
+          // Extension: Stop at Pass 2, use result immediately
           finalText = pass2Result;
           passesCompleted = 2;
           enginesUsed = 'gemini-openai';
-          console.log('[HYBRID-HUMANIZE] Pass 3 failed, using Pass 2 result');
+          console.log('[HYBRID-HUMANIZE] Extension fast track complete - 2 passes');
         } else {
-          const pass3Data = await pass3Response.json();
-          finalText = pass3Data.choices[0].message.content;
-          if (finalText && finalText.trim().length > 0) { bestSoFar = finalText; }
-          passesCompleted = 3;
-          enginesUsed = 'gemini-openai-claude';
+          // Web: Continue with Pass 3 (Claude) and Pass 4 (Cleanup)
           
-          // Verify structure preservation after Pass 3
-          const pass3LineBreaks = (finalText.match(/\n/g) || []).length;
-          console.log(`[HYBRID-HUMANIZE] Pass 3 (Claude) complete - Line breaks: output=${pass3LineBreaks}`);
-          
-          // Pass 4: Anti-Detection Cleanup (ULTRA/MASTER ONLY)
-          console.log('[HYBRID-HUMANIZE] Pass 4: Anti-detection cleanup');
-          
-          const pass4Response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          // Pass 3: Claude for final tone mastery
+          const pass3Response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${lovableApiKey}`,
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              model: 'google/gemini-2.5-flash',
+              model: 'anthropic/claude-sonnet-4-20250514',
               messages: [
-                { 
-                  role: 'system', 
-                  content: `You are a human writing expert. Your ONLY job: make AI-generated text sound naturally human WITHOUT changing meaning.
+                { role: 'system', content: `${systemPrompt}\n\nYou are the final polishing layer. Perfect the tone, add nuanced personality, and ensure authentic human voice.` },
+                { role: 'user', content: `${langRule}\n\nABSOLUTELY CRITICAL:\n- Keep EVERY line break exactly where it appears\n- If there are numbered lists, preserve that exact format\n- FORBIDDEN to merge separate lines into paragraphs\n\nInput text:\n${pass2Result}` }
+              ],
+            }),
+          });
+
+          if (!pass3Response.ok) {
+            // Use Pass 2 result if Pass 3 fails
+            finalText = pass2Result;
+            passesCompleted = 2;
+            enginesUsed = 'gemini-openai';
+            console.log('[HYBRID-HUMANIZE] Pass 3 failed, using Pass 2 result');
+          } else {
+            const pass3Data = await pass3Response.json();
+            finalText = pass3Data.choices[0].message.content;
+            if (finalText && finalText.trim().length > 0) { bestSoFar = finalText; }
+            passesCompleted = 3;
+            enginesUsed = 'gemini-openai-claude';
+            
+            // Verify structure preservation after Pass 3
+            const pass3LineBreaks = (finalText.match(/\n/g) || []).length;
+            console.log(`[HYBRID-HUMANIZE] Pass 3 (Claude) complete - Line breaks: output=${pass3LineBreaks}`);
+            
+            // Pass 4: Anti-Detection Cleanup (WEB ONLY)
+            console.log('[HYBRID-HUMANIZE] Pass 4: Anti-detection cleanup (web only)');
+            
+            const pass4Response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${lovableApiKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                model: 'google/gemini-2.5-flash',
+                messages: [
+                  { 
+                    role: 'system', 
+                    content: `You are a human writing expert. Your ONLY job: make AI-generated text sound naturally human WITHOUT changing meaning.
 
 REMOVE these AI fingerprints:
 - "Moreover," "Furthermore," "Ultimately," "Consequently" → replace with "But," "So," "And," "Plus"
@@ -628,26 +646,27 @@ PRESERVE STRUCTURE:
 - Same language: ${inputLangName} [${inputLangCode}]
 - Preserve all lists exactly
 - Plain text only, no markdown`
-                },
-                { 
-                  role: 'user', 
-                  content: `${langRule}\n\nRemove AI patterns from this text while keeping meaning identical:\n\n${finalText}` 
-                }
-              ],
-            }),
-          });
+                  },
+                  { 
+                    role: 'user', 
+                    content: `${langRule}\n\nRemove AI patterns from this text while keeping meaning identical:\n\n${finalText}` 
+                  }
+                ],
+              }),
+            });
 
-          if (!pass4Response.ok) {
-            console.log('[HYBRID-HUMANIZE] Pass 4 failed, using Pass 3 result');
-          } else {
-            const pass4Data = await pass4Response.json();
-            finalText = pass4Data.choices[0].message.content;
-            if (finalText && finalText.trim().length > 0) { bestSoFar = finalText; }
-            passesCompleted = 4;
-            enginesUsed = 'gemini-gpt-claude-cleanup';
-            
-            const pass4LineBreaks = (finalText.match(/\n/g) || []).length;
-            console.log(`[HYBRID-HUMANIZE] Pass 4 (Cleanup) complete - Line breaks: output=${pass4LineBreaks}`);
+            if (!pass4Response.ok) {
+              console.log('[HYBRID-HUMANIZE] Pass 4 failed, using Pass 3 result');
+            } else {
+              const pass4Data = await pass4Response.json();
+              finalText = pass4Data.choices[0].message.content;
+              if (finalText && finalText.trim().length > 0) { bestSoFar = finalText; }
+              passesCompleted = 4;
+              enginesUsed = 'gemini-gpt-claude-cleanup';
+              
+              const pass4LineBreaks = (finalText.match(/\n/g) || []).length;
+              console.log(`[HYBRID-HUMANIZE] Pass 4 (Cleanup) complete - Line breaks: output=${pass4LineBreaks}`);
+            }
           }
         }
       }
