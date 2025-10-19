@@ -189,6 +189,8 @@ document.addEventListener('keyup', () => {
 
 // Replace text in DOM - with improved INPUT/TEXTAREA and contenteditable support
 function replaceSelectedText(originalText, humanizedText) {
+  closeDialog(); // Close any processing dialog immediately
+  
   try {
     const selection = window.getSelection();
     let range = lastSelection?.range?.cloneRange();
@@ -594,6 +596,68 @@ function showError(errorMessage) {
   document.getElementById('sapienwrite-close-error').onclick = closeDialog;
 }
 
+// Show replacement notification with undo option
+function showReplacementNotification(originalText, humanizedText) {
+  const container = createNotificationContainer();
+  
+  const notification = document.createElement('div');
+  notification.style.cssText = `
+    background: #f0fdf4;
+    border-left: 4px solid #22c55e;
+    color: #166534;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    pointer-events: auto;
+    animation: slideIn 0.3s ease;
+    max-width: 320px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  `;
+  
+  notification.innerHTML = `
+    <span>✓ Text replaced!</span>
+    <button id="sapienwrite-undo-btn" style="
+      background: #ffffff;
+      border: 1px solid #22c55e;
+      color: #166534;
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    ">Undo</button>
+  `;
+  
+  container.appendChild(notification);
+  
+  // Undo button handler
+  const undoBtn = notification.querySelector('#sapienwrite-undo-btn');
+  undoBtn.onclick = () => {
+    restoreOriginalText();
+    if (notification.parentNode) {
+      notification.parentNode.removeChild(notification);
+    }
+  };
+  
+  // Auto-remove after 8 seconds
+  setTimeout(() => {
+    notification.style.animation = 'slideOut 0.3s ease';
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.parentNode.removeChild(notification);
+      }
+    }, 300);
+  }, 8000);
+}
+
 // Show upgrade required dialog
 function showUpgradeRequiredDialog(currentPlan) {
   // Remove existing dialog
@@ -717,7 +781,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   
   if (message.action === 'replaceText') {
-    replaceSelectedText(message.originalText, message.humanizedText);
+    const replaced = replaceSelectedText(message.originalText, message.humanizedText);
+    if (replaced) {
+      showReplacementNotification(message.originalText, message.humanizedText);
+    }
   }
   
   if (message.action === 'showUpgradeRequired') {

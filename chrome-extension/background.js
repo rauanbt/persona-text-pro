@@ -202,8 +202,9 @@ async function handleHumanizeRequest(text, tone, tabId, frameId) {
     
     console.log('[Background] Text humanized successfully');
     
+    // Automatically replace text
     chrome.tabs.sendMessage(tabId, {
-      action: 'showResult',
+      action: 'replaceText',
       originalText: text,
       humanizedText: result.humanizedText
     }, { frameId });
