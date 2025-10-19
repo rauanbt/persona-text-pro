@@ -172,7 +172,17 @@ function showError(message) {
 async function loadUserData() {
   try {
     const session = await getSession();
+    
     if (!session) {
+      console.log('[Popup] No session found');
+      showLoginView();
+      return;
+    }
+    
+    // Validate session has required fields
+    if (!session.user || !session.access_token) {
+      console.log('[Popup] Invalid session - missing fields');
+      await clearSession();
       showLoginView();
       return;
     }
@@ -239,6 +249,15 @@ function updatePlanBadge(plan) {
 async function fetchWordBalance() {
   try {
     const session = await getSession();
+    
+    // Validate session before using it
+    if (!session || !session.user) {
+      console.error('[Popup] No valid session for word balance');
+      await clearSession();
+      showLoginView();
+      return;
+    }
+    
     const plan = subscriptionData.plan || 'free';
     const extensionLimit = EXT_LIMITS[plan] || 750;
     

@@ -1,6 +1,11 @@
 // Authentication Helper Functions - Simple and Reliable
 // Uses ONLY chrome.storage.local for guaranteed reliability
 
+// Refresh token locking to prevent concurrent refresh attempts
+let refreshPromise = null;
+let lastRefreshAttempt = 0;
+const REFRESH_COOLDOWN = 5000; // 5 seconds between refresh attempts
+
 // Simple storage wrapper with timeout protection
 async function storageGet(keys) {
   return new Promise((resolve) => {
@@ -107,47 +112,76 @@ async function storeSession(session) {
 
 // Refresh session using refresh_token
 async function refreshSession() {
+  // If already refreshing, wait for that to complete
+  if (refreshPromise) {
+    console.log('[Auth] Refresh already in progress, waiting...');
+    return await refreshPromise;
+  }
+  
+  // Cooldown check to prevent rapid retries
+  const now = Date.now();
+  if (now - lastRefreshAttempt < REFRESH_COOLDOWN) {
+    console.log('[Auth] Refresh cooldown active');
+    return null;
+  }
+  
+  lastRefreshAttempt = now;
+  
   const data = await storageGet(['refresh_token', 'user_email', 'user_id']);
   if (!data.refresh_token) {
     console.log('[Auth] No refresh_token available');
     return null;
   }
   
-  try {
-    const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': SUPABASE_ANON_KEY
-      },
-      body: JSON.stringify({ refresh_token: data.refresh_token })
-    });
-    
-    if (!res.ok) {
-      const errText = await res.text();
-      console.error('[Auth] Refresh failed:', errText);
-      return null;
-    }
-    
-    const json = await res.json();
-    const expires_at = Math.floor(Date.now() / 1000) + (json.expires_in || 3600);
-    const newSession = {
-      access_token: json.access_token,
-      refresh_token: json.refresh_token || data.refresh_token,
-      expires_at,
-      user: {
-        email: json.user?.email || data.user_email,
-        id: json.user?.id || data.user_id
+  // Create the refresh promise and store it
+  refreshPromise = (async () => {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY
+        },
+        body: JSON.stringify({ refresh_token: data.refresh_token })
+      });
+      
+      if (!res.ok) {
+        const errText = await res.text();
+        console.error('[Auth] Refresh failed:', errText);
+        
+        // If refresh token is invalid/expired, clear session
+        if (errText.includes('refresh_token_already_used') || 
+            errText.includes('Invalid Refresh Token')) {
+          console.log('[Auth] Refresh token invalid - clearing session');
+          await clearSession();
+        }
+        return null;
       }
-    };
-    
-    await storeSession(newSession);
-    console.log('[Auth] Session refreshed successfully');
-    return newSession;
-  } catch (error) {
-    console.error('[Auth] Refresh error:', error);
-    return null;
-  }
+      
+      const json = await res.json();
+      const expires_at = Math.floor(Date.now() / 1000) + (json.expires_in || 3600);
+      const newSession = {
+        access_token: json.access_token,
+        refresh_token: json.refresh_token || data.refresh_token,
+        expires_at,
+        user: {
+          email: json.user?.email || data.user_email,
+          id: json.user?.id || data.user_id
+        }
+      };
+      
+      await storeSession(newSession);
+      console.log('[Auth] Session refreshed successfully');
+      return newSession;
+    } catch (error) {
+      console.error('[Auth] Refresh error:', error);
+      return null;
+    } finally {
+      refreshPromise = null; // Clear the lock
+    }
+  })();
+  
+  return await refreshPromise;
 }
 
 // Get session from chrome.storage.local
@@ -166,7 +200,7 @@ async function getSession() {
   }
   
   const now = Math.floor(Date.now() / 1000);
-  const skew = 10; // seconds buffer
+  const skew = 60; // Increased from 10 to 60 seconds buffer
   
   // Check if token is expired or near expiry
   if (data.expires_at && now >= (data.expires_at - skew)) {

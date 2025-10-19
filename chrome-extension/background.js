@@ -4,6 +4,18 @@ console.log('[Background] Service worker initialized');
 
 self.importScripts('config.js', 'auth.js');
 
+// Safe message sending helper
+async function safeSendMessage(tabId, message, options = {}) {
+  try {
+    await chrome.tabs.sendMessage(tabId, message, options);
+  } catch (error) {
+    // Silently ignore "receiving end does not exist" errors
+    if (!error.message?.includes('Receiving end does not exist')) {
+      console.error('[Background] Message send error:', error);
+    }
+  }
+}
+
 // Create context menu with tone submenu
 chrome.runtime.onInstalled.addListener(() => {
   console.log('[Background] Extension installed');
@@ -59,7 +71,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   
   const authenticated = await isAuthenticated();
   if (!authenticated) {
-    chrome.tabs.sendMessage(tab.id, {
+    await safeSendMessage(tab.id, {
       action: 'showNotification',
       message: 'Please login to use SapienWrite extension',
       type: 'error'
@@ -72,7 +84,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     const plan = subscriptionData.plan || 'free';
     
     if (plan !== 'extension_only' && plan !== 'master' && plan !== 'ultra') {
-      chrome.tabs.sendMessage(tab.id, {
+      await safeSendMessage(tab.id, {
         action: 'showUpgradeRequired',
         currentPlan: plan
       }, { frameId: info.frameId });
@@ -81,6 +93,18 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     
     const wordCount = selectedText.trim().split(/\s+/).length;
     const session = await getSession();
+    
+    // Validate session before using it
+    if (!session || !session.user) {
+      console.error('[Background] No valid session');
+      await safeSendMessage(tab.id, {
+        action: 'showNotification',
+        message: 'Session expired. Please reconnect the extension.',
+        type: 'error'
+      }, { frameId: info.frameId });
+      return;
+    }
+    
     const extensionLimit = EXTENSION_LIMITS[plan] || 750;
     
     const response = await fetch(
@@ -112,7 +136,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     
     // Check if user has enough words
     if (wordCount > wordBalance) {
-      chrome.tabs.sendMessage(tab.id, {
+      await safeSendMessage(tab.id, {
         action: 'showNotification',
         message: `Not enough words! Need ${wordCount}, have ${wordBalance}.`,
         type: 'error'
@@ -125,7 +149,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     
   } catch (error) {
     console.error('[Background] Error:', error);
-    chrome.tabs.sendMessage(tab.id, {
+    await safeSendMessage(tab.id, {
       action: 'showNotification',
       message: 'Failed to check account. Please try again.',
       type: 'error'
@@ -227,7 +251,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // Handle humanize request
 async function handleHumanizeRequest(text, tone, tabId, frameId) {
   try {
-    chrome.tabs.sendMessage(tabId, { action: 'showProcessing' }, { frameId });
+    await safeSendMessage(tabId, { action: 'showProcessing' }, { frameId });
     
     const result = await callSupabaseFunction('humanize-text-hybrid', {
       text: text,
@@ -245,7 +269,7 @@ async function handleHumanizeRequest(text, tone, tabId, frameId) {
     }
     
     // Automatically replace text
-    chrome.tabs.sendMessage(tabId, {
+    await safeSendMessage(tabId, {
       action: 'replaceText',
       originalText: text,
       humanizedText: humanizedText
@@ -253,7 +277,7 @@ async function handleHumanizeRequest(text, tone, tabId, frameId) {
     
   } catch (error) {
     console.error('[Background] Error humanizing:', error);
-    chrome.tabs.sendMessage(tabId, {
+    await safeSendMessage(tabId, {
       action: 'showError',
       message: error.message || 'Failed to humanize text'
     }, { frameId });
