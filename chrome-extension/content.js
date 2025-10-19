@@ -123,6 +123,7 @@ safeAppendToHead(style);
 
 // Track last selected range
 let lastSelection = null;
+let lastReplacement = null; // Track last replacement for undo
 
 document.addEventListener('mouseup', () => {
   const selection = window.getSelection();
@@ -136,64 +137,123 @@ document.addEventListener('mouseup', () => {
 
 // Replace text in DOM
 function replaceSelectedText(originalText, humanizedText) {
-  const selection = window.getSelection();
-  
-  if (!selection.rangeCount) {
-    console.log('[Content] No selection range');
-    // Try to use last selection
-    if (lastSelection && lastSelection.text === originalText) {
-      const range = lastSelection.range;
-      range.deleteContents();
-      range.insertNode(document.createTextNode(humanizedText));
-      showNotification('Text humanized successfully!', 'success');
-      return;
+  try {
+    const selection = window.getSelection();
+    let range = lastSelection?.range;
+    
+    if (!range && selection.rangeCount > 0) {
+      range = selection.getRangeAt(0);
     }
-    showNotification('Could not replace text. Please try again.', 'error');
+    
+    if (range) {
+      // Check if we're in an editable element
+      const container = range.commonAncestorContainer;
+      const editableElement = container.nodeType === 3 
+        ? container.parentElement 
+        : container;
+      
+      if (editableElement.isContentEditable || 
+          editableElement.tagName === 'TEXTAREA' || 
+          editableElement.tagName === 'INPUT') {
+        
+        // Handle contenteditable, textarea, or input
+        if (editableElement.tagName === 'TEXTAREA' || editableElement.tagName === 'INPUT') {
+          const start = editableElement.selectionStart;
+          const end = editableElement.selectionEnd;
+          const value = editableElement.value;
+          editableElement.value = value.substring(0, start) + humanizedText + value.substring(end);
+          editableElement.selectionStart = editableElement.selectionEnd = start + humanizedText.length;
+          
+          // Trigger input event
+          editableElement.dispatchEvent(new Event('input', { bubbles: true }));
+          
+          // Store replacement for undo
+          lastReplacement = {
+            originalText: originalText,
+            humanizedText: humanizedText,
+            element: editableElement,
+            start: start,
+            end: start + humanizedText.length
+          };
+        } else {
+          // ContentEditable
+          range.deleteContents();
+          const textNode = document.createTextNode(humanizedText);
+          range.insertNode(textNode);
+          
+          // Move cursor to end of inserted text
+          range.setStartAfter(textNode);
+          range.setEndAfter(textNode);
+          selection.removeAllRanges();
+          selection.addRange(range);
+          
+          // Trigger input event
+          editableElement.dispatchEvent(new Event('input', { bubbles: true }));
+          
+          // Store replacement for undo
+          lastReplacement = {
+            originalText: originalText,
+            humanizedText: humanizedText,
+            element: editableElement,
+            textNode: textNode
+          };
+        }
+        
+        showNotification('Text replaced successfully!', 'success');
+        return true;
+      }
+    }
+    
+    // Fallback: copy to clipboard
+    navigator.clipboard.writeText(humanizedText);
+    showNotification('Text copied to clipboard! (Could not replace automatically)', 'success');
+    return false;
+  } catch (error) {
+    console.error('[Content] Error replacing text:', error);
+    navigator.clipboard.writeText(humanizedText);
+    showNotification('Text copied to clipboard! (Could not replace automatically)', 'success');
+    return false;
+  }
+}
+
+// Restore original text after replacement
+function restoreOriginalText() {
+  if (!lastReplacement) {
+    showNotification('No text to restore', 'error');
     return;
   }
   
-  const range = selection.getRangeAt(0);
-  
-  // Verify selected text matches
-  if (range.toString() === originalText) {
-    range.deleteContents();
-    range.insertNode(document.createTextNode(humanizedText));
-    showNotification('Text humanized successfully!', 'success');
+  try {
+    const { originalText, humanizedText, element } = lastReplacement;
     
-    // Clear selection
-    selection.removeAllRanges();
-  } else {
-    // Text doesn't match, try to find and replace in editable elements
-    const activeElement = document.activeElement;
-    if (activeElement && (activeElement.tagName === 'TEXTAREA' || activeElement.tagName === 'INPUT')) {
-      const start = activeElement.selectionStart;
-      const end = activeElement.selectionEnd;
-      const text = activeElement.value;
+    if (element.tagName === 'TEXTAREA' || element.tagName === 'INPUT') {
+      const value = element.value;
+      const humanizedIndex = value.indexOf(humanizedText);
       
-      if (text.substring(start, end) === originalText) {
-        activeElement.value = text.substring(0, start) + humanizedText + text.substring(end);
-        showNotification('Text humanized successfully!', 'success');
-        return;
+      if (humanizedIndex !== -1) {
+        element.value = value.substring(0, humanizedIndex) + originalText + value.substring(humanizedIndex + humanizedText.length);
+        element.dispatchEvent(new Event('input', { bubbles: true }));
+        showNotification('Original text restored!', 'success');
+      } else {
+        showNotification('Could not find text to restore', 'error');
+      }
+    } else if (element.isContentEditable) {
+      const textContent = element.textContent;
+      const humanizedIndex = textContent.indexOf(humanizedText);
+      
+      if (humanizedIndex !== -1) {
+        element.textContent = textContent.substring(0, humanizedIndex) + originalText + textContent.substring(humanizedIndex + humanizedText.length);
+        element.dispatchEvent(new Event('input', { bubbles: true }));
+        showNotification('Original text restored!', 'success');
+      } else {
+        showNotification('Could not find text to restore', 'error');
       }
     }
     
-    // Try contenteditable
-    if (activeElement && activeElement.isContentEditable) {
-      const text = activeElement.innerText;
-      if (text.includes(originalText)) {
-        activeElement.innerText = text.replace(originalText, humanizedText);
-        showNotification('Text humanized successfully!', 'success');
-        return;
-      }
-    }
-    
-    console.log('[Content] Could not find matching text to replace');
-    showNotification('Could not replace text. Please copy the result from clipboard.', 'info');
-    
-    // Copy to clipboard as fallback
-    navigator.clipboard.writeText(humanizedText).then(() => {
-      showNotification('Humanized text copied to clipboard!', 'success');
-    });
+    lastReplacement = null;
+  } catch (error) {
+    console.error('[Content] Error restoring text:', error);
+    showNotification('Failed to restore text', 'error');
   }
 }
 
@@ -356,7 +416,10 @@ function showProcessing() {
 }
 
 function showResult(originalText, humanizedText) {
-  const content = document.getElementById('sapienwrite-dialog-content');
+  const dialog = document.getElementById('sapienwrite-dialog');
+  if (!dialog) return;
+  
+  const content = dialog.querySelector('#sapienwrite-dialog-content') || document.getElementById('sapienwrite-dialog-content');
   if (!content) return;
   
   content.innerHTML = `
@@ -365,19 +428,50 @@ function showResult(originalText, humanizedText) {
         <p style="margin: 0; font-size: 13px; color: #166534; line-height: 1.5;">${humanizedText}</p>
       </div>
     </div>
-    <div style="display: flex; gap: 12px;">
+    <div style="display: flex; gap: 8px;">
       <button id="sapienwrite-replace" style="flex: 1; padding: 12px; background: #22c55e; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">
         Replace Text
       </button>
       <button id="sapienwrite-copy" style="flex: 1; padding: 12px; background: #2563eb; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">
         Copy
       </button>
+      <button id="sapienwrite-close-result" style="flex: 1; padding: 12px; background: #f5f5f5; color: #666; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">
+        Close
+      </button>
     </div>
   `;
   
   document.getElementById('sapienwrite-replace').onclick = () => {
-    replaceSelectedText(originalText, humanizedText);
-    closeDialog();
+    const replaced = replaceSelectedText(originalText, humanizedText);
+    
+    if (replaced) {
+      // Show post-replacement UI with Restore option
+      content.innerHTML = `
+        <div style="background: #f0fdf4; border-left: 4px solid #22c55e; padding: 12px; border-radius: 8px; margin-bottom: 12px;">
+          <p style="margin: 0; font-size: 14px; color: #166534; font-weight: 600;">✓ Text replaced successfully!</p>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button id="sapienwrite-restore" style="flex: 1; padding: 12px; background: #f59e0b; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">
+            ↶ Restore Original
+          </button>
+          <button id="sapienwrite-close-final" style="flex: 1; padding: 12px; background: #f5f5f5; color: #666; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">
+            Close
+          </button>
+        </div>
+      `;
+      
+      document.getElementById('sapienwrite-restore').onclick = () => {
+        restoreOriginalText();
+        closeDialog();
+      };
+      
+      document.getElementById('sapienwrite-close-final').onclick = closeDialog;
+      
+      // Auto-close after 8 seconds
+      setTimeout(closeDialog, 8000);
+    } else {
+      closeDialog();
+    }
   };
   
   document.getElementById('sapienwrite-copy').onclick = () => {
@@ -385,6 +479,8 @@ function showResult(originalText, humanizedText) {
     showNotification('Copied to clipboard!', 'success');
     closeDialog();
   };
+  
+  document.getElementById('sapienwrite-close-result').onclick = closeDialog;
 }
 
 function showError(errorMessage) {

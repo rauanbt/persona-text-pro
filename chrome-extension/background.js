@@ -17,12 +17,12 @@ chrome.runtime.onInstalled.addListener(() => {
   
   // Create tone submenu items
   const tones = [
-    { id: 'tone-regular', title: 'Regular' },
-    { id: 'tone-professional', title: 'Professional' },
-    { id: 'tone-casual', title: 'Casual' },
-    { id: 'tone-academic', title: 'Academic' },
-    { id: 'tone-creative', title: 'Creative' },
-    { id: 'tone-conversational', title: 'Conversational' }
+    { id: 'tone-regular', title: 'Regular - Natural, balanced' },
+    { id: 'tone-formal', title: 'Formal/Academic - Professional, scholarly' },
+    { id: 'tone-persuasive', title: 'Persuasive/Sales - Compelling, convincing' },
+    { id: 'tone-empathetic', title: 'Empathetic/Warm - Understanding, caring' },
+    { id: 'tone-sarcastic', title: 'Sarcastic - Witty, ironic' },
+    { id: 'tone-funny', title: 'Funny - Humorous, entertaining' }
   ];
   
   tones.forEach(tone => {
@@ -42,11 +42,11 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   // Check if it's a tone submenu item
   const toneMap = {
     'tone-regular': 'regular',
-    'tone-professional': 'professional',
-    'tone-casual': 'casual',
-    'tone-academic': 'academic',
-    'tone-creative': 'creative',
-    'tone-conversational': 'conversational'
+    'tone-formal': 'formal',
+    'tone-persuasive': 'persuasive',
+    'tone-empathetic': 'empathetic',
+    'tone-sarcastic': 'sarcastic',
+    'tone-funny': 'funny'
   };
   
   const tone = toneMap[info.menuItemId];
