@@ -443,25 +443,26 @@ async function handleHumanizeRequest(text, tone, toneIntensity, forceRewrite, ta
     
     console.log('[Background] ✅ Response received - tone:', tone, 'intensity:', toneIntensity);
     
-    // Extract humanized text (edge function returns snake_case)
-    const humanizedText = result.humanized_text || result.humanizedText;
-    
-    if (!humanizedText || humanizedText.trim() === '') {
-      throw new Error('Empty response from humanization service');
-    }
-    
+    // Extract similarity meta if available
+    const simBeforeMeta = typeof result.similarity_before === 'number' ? result.similarity_before : undefined;
+    const simAfterMeta = typeof result.similarity_after === 'number' ? result.similarity_after : undefined;
+
     // Check if result is too similar to original
     const similarity = quickSimilarity(text, humanizedText);
-    console.log(`[Background] Similarity check: ${(similarity * 100).toFixed(1)}%`);
+    console.log(`[Background] Similarity check: ${(similarity * 100).toFixed(1)}%`, simBeforeMeta !== undefined ? `(server before=${(simBeforeMeta*100).toFixed(1)}% after=${(simAfterMeta*100).toFixed(1)}%)` : '');
     
-    if (similarity > 0.9 && tone !== 'regular') {
+    const tooSimilar = (similarity > 0.85) || (humanizedText.trim() === text.trim());
+    if (tone !== 'regular' && tooSimilar) {
       // Too similar - show result dialog with warning instead of silent replace
       console.warn('[Background] Result too similar to original, showing dialog with warning');
+      const metaLine = (simBeforeMeta !== undefined && simAfterMeta !== undefined)
+        ? ` (server similarity: before ${(simBeforeMeta*100).toFixed(0)}% → after ${(simAfterMeta*100).toFixed(0)}%)`
+        : '';
       await safeSendMessage(tabId, {
         action: 'showResult',
         originalText: text,
         humanizedText: humanizedText,
-        warning: `⚠️ Text came back ${(similarity * 100).toFixed(0)}% similar. Try a different tone or stronger intensity.`
+        warning: `⚠️ Text came back ${(similarity * 100).toFixed(0)}% similar.${metaLine} Try a different tone or stronger intensity.`
       }, { frameId });
     } else {
       // Good change - automatically replace text

@@ -664,12 +664,29 @@ PRESERVE STRUCTURE:
     const intensity = ['light','medium','strong'].includes(tone_intensity) ? tone_intensity : 'strong';
     const threshold = INTENSITY_THRESHOLDS[intensity] ?? INTENSITY_THRESHOLDS.strong;
     const isShortText = wordCount < 30;
+
+    // Guard: ensure we have a non-empty draft for similarity checks
+    if (!finalText || finalText.trim().length === 0) {
+      console.warn('[TONE] finalText empty → using bestSoFar for similarity');
+      finalText = (bestSoFar && bestSoFar.trim().length > 0) ? bestSoFar : text;
+    }
+
     let simBefore = jaccardSimilarity(text, finalText);
     let sim = simBefore;
     
     console.log(`[TONE] tone="${tone}" intensity="${intensity}" force_rewrite=${force_rewrite} short_text=${isShortText} similarity(before)=${sim.toFixed(3)} threshold=${threshold}`);
 
-    if (tone !== 'regular' && sim > threshold) {
+    // Always run at least one booster for non-regular tones when:
+    // - force_rewrite is true (default), or
+    // - similarity above intensity threshold, or very high (>= 0.85), or extremely low (<= 0.01), or
+    // - draft equals original text
+    const shouldForceBooster = (
+      tone !== 'regular' && (
+        force_rewrite || sim > threshold || sim >= 0.85 || finalText.trim() === text.trim() || sim <= 0.01
+      )
+    );
+
+    if (shouldForceBooster) {
       const changePct = Math.round(CHANGE_TARGET[intensity] * 100);
       const toneReinforcements: Record<string, string> = {
         formal: 'Use "However," "Additionally," "Therefore" naturally; reduce contractions; executive clarity; permit clause inversion for emphasis.',
@@ -702,7 +719,7 @@ ${extraToneReinforcement}${shortTextPromptAddition}
 Engine: ${engineName}`;
 
       // Booster pass 1: gemini-2.5-pro
-      if (sim > threshold) {
+      if (sim > threshold || force_rewrite || sim >= 0.85 || finalText.trim() === text.trim() || sim <= 0.01) {
         const system = boosterPromptBase(toneReinforcements[tone] || '', 'google/gemini-2.5-pro');
         const userContent = `${langRule}
 
@@ -876,7 +893,7 @@ This draft is still too similar to ORIGINAL (similarity=${sim.toFixed(3)}). Rewr
       finalText = text;
     }
 
-    return await finalizeResponse(supabase, userData.user.id, text, finalText, tone, wordCount, currentMonth, usage, currentUsage, planLimit, extraWords, passesCompleted, enginesUsed, source, userPlan);
+    return await finalizeResponse(supabase, userData.user.id, text, finalText, tone, wordCount, currentMonth, usage, currentUsage, planLimit, extraWords, passesCompleted, enginesUsed, source, userPlan, simBefore, sim);
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
@@ -903,7 +920,9 @@ async function finalizeResponse(
   passesCompleted: number = 2,
   enginesUsed: string = 'openai-dual-pass',
   source: string = 'web',
-  userPlan: string = 'free'
+  userPlan: string = 'free',
+  similarityBefore?: number,
+  similarityAfter?: number
 ) {
   const isExtensionRequest = source === 'extension';
   const hasExtensionAccess = ['ultra', 'master'].includes(userPlan);
@@ -992,6 +1011,8 @@ async function finalizeResponse(
     total_remaining: totalRemaining,
     passes_completed: passesCompleted,
     engine: enginesUsed,
+    similarity_before: similarityBefore,
+    similarity_after: similarityAfter,
     editor_note: editorNote || undefined,
     source: source
   }), {
