@@ -199,20 +199,14 @@ async function loadUserData() {
 // Show upgrade card for Free/Pro users
 function showUpgradeRequiredCard(plan) {
   const upgradeCard = document.getElementById('upgrade-required-card');
-  const quickHumanize = document.querySelector('.card:has(#quick-text)');
-  const wordBalanceCard = quickHumanize?.previousElementSibling;
   
   if (plan === 'free' || plan === 'pro' || plan === 'wordsmith') {
     upgradeCard.classList.remove('hidden');
-    if (quickHumanize) quickHumanize.style.display = 'none';
-    if (wordBalanceCard) wordBalanceCard.style.display = 'none';
     
     const planNames = { free: 'Free', pro: 'Pro', wordsmith: 'Pro' };
     document.getElementById('current-plan-name').textContent = planNames[plan] || plan;
   } else {
     upgradeCard.classList.add('hidden');
-    if (quickHumanize) quickHumanize.style.display = 'block';
-    if (wordBalanceCard) wordBalanceCard.style.display = 'block';
   }
 }
 
@@ -272,10 +266,9 @@ async function fetchWordBalance() {
       const extensionUsed = usageData.extension_words_used || 0;
       wordBalance = Math.max(0, extensionLimit - extensionUsed);
     } else if (plan === 'ultra' || plan === 'master') {
-      const extensionRemaining = Math.max(0, 5000 - (usageData.extension_words_used || 0));
-      const webRemaining = Math.max(0, 30000 - (usageData.words_used || 0));
-      wordBalance = extensionRemaining + webRemaining;
-      totalLimit = 35000; // 5k extension + 30k web for progress bar
+      const totalUsed = (usageData.words_used || 0) + (usageData.extension_words_used || 0);
+      wordBalance = Math.max(0, 30000 - totalUsed);
+      totalLimit = 30000; // Shared 30k pool for web + extension
     } else {
       wordBalance = 0;
     }
@@ -361,51 +354,6 @@ document.getElementById('logout-link')?.addEventListener('click', async (e) => {
   e.preventDefault();
   await clearSession();
   showLoginView();
-});
-
-document.getElementById('humanize-button')?.addEventListener('click', async () => {
-  const text = document.getElementById('quick-text').value.trim();
-  
-  if (!text) {
-    showError('Please enter text to humanize');
-    return;
-  }
-  
-  const wordCount = text.split(/\s+/).length;
-  
-  if (wordBalance < wordCount) {
-    showError(`Not enough words! Need ${wordCount}, have ${wordBalance}.`);
-    document.getElementById('upgrade-prompt').classList.remove('hidden');
-    return;
-  }
-  
-  const button = document.getElementById('humanize-button');
-  button.disabled = true;
-  button.textContent = 'Humanizing...';
-  
-  try {
-    const result = await callSupabaseFunction('humanize-text-hybrid', {
-      text: text,
-      tone: 'regular',
-      source: 'extension'
-    });
-    
-    await navigator.clipboard.writeText(result.humanizedText);
-    button.textContent = '✓ Copied to Clipboard!';
-    
-    await fetchWordBalance();
-    
-    setTimeout(() => {
-      button.disabled = false;
-      button.textContent = 'Humanize Text';
-      document.getElementById('quick-text').value = '';
-    }, 2000);
-  } catch (error) {
-    console.error('[Popup] Humanize error:', error);
-    showError('Humanization failed. Please try again.');
-    button.disabled = false;
-    button.textContent = 'Humanize Text';
-  }
 });
 
 // Listen for storage changes

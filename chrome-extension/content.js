@@ -297,6 +297,45 @@ function closeDialog() {
 }
 
 function showProcessing() {
+  // Check if dialog exists, create minimal one if not
+  let dialog = document.getElementById('sapienwrite-dialog');
+  if (!dialog) {
+    dialog = document.createElement('div');
+    dialog.id = 'sapienwrite-dialog';
+    dialog.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 999999;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      padding: 24px;
+      max-width: 500px;
+      width: 90%;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    `;
+    
+    dialog.innerHTML = `<div id="sapienwrite-dialog-content"></div>`;
+    
+    // Add backdrop
+    const backdrop = document.createElement('div');
+    backdrop.id = 'sapienwrite-backdrop';
+    backdrop.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 999998;
+    `;
+    
+    safeAppendToBody(backdrop);
+    safeAppendToBody(dialog);
+  }
+  
   const content = document.getElementById('sapienwrite-dialog-content');
   if (!content) return;
   

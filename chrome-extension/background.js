@@ -4,96 +4,132 @@ console.log('[Background] Service worker initialized');
 
 self.importScripts('config.js', 'auth.js');
 
-// Create context menu
+// Create context menu with tone submenu
 chrome.runtime.onInstalled.addListener(() => {
   console.log('[Background] Extension installed');
   
+  // Create parent menu item
   chrome.contextMenus.create({
-    id: 'humanize-selection',
+    id: 'humanize-parent',
     title: 'Humanize with SapienWrite',
     contexts: ['selection']
   });
   
-  console.log('[Background] Context menu created');
+  // Create tone submenu items
+  const tones = [
+    { id: 'tone-regular', title: 'Regular' },
+    { id: 'tone-professional', title: 'Professional' },
+    { id: 'tone-casual', title: 'Casual' },
+    { id: 'tone-academic', title: 'Academic' },
+    { id: 'tone-creative', title: 'Creative' },
+    { id: 'tone-conversational', title: 'Conversational' }
+  ];
+  
+  tones.forEach(tone => {
+    chrome.contextMenus.create({
+      id: tone.id,
+      parentId: 'humanize-parent',
+      title: tone.title,
+      contexts: ['selection']
+    });
+  });
+  
+  console.log('[Background] Context menu with tone submenu created');
 });
 
 // Handle context menu clicks
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-  if (info.menuItemId === 'humanize-selection') {
-    console.log('[Background] Context menu clicked');
+  // Check if it's a tone submenu item
+  const toneMap = {
+    'tone-regular': 'regular',
+    'tone-professional': 'professional',
+    'tone-casual': 'casual',
+    'tone-academic': 'academic',
+    'tone-creative': 'creative',
+    'tone-conversational': 'conversational'
+  };
+  
+  const tone = toneMap[info.menuItemId];
+  if (!tone) return; // Not a tone item
+  
+  console.log('[Background] Context menu clicked with tone:', tone);
+  
+  const selectedText = info.selectionText;
+  if (!selectedText) return;
+  
+  const authenticated = await isAuthenticated();
+  if (!authenticated) {
+    chrome.tabs.sendMessage(tab.id, {
+      action: 'showNotification',
+      message: 'Please login to use SapienWrite extension',
+      type: 'error'
+    });
+    return;
+  }
+  
+  try {
+    const subscriptionData = await checkSubscription();
+    const plan = subscriptionData.plan || 'free';
     
-    const selectedText = info.selectionText;
-    if (!selectedText) return;
+    if (plan !== 'extension_only' && plan !== 'master' && plan !== 'ultra') {
+      chrome.tabs.sendMessage(tab.id, {
+        action: 'showUpgradeRequired',
+        currentPlan: plan
+      });
+      return;
+    }
     
-    const authenticated = await isAuthenticated();
-    if (!authenticated) {
+    const wordCount = selectedText.trim().split(/\s+/).length;
+    const session = await getSession();
+    const extensionLimit = EXTENSION_LIMITS[plan] || 750;
+    
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/usage_tracking?user_id=eq.${session.user.id}&select=words_used,extension_words_used`,
+      {
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      }
+    );
+    
+    const data = await response.json();
+    const usageData = data[0] || { words_used: 0, extension_words_used: 0 };
+    
+    let wordBalance;
+    if (plan === 'free') {
+      const totalUsed = (usageData.words_used || 0) + (usageData.extension_words_used || 0);
+      wordBalance = Math.max(0, extensionLimit - totalUsed);
+    } else if (plan === 'extension_only') {
+      const extensionUsed = usageData.extension_words_used || 0;
+      wordBalance = Math.max(0, extensionLimit - extensionUsed);
+    } else if (plan === 'ultra' || plan === 'master') {
+      const totalUsed = (usageData.words_used || 0) + (usageData.extension_words_used || 0);
+      wordBalance = Math.max(0, 30000 - totalUsed);
+    } else {
+      wordBalance = 0;
+    }
+    
+    // Check if user has enough words
+    if (wordCount > wordBalance) {
       chrome.tabs.sendMessage(tab.id, {
         action: 'showNotification',
-        message: 'Please login to use SapienWrite extension',
+        message: `Not enough words! Need ${wordCount}, have ${wordBalance}.`,
         type: 'error'
       });
       return;
     }
     
-    try {
-      const subscriptionData = await checkSubscription();
-      const plan = subscriptionData.plan || 'free';
-      
-      if (plan !== 'extension_only' && plan !== 'master' && plan !== 'ultra') {
-        chrome.tabs.sendMessage(tab.id, {
-          action: 'showUpgradeRequired',
-          currentPlan: plan
-        });
-        return;
-      }
-      
-      const wordCount = selectedText.trim().split(/\s+/).length;
-      const session = await getSession();
-      const extensionLimit = EXTENSION_LIMITS[plan] || 750;
-      
-      const response = await fetch(
-        `${SUPABASE_URL}/rest/v1/usage_tracking?user_id=eq.${session.user.id}&select=words_used,extension_words_used`,
-        {
-          headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${session.access_token}`
-          }
-        }
-      );
-      
-      const data = await response.json();
-      const usageData = data[0] || { words_used: 0, extension_words_used: 0 };
-      
-      let wordBalance;
-      if (plan === 'free') {
-        const totalUsed = (usageData.words_used || 0) + (usageData.extension_words_used || 0);
-        wordBalance = Math.max(0, extensionLimit - totalUsed);
-      } else if (plan === 'extension_only') {
-        const extensionUsed = usageData.extension_words_used || 0;
-        wordBalance = Math.max(0, extensionLimit - extensionUsed);
-      } else if (plan === 'ultra' || plan === 'master') {
-        const extensionRemaining = Math.max(0, 5000 - (usageData.extension_words_used || 0));
-        const webRemaining = Math.max(0, 30000 - (usageData.words_used || 0));
-        wordBalance = extensionRemaining + webRemaining;
-      } else {
-        wordBalance = 0;
-      }
-      
-      chrome.tabs.sendMessage(tab.id, {
-        action: 'showDialog',
-        text: selectedText,
-        wordCount: wordCount,
-        wordBalance: wordBalance
-      });
-      
-    } catch (error) {
-      console.error('[Background] Error:', error);
-      chrome.tabs.sendMessage(tab.id, {
-        action: 'showNotification',
-        message: 'Failed to check account. Please try again.',
-        type: 'error'
-      });
-    }
+    // Start humanization immediately
+    await handleHumanizeRequest(selectedText, tone, tab.id);
+    
+  } catch (error) {
+    console.error('[Background] Error:', error);
+    chrome.tabs.sendMessage(tab.id, {
+      action: 'showNotification',
+      message: 'Failed to check account. Please try again.',
+      type: 'error'
+    });
   }
 });
 

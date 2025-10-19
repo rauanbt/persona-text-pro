@@ -42,7 +42,7 @@ const Dashboard = () => {
 
   const currentPlan = subscriptionData.plan;
   const isExtensionOnlyPlan = currentPlan === 'extension_only';
-  const hasExtensionBonus = currentPlan === 'ultra' || currentPlan === 'master';
+  const hasExtensionBonus = currentPlan === 'extension_only';
   const webPlanLimit = PLAN_LIMITS[currentPlan as keyof typeof PLAN_LIMITS];
   const extensionLimit = hasExtensionBonus ? 5000 : 0;
   
@@ -620,13 +620,13 @@ const Dashboard = () => {
                       </div>
                     </div>
                     
-                    {/* Extension Bonus Words for Ultra Plan */}
+                    {/* Extension Words for Extension-Only Plan */}
                      {hasExtensionBonus && (
                       <div className="mt-4 pt-4 border-t">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
                             <Chrome className="w-4 h-4 text-blue-500" />
-                            <span className="text-sm font-medium">Extension Bonus Words</span>
+                            <span className="text-sm font-medium">Extension Words</span>
                           </div>
                           <Badge variant="secondary">
                             {extensionRemainingWords.toLocaleString()} / 5,000
@@ -634,7 +634,7 @@ const Dashboard = () => {
                         </div>
                         <Progress value={extensionUsagePercentage} className="mb-2" />
                         <p className="text-xs text-muted-foreground">
-                          Separate 5,000-word pool for Chrome Extension use only
+                          Chrome Extension access - 5,000 words/month
                         </p>
                         
                         <div className="flex gap-2 mt-3">
@@ -940,7 +940,7 @@ const Dashboard = () => {
                     Chrome Extension Access
                   </CardTitle>
                   <Badge variant="secondary" className="w-fit">
-                    Active - {currentPlan === 'ultra' ? '5,000 bonus words' : '5,000 words/month'}
+                    Active - {currentPlan === 'ultra' ? '30,000 words/month (shared)' : '5,000 words/month'}
                   </Badge>
                 </CardHeader>
               </Card>
@@ -1068,11 +1068,11 @@ const Dashboard = () => {
                       </div>
                     )}
                     <div className="text-sm text-muted-foreground mb-1">
-                      30,000 web words/month
+                      30,000 words/month
                     </div>
                     <div className="text-xs text-muted-foreground mb-3 flex items-center gap-1">
                       <Chrome className="h-3 w-3" />
-                      Includes 5,000 extension bonus words
+                      Web + Extension shared pool
                     </div>
                     <Button 
                       onClick={() => handleUpgrade(isAnnualBilling ? PLAN_PRICES.ultra.annual.priceId : PLAN_PRICES.ultra.monthly.priceId)}
