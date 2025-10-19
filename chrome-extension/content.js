@@ -261,6 +261,13 @@ function replaceSelectedText(originalText, humanizedText) {
       const end = lastInputSelection?.end ?? inputEl.selectionEnd;
       
       if (typeof start === 'number' && typeof end === 'number') {
+        // Focus the element first
+        try {
+          inputEl.focus({ preventScroll: true });
+        } catch (e) {
+          inputEl.focus();
+        }
+        
         const value = inputEl.value;
         inputEl.value = value.substring(0, start) + humanizedText + value.substring(end);
         inputEl.selectionStart = inputEl.selectionEnd = start + humanizedText.length;
@@ -281,10 +288,27 @@ function replaceSelectedText(originalText, humanizedText) {
       }
     }
     
-    // TIER 2: ContentEditable with execCommand
-    const selection = window.getSelection();
-    if (selection && selection.rangeCount > 0) {
+    // TIER 2: ContentEditable - restore selection and replace
+    if (lastSelection?.range && lastSelection?.container) {
       try {
+        const container = lastSelection.container;
+        const range = lastSelection.range;
+        
+        // Focus the contenteditable container
+        if (container.focus) {
+          try {
+            container.focus({ preventScroll: true });
+          } catch (e) {
+            container.focus();
+          }
+        }
+        
+        // Restore selection
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        
+        // Try execCommand first
         const success = document.execCommand('insertText', false, humanizedText);
         
         if (success) {
@@ -297,8 +321,35 @@ function replaceSelectedText(originalText, humanizedText) {
           
           return true;
         }
+        
+        // If execCommand failed, manually replace
+        console.log('[Content] execCommand failed, trying manual replacement');
+        range.deleteContents();
+        const textNode = document.createTextNode(humanizedText);
+        range.insertNode(textNode);
+        
+        // Move caret to end of inserted text
+        range.setStartAfter(textNode);
+        range.setEndAfter(textNode);
+        sel.removeAllRanges();
+        sel.addRange(range);
+        
+        // Dispatch input events
+        container.dispatchEvent(new Event('input', { bubbles: true }));
+        container.dispatchEvent(new Event('change', { bubbles: true }));
+        container.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+        
+        showNotification('Text replaced!', 'success');
+        
+        lastReplacement = {
+          originalText: originalText,
+          humanizedText: humanizedText
+        };
+        
+        return true;
+        
       } catch (e) {
-        console.log('[Content] execCommand blocked:', e.message);
+        console.log('[Content] ContentEditable replacement failed:', e.message);
       }
     }
     
