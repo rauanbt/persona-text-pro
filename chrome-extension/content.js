@@ -2,6 +2,41 @@
 
 console.log('[Content] SapienWrite content script loaded');
 
+// Extension context validation
+let extensionContextValid = true;
+
+function isExtensionContextValid() {
+  try {
+    const id = chrome.runtime?.id;
+    if (!id) {
+      extensionContextValid = false;
+      return false;
+    }
+    return true;
+  } catch (e) {
+    extensionContextValid = false;
+    return false;
+  }
+}
+
+function safeChromeMessage(message, callback) {
+  if (!isExtensionContextValid()) {
+    showNotification('Extension updated. Please refresh this page.', 'info');
+    return;
+  }
+  
+  try {
+    chrome.runtime.sendMessage(message, callback);
+  } catch (error) {
+    if (error.message?.includes('Extension context invalidated')) {
+      extensionContextValid = false;
+      showNotification('Extension updated. Please refresh this page.', 'info');
+    } else {
+      console.error('[Content] Message error:', error);
+    }
+  }
+}
+
 // Safe DOM append helpers
 function safeAppendToHead(node) {
   if (document.head) {
@@ -23,46 +58,6 @@ function safeAppendToBody(node) {
   }
 }
 
-// Helper functions for DOM path-based selection restoration
-function getNodePath(node, root) {
-  const path = [];
-  let n = node;
-  while (n && n !== root) {
-    const p = n.parentNode;
-    if (!p) break;
-    const idx = Array.from(p.childNodes).indexOf(n);
-    if (idx === -1) break;
-    path.unshift(idx);
-    n = p;
-  }
-  return path;
-}
-
-function getNodeFromPath(root, path) {
-  let n = root;
-  for (const i of path) {
-    n = n?.childNodes?.[i];
-    if (!n) break;
-  }
-  return n;
-}
-
-function firstTextNodeIn(node) {
-  if (!node) return null;
-  const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
-  return walker.nextNode();
-}
-
-function lastTextNodeIn(node) {
-  if (!node) return null;
-  const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
-  let last = null;
-  let cur;
-  while (cur = walker.nextNode()) last = cur;
-  return last;
-}
-
-// Request session from web app on load - repeat for 5 seconds
 console.log('[Content] Starting session request broadcast (10 attempts over 5s)');
 let requestAttempts = 0;
 const maxAttempts = 10;
@@ -221,73 +216,12 @@ document.addEventListener('contextmenu', () => {
       valueSnapshot: t.value
     };
   } else {
-    // Enhanced selection tracking for contenteditable with DOM path capture
     const sel = window.getSelection();
     if (sel && sel.rangeCount > 0 && sel.toString().trim()) {
-      const range = sel.getRangeAt(0);
-      const selectedText = sel.toString();
-      
-      // Find the contenteditable container
-      let container = range.commonAncestorContainer;
-      let editableElement = null;
-      let currentNode = container.nodeType === 3 ? container.parentElement : container;
-      
-      while (currentNode && !editableElement) {
-        if (currentNode.isContentEditable) {
-          editableElement = currentNode;
-          break;
-        }
-        currentNode = currentNode.parentElement;
-      }
-      
-      if (editableElement) {
-        // Focus the editable element to prevent focus loss
-        try {
-          editableElement.focus({ preventScroll: true });
-        } catch (e) {
-          console.log('[Content] Could not focus element:', e.message);
-        }
-        
-        // Capture exact DOM paths for reliable restoration
-        const sc = range.startContainer;
-        const ec = range.endContainer;
-        
-        // Get text nodes if not already
-        const startTextNode = sc.nodeType === 3 ? sc : firstTextNodeIn(sc) || sc;
-        const endTextNode = ec.nodeType === 3 ? ec : lastTextNodeIn(ec) || ec;
-        
-        const startPath = getNodePath(startTextNode, editableElement);
-        const endPath = getNodePath(endTextNode, editableElement);
-        
-        // Get surrounding context for fallback text matching
-        const fullText = editableElement.innerText || editableElement.textContent || '';
-        const selectedIndex = fullText.indexOf(selectedText);
-        
-        lastSelection = {
-          text: selectedText,
-          range: range.cloneRange(),
-          container: editableElement,
-          startPath: startPath,
-          endPath: endPath,
-          startOffset: range.startOffset,
-          endOffset: range.endOffset,
-          textBefore: selectedIndex >= 0 ? fullText.substring(Math.max(0, selectedIndex - 50), selectedIndex) : '',
-          textAfter: selectedIndex >= 0 ? fullText.substring(selectedIndex + selectedText.length, selectedIndex + selectedText.length + 50) : '',
-          timestamp: Date.now()
-        };
-        
-        console.log('[Content] Path-based selection captured:', {
-          textLength: selectedText.length,
-          hasContainer: !!editableElement,
-          hasPaths: startPath.length > 0 && endPath.length > 0
-        });
-      } else {
-        // Fallback to simple selection
-        lastSelection = {
-          text: selectedText,
-          range: range.cloneRange()
-        };
-      }
+      lastSelection = {
+        text: sel.toString(),
+        range: sel.getRangeAt(0).cloneRange()
+      };
     }
   }
 }, true);
@@ -308,277 +242,76 @@ document.addEventListener('keyup', () => {
   }
 }, true);
 
-// Replace text in DOM - with path-based selection restoration
+// Simplified text replacement with 3-tier fallback
 function replaceSelectedText(originalText, humanizedText) {
   closeDialog();
   
-  // Safety check
-  if (!humanizedText || humanizedText.trim() === '') {
-    console.error('[Content] Empty humanized text, aborting');
-    showNotification('Replacement failed: empty result', 'error');
+  if (!humanizedText?.trim()) {
+    showNotification('Empty result, cannot replace', 'error');
     return false;
   }
   
-  console.log('[Content] Attempting replacement:', {
-    originalLength: originalText.length,
-    humanizedLength: humanizedText.length,
-    hasLastSelection: !!lastSelection,
-    hasLastInputSelection: !!lastInputSelection
-  });
+  console.log('[Content] Attempting replacement');
   
   try {
-    // PATH 1: INPUT/TEXTAREA (already works reliably)
-    const useEl = lastInputSelection?.element ?? (
-      (document.activeElement?.tagName === 'TEXTAREA' || document.activeElement?.tagName === 'INPUT') 
-        ? document.activeElement 
-        : null
-    );
-    const start = lastInputSelection?.start ?? useEl?.selectionStart;
-    const end = lastInputSelection?.end ?? useEl?.selectionEnd;
-    
-    if (useEl && typeof start === 'number' && typeof end === 'number' && end >= start) {
-      // Ensure focus
-      try {
-        useEl.focus();
-      } catch (e) {
-        console.log('[Content] Could not focus input element');
-      }
+    // TIER 1: INPUT/TEXTAREA (direct value manipulation)
+    const inputEl = lastInputSelection?.element ?? document.activeElement;
+    if (inputEl?.tagName === 'TEXTAREA' || inputEl?.tagName === 'INPUT') {
+      const start = lastInputSelection?.start ?? inputEl.selectionStart;
+      const end = lastInputSelection?.end ?? inputEl.selectionEnd;
       
-      const value = useEl.value;
-      useEl.value = value.substring(0, start) + humanizedText + value.substring(end);
-      useEl.selectionStart = useEl.selectionEnd = start + humanizedText.length;
-      useEl.dispatchEvent(new Event('input', { bubbles: true }));
-      useEl.dispatchEvent(new Event('change', { bubbles: true }));
-      useEl.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
-      
-      lastReplacement = {
-        originalText: originalText,
-        humanizedText: humanizedText,
-        element: useEl,
-        startIndex: start,
-        endIndex: start + humanizedText.length
-      };
-      console.log('[Content] ✓ input replacement');
-      showNotification('Text replaced successfully!', 'success');
-      return true;
-    }
-    
-    // PATH 2A: CONTENTEDITABLE with path-based restoration (PRIMARY)
-    if (lastSelection?.container && lastSelection?.startPath && lastSelection?.endPath) {
-      const editableElement = lastSelection.container;
-      
-      console.log('[Content] Trying path-based restoration');
-      
-      // Ensure focus on editable element
-      try {
-        editableElement.focus({ preventScroll: true });
-      } catch (e) {
-        console.log('[Content] Could not focus editable element');
-      }
-      
-      let startNode = getNodeFromPath(editableElement, lastSelection.startPath);
-      let endNode = getNodeFromPath(editableElement, lastSelection.endPath);
-      
-      if (startNode && endNode) {
-        // Ensure we have text nodes
-        if (startNode.nodeType !== 3) {
-          startNode = firstTextNodeIn(startNode) || startNode;
-        }
-        if (endNode.nodeType !== 3) {
-          endNode = lastTextNodeIn(endNode) || endNode;
-        }
+      if (typeof start === 'number' && typeof end === 'number') {
+        const value = inputEl.value;
+        inputEl.value = value.substring(0, start) + humanizedText + value.substring(end);
+        inputEl.selectionStart = inputEl.selectionEnd = start + humanizedText.length;
         
-        // Validate nodes are text nodes
-        if (startNode.nodeType === 3 && endNode.nodeType === 3) {
-          try {
-            const range = document.createRange();
-            const safeStartOffset = Math.min(lastSelection.startOffset, startNode.textContent?.length ?? 0);
-            const safeEndOffset = Math.min(lastSelection.endOffset, endNode.textContent?.length ?? 0);
-            
-            range.setStart(startNode, safeStartOffset);
-            range.setEnd(endNode, safeEndOffset);
-            
-            const selection = window.getSelection();
-            selection.removeAllRanges();
-            selection.addRange(range);
-            
-            let success = false;
-            
-            // Try execCommand first
-            try {
-              success = document.execCommand('insertText', false, humanizedText);
-              if (success) {
-                console.log('[Content] ✓ path-restore via execCommand');
-              }
-            } catch (e) {
-              console.log('[Content] execCommand failed:', e.message);
-            }
-            
-            // Fallback to manual insertion
-            if (!success) {
-              range.deleteContents();
-              const textNode = document.createTextNode(humanizedText);
-              range.insertNode(textNode);
-              
-              // Move caret after inserted text
-              range.setStartAfter(textNode);
-              range.setEndAfter(textNode);
-              selection.removeAllRanges();
-              selection.addRange(range);
-              
-              console.log('[Content] ✓ path-restore via manual insertion');
-            }
-            
-            // Trigger editor events
-            editableElement.dispatchEvent(new Event('input', { bubbles: true }));
-            editableElement.dispatchEvent(new Event('change', { bubbles: true }));
-            editableElement.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
-            
-            lastReplacement = {
-              originalText: originalText,
-              humanizedText: humanizedText,
-              element: editableElement
-            };
-            
-            showNotification('Text replaced successfully!', 'success');
-            return true;
-            
-          } catch (e) {
-            console.log('[Content] Path-based restoration failed:', e.message);
-          }
-        }
+        inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+        inputEl.dispatchEvent(new Event('change', { bubbles: true }));
+        
+        lastReplacement = {
+          originalText: originalText,
+          humanizedText: humanizedText,
+          element: inputEl,
+          startIndex: start,
+          endIndex: start + humanizedText.length
+        };
+        
+        showNotification('Text replaced!', 'success');
+        return true;
       }
     }
     
-    // PATH 2B: CONTENTEDITABLE with context-based text matching (FALLBACK)
-    if (lastSelection && lastSelection.container && lastSelection.text) {
-      const editableElement = lastSelection.container;
-      
-      console.log('[Content] Path-restore failed, trying context-based matching');
-      
-      const fullText = editableElement.innerText || editableElement.textContent || '';
-      let targetIndex = -1;
-      
-      // Try to find using context
-      if (lastSelection.textBefore || lastSelection.textAfter) {
-        const searchText = lastSelection.textBefore + lastSelection.text + lastSelection.textAfter;
-        const searchIndex = fullText.indexOf(searchText);
+    // TIER 2: ContentEditable with execCommand
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      try {
+        const success = document.execCommand('insertText', false, humanizedText);
         
-        if (searchIndex !== -1) {
-          targetIndex = searchIndex + lastSelection.textBefore.length;
-          console.log('[Content] Found text using context matching');
-        }
-      }
-      
-      // Fallback: direct text search
-      if (targetIndex === -1) {
-        targetIndex = fullText.indexOf(lastSelection.text);
-        console.log('[Content] Using direct text search, found at:', targetIndex);
-      }
-      
-      if (targetIndex !== -1) {
-        // Create new Range by walking the text nodes
-        const range = document.createRange();
-        let charCount = 0;
-        let startNode = null, startOffset = 0;
-        let endNode = null, endOffset = 0;
-        let found = false;
-        
-        const walker = document.createTreeWalker(
-          editableElement,
-          NodeFilter.SHOW_TEXT,
-          null,
-          false
-        );
-        
-        let node;
-        while (node = walker.nextNode()) {
-          const nodeLength = node.textContent.length;
-          
-          if (!startNode && charCount + nodeLength > targetIndex) {
-            startNode = node;
-            startOffset = targetIndex - charCount;
-          }
-          
-          if (startNode && charCount + nodeLength >= targetIndex + lastSelection.text.length) {
-            endNode = node;
-            endOffset = (targetIndex + lastSelection.text.length) - charCount;
-            found = true;
-            break;
-          }
-          
-          charCount += nodeLength;
-        }
-        
-        if (found && startNode && endNode) {
-          range.setStart(startNode, startOffset);
-          range.setEnd(endNode, endOffset);
-          
-          const selection = window.getSelection();
-          selection.removeAllRanges();
-          selection.addRange(range);
-          
-          let success = false;
-          
-          // Try execCommand first
-          try {
-            success = document.execCommand('insertText', false, humanizedText);
-            if (success) {
-              console.log('[Content] ✓ context-restore via execCommand');
-            }
-          } catch (e) {
-            console.log('[Content] execCommand failed:', e.message);
-          }
-          
-          // Fallback to manual insertion
-          if (!success) {
-            range.deleteContents();
-            const textNode = document.createTextNode(humanizedText);
-            range.insertNode(textNode);
-            
-            range.setStartAfter(textNode);
-            range.setEndAfter(textNode);
-            selection.removeAllRanges();
-            selection.addRange(range);
-            
-            console.log('[Content] ✓ context-restore via manual insertion');
-          }
-          
-          // Trigger editor events
-          editableElement.dispatchEvent(new Event('input', { bubbles: true }));
-          editableElement.dispatchEvent(new Event('change', { bubbles: true }));
-          editableElement.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+        if (success) {
+          showNotification('Text replaced!', 'success');
           
           lastReplacement = {
             originalText: originalText,
-            humanizedText: humanizedText,
-            element: editableElement
+            humanizedText: humanizedText
           };
           
-          showNotification('Text replaced successfully!', 'success');
           return true;
         }
+      } catch (e) {
+        console.log('[Content] execCommand blocked:', e.message);
       }
     }
     
-    // PATH 3: Clipboard fallback
-    console.log('[Content] clipboard-fallback: No replacement method worked');
-    try {
-      navigator.clipboard.writeText(humanizedText);
-      showNotification('Text copied to clipboard. Paste it to replace.', 'info');
-    } catch (err) {
-      showNotification('Please select the text again and try.', 'error');
-    }
+    // TIER 3: Clipboard fallback
+    console.log('[Content] Auto-replace blocked, using clipboard');
+    navigator.clipboard.writeText(humanizedText).catch(() => {});
     return false;
     
   } catch (error) {
     console.error('[Content] Replacement error:', error);
     try {
-      navigator.clipboard.writeText(humanizedText);
-      showNotification('Text copied to clipboard. Paste it to replace.', 'info');
-    } catch (err) {
-      showNotification('Replacement failed. Please try again.', 'error');
-    }
+      navigator.clipboard.writeText(humanizedText).catch(() => {});
+    } catch {}
     return false;
   }
 }
@@ -593,33 +326,19 @@ function restoreOriginalText() {
   try {
     const { originalText, humanizedText, element, startIndex, endIndex } = lastReplacement;
     
-    // Use precise index-based restoration for INPUT/TEXTAREA
-    if ((element.tagName === 'TEXTAREA' || element.tagName === 'INPUT') && 
-        typeof startIndex === 'number' && typeof endIndex === 'number') {
-      const value = element.value;
-      element.value = value.substring(0, startIndex) + originalText + value.substring(endIndex);
-      element.selectionStart = element.selectionEnd = startIndex + originalText.length;
-      element.dispatchEvent(new Event('input', { bubbles: true }));
-      element.dispatchEvent(new Event('change', { bubbles: true }));
-      showNotification('Original text restored!', 'success');
-      lastReplacement = null;
-      return;
-    }
-    
-    // Fallback for contenteditable - use string replacement
-    if (element.isContentEditable) {
-      const textContent = element.textContent;
-      const humanizedIndex = textContent.indexOf(humanizedText);
-      
-      if (humanizedIndex !== -1) {
-        element.textContent = textContent.substring(0, humanizedIndex) + originalText + textContent.substring(humanizedIndex + humanizedText.length);
+    if (element?.tagName === 'TEXTAREA' || element?.tagName === 'INPUT') {
+      if (typeof startIndex === 'number' && typeof endIndex === 'number') {
+        const value = element.value;
+        element.value = value.substring(0, startIndex) + originalText + value.substring(endIndex);
+        element.selectionStart = element.selectionEnd = startIndex + originalText.length;
         element.dispatchEvent(new Event('input', { bubbles: true }));
         showNotification('Original text restored!', 'success');
-      } else {
-        showNotification('Could not find text to restore', 'error');
+        lastReplacement = null;
+        return;
       }
     }
     
+    showNotification('Undo not available for this editor', 'info');
     lastReplacement = null;
   } catch (error) {
     console.error('[Content] Error restoring text:', error);
@@ -726,7 +445,7 @@ function createDialog(text, wordCount, wordBalance, selectedTone = null) {
   
   document.getElementById('sapienwrite-humanize').onclick = () => {
     const tone = document.getElementById('sapienwrite-tone').value;
-    chrome.runtime.sendMessage({
+    safeChromeMessage({
       action: 'humanizeWithTone',
       text: text,
       tone: tone
@@ -884,67 +603,6 @@ function showError(errorMessage) {
   document.getElementById('sapienwrite-close-error').onclick = closeDialog;
 }
 
-// Show replacement notification with undo option
-function showReplacementNotification(originalText, humanizedText) {
-  const container = createNotificationContainer();
-  
-  const notification = document.createElement('div');
-  notification.style.cssText = `
-    background: #f0fdf4;
-    border-left: 4px solid #22c55e;
-    color: #166534;
-    padding: 12px 16px;
-    border-radius: 8px;
-    margin-bottom: 10px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    font-size: 14px;
-    font-weight: 500;
-    pointer-events: auto;
-    animation: slideIn 0.3s ease;
-    max-width: 320px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-  `;
-  
-  notification.innerHTML = `
-    <span>✓ Text replaced!</span>
-    <button id="sapienwrite-undo-btn" style="
-      background: #ffffff;
-      border: 1px solid #22c55e;
-      color: #166534;
-      padding: 4px 12px;
-      border-radius: 6px;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      white-space: nowrap;
-    ">Undo</button>
-  `;
-  
-  container.appendChild(notification);
-  
-  // Undo button handler
-  const undoBtn = notification.querySelector('#sapienwrite-undo-btn');
-  undoBtn.onclick = () => {
-    restoreOriginalText();
-    if (notification.parentNode) {
-      notification.parentNode.removeChild(notification);
-    }
-  };
-  
-  // Auto-remove after 8 seconds
-  setTimeout(() => {
-    notification.style.animation = 'slideOut 0.3s ease';
-    setTimeout(() => {
-      if (notification.parentNode) {
-        notification.parentNode.removeChild(notification);
-      }
-    }, 300);
-  }, 8000);
-}
 
 // Show upgrade required dialog
 function showUpgradeRequiredDialog(currentPlan) {
@@ -1033,7 +691,7 @@ window.addEventListener('message', (event) => {
   
   if (event.data.type === 'SAPIENWRITE_SESSION') {
     console.log('[Content] Received session from web app (fallback)');
-    chrome.runtime.sendMessage({
+    safeChromeMessage({
       action: 'storeSession',
       session: event.data.session
     });
@@ -1041,7 +699,7 @@ window.addEventListener('message', (event) => {
   
   if (event.data.type === 'SUBSCRIPTION_UPDATED') {
     console.log('[Content] Subscription updated, notifying background');
-    chrome.runtime.sendMessage({ action: 'subscriptionUpdated' });
+    safeChromeMessage({ action: 'subscriptionUpdated' });
   }
 });
 
@@ -1086,11 +744,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   
   if (message.action === 'replaceText') {
     const replaced = replaceSelectedText(message.originalText, message.humanizedText);
-    if (replaced) {
-      showReplacementNotification(message.originalText, message.humanizedText);
-    } else {
-      // If replacement failed, show the result dialog so user can copy
-      console.log('[Content] Replacement failed, showing result dialog');
+    if (!replaced) {
+      // If replacement failed, show result dialog with copy option
+      console.log('[Content] Replacement blocked, showing result dialog');
       showResult(message.originalText, message.humanizedText);
     }
   }
@@ -1099,52 +755,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     showUpgradeRequiredDialog(message.currentPlan);
   }
   
-  if (message.action === 'preflightReplace') {
-    const result = checkReplacementPossible();
-    sendResponse(result);
-    return true;
-  }
-  
   sendResponse({ received: true });
 });
 
-// Preflight check: can we replace text?
-function checkReplacementPossible() {
-  // Check INPUT/TEXTAREA
-  const useEl = lastInputSelection?.element ?? (
-    (document.activeElement?.tagName === 'TEXTAREA' || document.activeElement?.tagName === 'INPUT') 
-      ? document.activeElement 
-      : null
-  );
-  const start = lastInputSelection?.start ?? useEl?.selectionStart;
-  const end = lastInputSelection?.end ?? useEl?.selectionEnd;
-  
-  if (useEl && typeof start === 'number' && typeof end === 'number' && end >= start) {
-    return { ok: true, method: 'input' };
-  }
-  
-  // Check path-based for contenteditable
-  if (lastSelection?.container && lastSelection?.startPath && lastSelection?.endPath) {
-    const editableElement = lastSelection.container;
-    const startNode = getNodeFromPath(editableElement, lastSelection.startPath);
-    const endNode = getNodeFromPath(editableElement, lastSelection.endPath);
-    
-    if (startNode && endNode) {
-      return { ok: true, method: 'path' };
-    }
-  }
-  
-  // Check context-based for contenteditable
-  if (lastSelection?.container && lastSelection?.text) {
-    const editableElement = lastSelection.container;
-    const fullText = editableElement.innerText || editableElement.textContent || '';
-    
-    if (fullText.includes(lastSelection.text)) {
-      return { ok: true, method: 'context' };
-    }
-  }
-  
-  return { ok: false, method: 'none', reason: 'No valid selection or editor state found' };
-}
 
 console.log('[Content] SapienWrite ready');
