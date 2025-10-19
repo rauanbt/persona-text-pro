@@ -187,6 +187,41 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     sendResponse({ success: true });
     return true;
   }
+  
+  if (message.action === 'requestSessionFromWebApp') {
+    console.log('[Background] Requesting session from web app...');
+    
+    // Query all SapienWrite tabs
+    chrome.tabs.query({}, (tabs) => {
+      const sapienWriteTabs = tabs.filter(tab => 
+        tab.url && (
+          tab.url.includes('sapienwrite.com') ||
+          tab.url.includes('lovableproject.com') ||
+          tab.url.includes('localhost:5173')
+        )
+      );
+      
+      console.log('[Background] Found SapienWrite tabs:', sapienWriteTabs.length);
+      
+      if (sapienWriteTabs.length === 0) {
+        sendResponse({ success: false, tabsFound: 0 });
+        return;
+      }
+      
+      // Send request to all matching tabs
+      sapienWriteTabs.forEach(tab => {
+        chrome.tabs.sendMessage(tab.id, {
+          type: 'SAPIENWRITE_REQUEST_SESSION'
+        }).catch(err => {
+          console.log('[Background] Could not send to tab', tab.id, err.message);
+        });
+      });
+      
+      sendResponse({ success: true, tabsFound: sapienWriteTabs.length });
+    });
+    
+    return true; // Keep channel open for async response
+  }
 });
 
 // Handle humanize request

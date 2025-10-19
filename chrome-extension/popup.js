@@ -304,17 +304,50 @@ document.getElementById('connect-extension-button')?.addEventListener('click', a
 
 document.getElementById('refresh-connection-button')?.addEventListener('click', async () => {
   console.log('[Popup] Manual refresh triggered');
+  const refreshBtn = document.getElementById('refresh-connection-button');
+  const originalText = refreshBtn.textContent;
+  
   try {
+    // Show loading state
+    refreshBtn.textContent = 'Checking...';
+    refreshBtn.disabled = true;
+    
+    // Request session from any open SapienWrite tabs
+    const response = await new Promise((resolve) => {
+      chrome.runtime.sendMessage({ action: 'requestSessionFromWebApp' }, resolve);
+    });
+    
+    console.log('[Popup] Request session response:', response);
+    
+    if (!response.success || response.tabsFound === 0) {
+      showError('No SapienWrite tabs open. Please log in at sapienwrite.com first.');
+      refreshBtn.textContent = originalText;
+      refreshBtn.disabled = false;
+      await populateDiagnostics();
+      return;
+    }
+    
+    // Wait for session to be stored (give web app time to respond)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Check if authenticated now
     const authenticated = await isAuthenticated();
     if (authenticated) {
       await loadUserData();
+      await populateDiagnostics();
     } else {
+      showError('Not logged in. Please log in at sapienwrite.com and try again.');
       showLoginView();
+      await populateDiagnostics();
     }
-    await populateDiagnostics();
+    
+    refreshBtn.textContent = originalText;
+    refreshBtn.disabled = false;
   } catch (e) {
     console.error('[Popup] Refresh failed:', e);
-    showError('Failed to refresh. Check diagnostics.');
+    showError('Failed to refresh. Please log in at sapienwrite.com/extension-auth');
+    refreshBtn.textContent = originalText;
+    refreshBtn.disabled = false;
   }
 });
 
