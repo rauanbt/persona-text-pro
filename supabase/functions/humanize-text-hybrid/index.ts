@@ -85,6 +85,12 @@ const INTENSITY_THRESHOLDS: Record<string, number> = {
   strong: 0.6,
 };
 
+const CHANGE_TARGET: Record<string, number> = {
+  light: 0.15,   // 15% word change
+  medium: 0.25,  // 25% word change
+  strong: 0.40,  // 40% word change
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -102,7 +108,7 @@ serve(async (req) => {
       throw new Error('User not authenticated');
     }
 
-    const { text, tone, source = 'web' } = await req.json(); // source: 'web' or 'extension'
+    const { text, tone, source = 'web', tone_intensity = 'strong' } = await req.json(); // source: 'web' or 'extension'
     
     if (!text || !tone) {
       throw new Error('Text and tone are required');
@@ -647,6 +653,80 @@ PRESERVE STRUCTURE:
       }
     } catch (e) {
       console.error('[LANG] Post-generation language verification failed:', e);
+    }
+
+    // TONE BOOSTER: Enforce visible tone changes
+    const intensity = ['light','medium','strong'].includes(tone_intensity) ? tone_intensity : 'strong';
+    const threshold = INTENSITY_THRESHOLDS[intensity] ?? INTENSITY_THRESHOLDS.strong;
+    let sim = jaccardSimilarity(text, finalText);
+    console.log(`[TONE] Requested tone="${tone}" intensity="${intensity}" similarity(before)=${sim.toFixed(3)} threshold=${threshold}`);
+
+    if (tone !== 'regular' && sim > threshold) {
+      const changePct = Math.round(CHANGE_TARGET[intensity] * 100);
+      const toneReinforcements: Record<string, string> = {
+        formal: 'Use "However," "Additionally," "Therefore" naturally; reduce contractions a bit; executive clarity.',
+        persuasive: 'Address the reader with "you" and "your", add rhetorical questions and a subtle sense of urgency.',
+        empathetic: 'Use warm phrases like "I understand," "That makes sense," "Let\'s take it step by step."',
+        sarcastic: 'Dry wit with phrases like "Oh great," "Sure," "Obviously"; use fragments for punch.',
+        funny: 'Use playful exaggerations and unexpected comparisons; comedic rhythm with short setups and punchy payoffs.',
+        regular: ''
+      };
+
+      const boosterPromptBase = (extraToneReinforcement: string) => `
+You are a human writer. Rewrite the user's text to EXPLICITLY reflect the tone "${tone}".
+Requirements:
+- Change at least ${changePct}% of the words and reorder clauses where natural
+- Preserve meaning exactly
+- Keep EVERY line break and list formatting exactly
+- Output ONLY plain text
+- Use the same language as input (${inputLangName} [${inputLangCode}])
+${extraToneReinforcement}`;
+
+      for (let attempt = 1; attempt <= 2 && sim > threshold; attempt++) {
+        const system = boosterPromptBase(toneReinforcements[tone] || '');
+        const userContent = `${langRule}
+
+ORIGINAL:
+${text}
+
+CURRENT DRAFT:
+${finalText}
+
+Rewrite CURRENT DRAFT to meet all requirements above while ensuring it is sufficiently different from ORIGINAL.`;
+
+        try {
+          const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${lovableApiKey}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model: 'google/gemini-2.5-flash',
+              messages: [
+                { role: 'system', content: system },
+                { role: 'user', content: userContent }
+              ],
+            }),
+          });
+
+          if (resp.ok) {
+            const data = await resp.json();
+            const candidate = data.choices?.[0]?.message?.content?.trim();
+            if (candidate) {
+              finalText = candidate;
+              sim = jaccardSimilarity(text, finalText);
+              enginesUsed += attempt === 1 ? '+booster1' : '+booster2';
+              passesCompleted += 1;
+              console.log(`[TONE] Booster attempt ${attempt} similarity=${sim.toFixed(3)} (threshold=${threshold})`);
+            }
+          } else {
+            console.error('[TONE] Booster API error:', resp.status, await resp.text());
+            break;
+          }
+        } catch (boosterError) {
+          console.error('[TONE] Booster attempt failed:', boosterError);
+          break;
+        }
+      }
+      console.log(`[TONE] Booster complete: final similarity=${sim.toFixed(3)} threshold_met=${sim <= threshold}`);
     }
 
     // Check if output is too long and condense if needed
