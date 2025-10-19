@@ -306,7 +306,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'humanizeWithTone') {
     // Map legacy tone names to supported tones
     const mappedTone = mapToneToSupported(message.tone);
-    console.log('[Background] Tone mapping:', message.tone, '->', mappedTone);
+    console.log('[Background] ✅ TONE SELECTED:', message.tone, mappedTone !== message.tone ? `→ ${mappedTone}` : '');
     
     handleHumanizeRequest(message.text, mappedTone, sender.tab?.id, sender.frameId)
       .then(() => sendResponse({ success: true }))
@@ -413,6 +413,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // Handle humanize request
 async function handleHumanizeRequest(text, tone, tabId, frameId) {
   try {
+    console.log(`[Background] 📤 Sending to edge function with tone: "${tone}"`);
     await safeSendMessage(tabId, { action: 'showProcessing' }, { frameId });
     
     const result = await callSupabaseFunction('humanize-text-hybrid', {
@@ -421,7 +422,7 @@ async function handleHumanizeRequest(text, tone, tabId, frameId) {
       source: 'extension'
     });
     
-    console.log('[Background] Text humanized successfully');
+    console.log('[Background] ✅ Text humanized successfully with tone:', tone);
     
     // Extract humanized text (edge function returns snake_case)
     const humanizedText = result.humanized_text || result.humanizedText;

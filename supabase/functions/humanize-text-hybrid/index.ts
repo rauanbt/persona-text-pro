@@ -332,6 +332,7 @@ Write like a funny human, not an AI trying to tell jokes.`
     };
 
     const systemPrompt = tonePrompts[tone as keyof typeof tonePrompts] || tonePrompts.regular;
+    console.log(`[TONE] Selected tone: "${tone}" - Using ${tone} prompt`);
     let finalText = text;
     let bestSoFar = text;
     let passesCompleted = 0;

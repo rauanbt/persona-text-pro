@@ -159,6 +159,7 @@ safeAppendToHead(style);
 let lastSelection = null;
 let lastReplacement = null; // Track last replacement for undo
 let lastInputSelection = null; // { element, start, end, valueSnapshot }
+let selectedTone = 'regular'; // Track currently selected tone for display
 
 // Track selections in contenteditable
 document.addEventListener('mouseup', () => {
@@ -496,6 +497,8 @@ function createDialog(text, wordCount, wordBalance, selectedTone = null) {
   
   document.getElementById('sapienwrite-humanize').onclick = () => {
     const tone = document.getElementById('sapienwrite-tone').value;
+    selectedTone = tone; // Store globally so we can display it in result
+    console.log(`[Content] 🎨 User selected tone: "${tone}"`);
     safeChromeMessage({
       action: 'humanizeWithTone',
       text: text,
@@ -577,8 +580,23 @@ function showResult(originalText, humanizedText) {
   const content = dialog.querySelector('#sapienwrite-dialog-content') || document.getElementById('sapienwrite-dialog-content');
   if (!content) return;
   
+  // Map tone to display name
+  const toneDisplayNames = {
+    'regular': 'Regular',
+    'formal': 'Formal/Academic',
+    'persuasive': 'Persuasive/Sales',
+    'empathetic': 'Empathetic/Warm',
+    'sarcastic': 'Sarcastic',
+    'funny': 'Funny'
+  };
+  
+  const toneDisplay = toneDisplayNames[selectedTone] || selectedTone;
+  
   content.innerHTML = `
     <div style="margin-bottom: 16px;">
+      <div style="background: #dbeafe; border-left: 4px solid #2563eb; padding: 8px 12px; border-radius: 6px; margin-bottom: 8px;">
+        <p style="margin: 0; font-size: 12px; color: #1e40af; font-weight: 600;">✓ Humanized with ${toneDisplay} tone</p>
+      </div>
       <div style="background: #f0fdf4; border-left: 4px solid #22c55e; padding: 12px; border-radius: 8px; margin-bottom: 12px;">
         <p style="margin: 0; font-size: 13px; color: #166534; line-height: 1.5;">${humanizedText}</p>
       </div>
