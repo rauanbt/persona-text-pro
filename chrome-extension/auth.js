@@ -104,8 +104,12 @@ async function storeSession(session) {
     expires_at: session.expires_at,
     user_email: session.user.email,
     user_id: session.user.id,
+    remember_me: true, // Persistent session flag
     session_stored_at: Date.now()
   });
+  
+  // Clear reconnect flag if we were reconnecting
+  await storageRemove(['needs_reconnect']);
   
   console.log('[Auth] Session stored successfully');
 }
@@ -200,7 +204,7 @@ async function getSession() {
   }
   
   const now = Math.floor(Date.now() / 1000);
-  const skew = 60; // Increased from 10 to 60 seconds buffer
+  const skew = 300; // 5 minutes buffer for proactive refresh
   
   // Check if token is expired or near expiry
   if (data.expires_at && now >= (data.expires_at - skew)) {
@@ -231,15 +235,52 @@ async function getSession() {
 
 // Clear session from storage
 async function clearSession() {
+  const data = await storageGet(['remember_me', 'user_email']);
+  
+  if (data.remember_me) {
+    // Keep minimal data for auto-reconnect
+    await storageSet({ 
+      needs_reconnect: true,
+      remember_me: true,
+      user_email: data.user_email 
+    });
+    await storageRemove([
+      'access_token',
+      'refresh_token',
+      'expires_at',
+      'user_id',
+      'session_stored_at'
+    ]);
+    console.log('[Auth] Session marked for reconnect (remember_me active)');
+  } else {
+    // Full clear
+    await storageRemove([
+      'access_token',
+      'refresh_token',
+      'expires_at',
+      'user_email',
+      'user_id',
+      'session_stored_at',
+      'needs_reconnect',
+      'remember_me'
+    ]);
+    console.log('[Auth] Session cleared completely');
+  }
+}
+
+// Complete sign out - clears remember_me flag
+async function signOut() {
   await storageRemove([
     'access_token',
     'refresh_token',
     'expires_at',
     'user_email',
     'user_id',
-    'session_stored_at'
+    'session_stored_at',
+    'needs_reconnect',
+    'remember_me'
   ]);
-  console.log('[Auth] Session cleared');
+  console.log('[Auth] Signed out completely');
 }
 
 // Check if user is authenticated

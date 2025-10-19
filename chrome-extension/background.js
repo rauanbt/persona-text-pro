@@ -19,53 +19,112 @@ async function safeSendMessage(tabId, message, options = {}) {
 // Ensure we have a fresh session - self-healing flow
 async function ensureFreshSession() {
   const authenticated = await isAuthenticated();
-  if (!authenticated) {
-    console.log('[Background] No session - requesting from web app');
-    
-    // Try to get session from open SapienWrite tabs
-    return new Promise((resolve) => {
-      chrome.tabs.query({}, async (tabs) => {
-        const sapienWriteTabs = tabs.filter(tab => 
-          tab.url && (
-            tab.url.includes('sapienwrite.com') ||
-            tab.url.includes('lovableproject.com') ||
-            tab.url.includes('localhost:5173')
-          )
-        );
-        
-        if (sapienWriteTabs.length === 0) {
-          resolve({ success: false, reason: 'no_tabs' });
-          return;
-        }
-        
-        // Request session from all matching tabs
-        sapienWriteTabs.forEach(tab => {
-          chrome.tabs.sendMessage(tab.id, {
-            type: 'SAPIENWRITE_REQUEST_SESSION'
-          }).catch(() => {});
-        });
-        
-        // Wait up to 2 seconds for session
-        const sessionListener = (message) => {
-          if (message.action === 'sessionStored') {
-            chrome.runtime.onMessage.removeListener(sessionListener);
-            clearTimeout(timeout);
-            resolve({ success: true });
-          }
-        };
-        
-        chrome.runtime.onMessage.addListener(sessionListener);
-        
-        const timeout = setTimeout(() => {
-          chrome.runtime.onMessage.removeListener(sessionListener);
-          resolve({ success: false, reason: 'timeout' });
-        }, 2000);
-      });
-    });
+  if (authenticated) {
+    const session = await getSession();
+    if (session) return { success: true };
   }
   
-  return { success: true };
+  // Check for remember_me flag and auto-reconnect
+  const data = await chrome.storage.local.get(['remember_me', 'needs_reconnect', 'user_email']);
+  
+  if (data.remember_me && data.needs_reconnect) {
+    console.log('[Background] Auto-reconnecting for', data.user_email);
+    
+    // Attempt auto-reconnect (up to 2 tries)
+    for (let i = 0; i < 2; i++) {
+      console.log(`[Background] Reconnect attempt ${i + 1}/2`);
+      const result = await requestSessionFromWebApp(2000);
+      
+      if (result.success) {
+        await chrome.storage.local.remove(['needs_reconnect']);
+        console.log('[Background] Auto-reconnect successful');
+        return { success: true };
+      }
+      
+      // Wait 1 second between attempts
+      if (i < 1) await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    
+    // Failed after 2 attempts
+    console.log('[Background] Auto-reconnect failed, manual action required');
+    chrome.notifications.create({
+      type: 'basic',
+      title: 'SapienWrite - Reconnect Required',
+      message: 'Please open the extension to reconnect',
+      iconUrl: 'icons/icon-48.png'
+    });
+    return { success: false, reason: 'reconnect_failed' };
+  }
+  
+  // No remember_me, just try to get session from open tabs
+  console.log('[Background] No session - requesting from web app');
+  return await requestSessionFromWebApp(2000);
 }
+
+// Helper to request session from web app
+async function requestSessionFromWebApp(timeoutMs = 2000) {
+  return new Promise((resolve) => {
+    chrome.tabs.query({}, async (tabs) => {
+      const sapienWriteTabs = tabs.filter(tab => 
+        tab.url && (
+          tab.url.includes('sapienwrite.com') ||
+          tab.url.includes('lovableproject.com') ||
+          tab.url.includes('localhost:5173')
+        )
+      );
+      
+      if (sapienWriteTabs.length === 0) {
+        resolve({ success: false, reason: 'no_tabs' });
+        return;
+      }
+      
+      // Request session from all matching tabs
+      sapienWriteTabs.forEach(tab => {
+        chrome.tabs.sendMessage(tab.id, {
+          type: 'SAPIENWRITE_REQUEST_SESSION'
+        }).catch(() => {});
+      });
+      
+      // Wait for session
+      const sessionListener = (message) => {
+        if (message.action === 'sessionStored') {
+          chrome.runtime.onMessage.removeListener(sessionListener);
+          clearTimeout(timeout);
+          resolve({ success: true });
+        }
+      };
+      
+      chrome.runtime.onMessage.addListener(sessionListener);
+      
+      const timeout = setTimeout(() => {
+        chrome.runtime.onMessage.removeListener(sessionListener);
+        resolve({ success: false, reason: 'timeout' });
+      }, timeoutMs);
+    });
+  });
+}
+
+// Proactive session sync when SapienWrite tab is activated
+chrome.tabs.onActivated.addListener(async (activeInfo) => {
+  try {
+    const tab = await chrome.tabs.get(activeInfo.tabId);
+    if (tab.url && (
+      tab.url.includes('sapienwrite.com') ||
+      tab.url.includes('lovableproject.com') ||
+      tab.url.includes('localhost:5173')
+    )) {
+      console.log('[Background] SapienWrite tab focused, syncing session...');
+      // Wait 100ms for tab to be fully loaded
+      setTimeout(() => {
+        chrome.tabs.sendMessage(activeInfo.tabId, {
+          type: 'SAPIENWRITE_REQUEST_SESSION'
+        }).catch(() => {});
+      }, 100);
+    }
+  } catch (e) {
+    // Tab might not exist anymore
+  }
+});
 
 // Map legacy tone names to supported tones
 function mapToneToSupported(tone) {
@@ -404,6 +463,22 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         console.error('[Background] Failed to store session:', error);
         sendResponse({ success: false, error: error.message });
       });
+    return true;
+  }
+  
+  if (message.action === 'ensureFreshSession') {
+    console.log('[Background] Manual session refresh requested');
+    ensureFreshSession()
+      .then(result => sendResponse(result))
+      .catch(error => sendResponse({ success: false, error: error.message }));
+    return true;
+  }
+  
+  if (message.action === 'signOut') {
+    console.log('[Background] Sign out requested');
+    signOut()
+      .then(() => sendResponse({ success: true }))
+      .catch(error => sendResponse({ success: false, error: error.message }));
     return true;
   }
   

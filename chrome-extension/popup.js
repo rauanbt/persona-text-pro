@@ -171,6 +171,15 @@ function showError(message) {
 // Load user data
 async function loadUserData() {
   try {
+    // Check for reconnect state
+    const storageData = await localGet(['remember_me', 'needs_reconnect', 'user_email']);
+    
+    if (storageData.needs_reconnect && storageData.remember_me) {
+      console.log('[Popup] Needs reconnect - showing reconnect UI');
+      showReconnectUI(storageData.user_email);
+      return;
+    }
+    
     const session = await getSession();
     
     if (!session) {
@@ -188,6 +197,13 @@ async function loadUserData() {
       await requestSessionFromWebApp();
       showLoginView();
       return;
+    }
+    
+    // Proactive refresh if token expires soon (< 10 minutes)
+    const now = Math.floor(Date.now() / 1000);
+    if (session.expires_at && (session.expires_at - now) < 600) {
+      console.log('[Popup] Token expires soon, refreshing proactively...');
+      chrome.runtime.sendMessage({ action: 'ensureFreshSession' }).catch(() => {});
     }
     
     document.getElementById('user-email').textContent = session.user.email;
@@ -420,7 +436,9 @@ document.getElementById('upgrade-ultra-button')?.addEventListener('click', () =>
 
 document.getElementById('logout-link')?.addEventListener('click', async (e) => {
   e.preventDefault();
-  await clearSession();
+  console.log('[Popup] Logout clicked');
+  // Complete sign out - clears remember_me flag
+  await chrome.runtime.sendMessage({ action: 'signOut' });
   showLoginView();
 });
 
@@ -464,6 +482,68 @@ async function requestSessionFromWebApp() {
     });
   });
 }
+
+// Show reconnect UI when session needs reconnection
+function showReconnectUI(email) {
+  document.getElementById('loading-view')?.classList.add('hidden');
+  document.getElementById('login-view')?.classList.add('hidden');
+  const mainView = document.getElementById('main-view');
+  mainView?.classList.remove('hidden');
+  
+  const statusText = document.getElementById('status-text');
+  const planText = document.getElementById('plan-text');
+  const statsContainer = document.querySelector('.stats-card');
+  const actionsContainer = document.querySelector('.actions');
+  
+  if (statusText) statusText.textContent = 'Session expired';
+  if (planText) planText.textContent = email ? `Last login: ${email}` : 'Please reconnect';
+  
+  // Hide stats
+  if (statsContainer) statsContainer.style.display = 'none';
+  
+  // Clear and rebuild actions
+  if (actionsContainer) {
+    actionsContainer.innerHTML = '';
+    
+    // Reconnect button
+    const reconnectBtn = document.createElement('button');
+    reconnectBtn.className = 'action-button primary';
+    reconnectBtn.textContent = email ? `Reconnect as ${email}` : 'Reconnect';
+    reconnectBtn.onclick = async () => {
+      reconnectBtn.textContent = 'Connecting...';
+      reconnectBtn.disabled = true;
+      
+      const result = await chrome.runtime.sendMessage({ action: 'ensureFreshSession' });
+      
+      if (result?.success) {
+        setTimeout(() => loadUserData(), 1000);
+      } else {
+        reconnectBtn.textContent = 'Connection failed - Try again';
+        reconnectBtn.disabled = false;
+        
+        // Suggest opening the web app
+        const helpText = document.createElement('p');
+        helpText.style.cssText = 'margin-top: 8px; font-size: 12px; color: #666;';
+        helpText.textContent = 'Please open SapienWrite.com to reconnect';
+        actionsContainer.appendChild(helpText);
+      }
+    };
+    
+    // Sign out completely button
+    const signOutBtn = document.createElement('button');
+    signOutBtn.className = 'action-button secondary';
+    signOutBtn.textContent = 'Sign out completely';
+    signOutBtn.style.cssText = 'margin-top: 8px; background: transparent; border: 1px solid #ddd;';
+    signOutBtn.onclick = async () => {
+      await chrome.runtime.sendMessage({ action: 'signOut' });
+      showLoginView();
+    };
+    
+    actionsContainer.appendChild(reconnectBtn);
+    actionsContainer.appendChild(signOutBtn);
+  }
+}
+
 
 // Listen for messages from background
 chrome.runtime.onMessage.addListener((message) => {
