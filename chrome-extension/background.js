@@ -63,7 +63,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       action: 'showNotification',
       message: 'Please login to use SapienWrite extension',
       type: 'error'
-    });
+    }, { frameId: info.frameId });
     return;
   }
   
@@ -75,7 +75,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       chrome.tabs.sendMessage(tab.id, {
         action: 'showUpgradeRequired',
         currentPlan: plan
-      });
+      }, { frameId: info.frameId });
       return;
     }
     
@@ -116,12 +116,12 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         action: 'showNotification',
         message: `Not enough words! Need ${wordCount}, have ${wordBalance}.`,
         type: 'error'
-      });
+      }, { frameId: info.frameId });
       return;
     }
     
     // Start humanization immediately
-    await handleHumanizeRequest(selectedText, tone, tab.id);
+    await handleHumanizeRequest(selectedText, tone, tab.id, info.frameId);
     
   } catch (error) {
     console.error('[Background] Error:', error);
@@ -129,7 +129,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       action: 'showNotification',
       message: 'Failed to check account. Please try again.',
       type: 'error'
-    });
+    }, { frameId: info.frameId });
   }
 });
 
@@ -190,9 +190,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 // Handle humanize request
-async function handleHumanizeRequest(text, tone, tabId) {
+async function handleHumanizeRequest(text, tone, tabId, frameId) {
   try {
-    chrome.tabs.sendMessage(tabId, { action: 'showProcessing' });
+    chrome.tabs.sendMessage(tabId, { action: 'showProcessing' }, { frameId });
     
     const result = await callSupabaseFunction('humanize-text-hybrid', {
       text: text,
@@ -206,13 +206,13 @@ async function handleHumanizeRequest(text, tone, tabId) {
       action: 'showResult',
       originalText: text,
       humanizedText: result.humanizedText
-    });
+    }, { frameId });
     
   } catch (error) {
     console.error('[Background] Error humanizing:', error);
     chrome.tabs.sendMessage(tabId, {
       action: 'showError',
       message: error.message || 'Failed to humanize text'
-    });
+    }, { frameId });
   }
 }

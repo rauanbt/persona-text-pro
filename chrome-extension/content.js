@@ -135,7 +135,7 @@ document.addEventListener('mouseup', () => {
   }
 });
 
-// Replace text in DOM
+// Replace text in DOM - with improved Gmail/contenteditable support
 function replaceSelectedText(originalText, humanizedText) {
   try {
     const selection = window.getSelection();
@@ -145,73 +145,117 @@ function replaceSelectedText(originalText, humanizedText) {
       range = selection.getRangeAt(0);
     }
     
-    if (range) {
-      // Check if we're in an editable element
-      const container = range.commonAncestorContainer;
-      const editableElement = container.nodeType === 3 
-        ? container.parentElement 
-        : container;
-      
-      if (editableElement.isContentEditable || 
-          editableElement.tagName === 'TEXTAREA' || 
-          editableElement.tagName === 'INPUT') {
-        
-        // Handle contenteditable, textarea, or input
-        if (editableElement.tagName === 'TEXTAREA' || editableElement.tagName === 'INPUT') {
-          const start = editableElement.selectionStart;
-          const end = editableElement.selectionEnd;
-          const value = editableElement.value;
-          editableElement.value = value.substring(0, start) + humanizedText + value.substring(end);
-          editableElement.selectionStart = editableElement.selectionEnd = start + humanizedText.length;
-          
-          // Trigger input event
-          editableElement.dispatchEvent(new Event('input', { bubbles: true }));
-          
-          // Store replacement for undo
-          lastReplacement = {
-            originalText: originalText,
-            humanizedText: humanizedText,
-            element: editableElement,
-            start: start,
-            end: start + humanizedText.length
-          };
-        } else {
-          // ContentEditable
-          range.deleteContents();
-          const textNode = document.createTextNode(humanizedText);
-          range.insertNode(textNode);
-          
-          // Move cursor to end of inserted text
-          range.setStartAfter(textNode);
-          range.setEndAfter(textNode);
-          selection.removeAllRanges();
-          selection.addRange(range);
-          
-          // Trigger input event
-          editableElement.dispatchEvent(new Event('input', { bubbles: true }));
-          
-          // Store replacement for undo
-          lastReplacement = {
-            originalText: originalText,
-            humanizedText: humanizedText,
-            element: editableElement,
-            textNode: textNode
-          };
-        }
-        
-        showNotification('Text replaced successfully!', 'success');
-        return true;
-      }
+    if (!range) {
+      navigator.clipboard.writeText(humanizedText);
+      showNotification('Couldn\'t replace here automatically—result copied to clipboard.', 'info');
+      return false;
     }
     
-    // Fallback: copy to clipboard
+    // Walk up DOM to find nearest editable element
+    let container = range.commonAncestorContainer;
+    let editableElement = null;
+    
+    // Start from the text node's parent if we're on a text node
+    let currentNode = container.nodeType === 3 ? container.parentElement : container;
+    
+    // Walk up the tree to find the editable element
+    while (currentNode && !editableElement) {
+      if (currentNode.isContentEditable || 
+          currentNode.tagName === 'TEXTAREA' || 
+          currentNode.tagName === 'INPUT') {
+        editableElement = currentNode;
+        break;
+      }
+      currentNode = currentNode.parentElement;
+    }
+    
+    if (!editableElement) {
+      navigator.clipboard.writeText(humanizedText);
+      showNotification('Couldn\'t replace here automatically—result copied to clipboard.', 'info');
+      return false;
+    }
+    
+    // Handle textarea or input
+    if (editableElement.tagName === 'TEXTAREA' || editableElement.tagName === 'INPUT') {
+      const start = editableElement.selectionStart;
+      const end = editableElement.selectionEnd;
+      const value = editableElement.value;
+      
+      editableElement.value = value.substring(0, start) + humanizedText + value.substring(end);
+      editableElement.selectionStart = editableElement.selectionEnd = start + humanizedText.length;
+      
+      // Emit events to trigger frameworks
+      editableElement.dispatchEvent(new Event('input', { bubbles: true }));
+      editableElement.dispatchEvent(new Event('change', { bubbles: true }));
+      editableElement.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+      
+      // Store replacement for undo
+      lastReplacement = {
+        originalText: originalText,
+        humanizedText: humanizedText,
+        element: editableElement,
+        start: start,
+        end: start + humanizedText.length
+      };
+      
+      showNotification('Text replaced successfully!', 'success');
+      return true;
+    }
+    
+    // Handle contenteditable (Gmail, etc.)
+    if (editableElement.isContentEditable) {
+      // Try using execCommand first (more reliable in Gmail)
+      selection.removeAllRanges();
+      selection.addRange(range);
+      
+      let success = false;
+      
+      // Method 1: Try execCommand (best for Gmail)
+      try {
+        range.deleteContents();
+        success = document.execCommand('insertText', false, humanizedText);
+      } catch (e) {
+        console.log('[Content] execCommand failed, trying fallback');
+      }
+      
+      // Method 2: Fallback to manual insertion
+      if (!success) {
+        range.deleteContents();
+        const textNode = document.createTextNode(humanizedText);
+        range.insertNode(textNode);
+        
+        // Move cursor to end of inserted text
+        range.setStartAfter(textNode);
+        range.setEndAfter(textNode);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+      
+      // Emit events to trigger editor frameworks
+      editableElement.dispatchEvent(new Event('input', { bubbles: true }));
+      editableElement.dispatchEvent(new Event('change', { bubbles: true }));
+      editableElement.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+      
+      // Store replacement for undo
+      lastReplacement = {
+        originalText: originalText,
+        humanizedText: humanizedText,
+        element: editableElement
+      };
+      
+      showNotification('Text replaced successfully!', 'success');
+      return true;
+    }
+    
+    // No editable element found
     navigator.clipboard.writeText(humanizedText);
-    showNotification('Text copied to clipboard! (Could not replace automatically)', 'success');
+    showNotification('Couldn\'t replace here automatically—result copied to clipboard.', 'info');
     return false;
+    
   } catch (error) {
     console.error('[Content] Error replacing text:', error);
     navigator.clipboard.writeText(humanizedText);
-    showNotification('Text copied to clipboard! (Could not replace automatically)', 'success');
+    showNotification('Couldn\'t replace here automatically—result copied to clipboard.', 'info');
     return false;
   }
 }
