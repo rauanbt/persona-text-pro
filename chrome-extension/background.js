@@ -307,9 +307,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // Map legacy tone names to supported tones
     const mappedTone = mapToneToSupported(message.tone);
     const intensity = message.toneIntensity || 'strong';
-    console.log('[Background] ✅ TONE SELECTED:', message.tone, mappedTone !== message.tone ? `→ ${mappedTone}` : '', '| intensity:', intensity);
+    const forceRewrite = message.forceRewrite !== undefined ? message.forceRewrite : true;
+    console.log('[Background] ✅ TONE SELECTED:', message.tone, mappedTone !== message.tone ? `→ ${mappedTone}` : '', '| intensity:', intensity, '| force_rewrite:', forceRewrite);
     
-    handleHumanizeRequest(message.text, mappedTone, intensity, sender.tab?.id, sender.frameId)
+    handleHumanizeRequest(message.text, mappedTone, intensity, forceRewrite, sender.tab?.id, sender.frameId)
       .then(() => sendResponse({ success: true }))
       .catch((error) => sendResponse({ success: false, error: error.message }));
     return true;
@@ -411,20 +412,31 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
+// Simple Jaccard similarity check
+function quickSimilarity(a, b) {
+  const aw = new Set(a.toLowerCase().split(/\s+/).filter(Boolean));
+  const bw = new Set(b.toLowerCase().split(/\s+/).filter(Boolean));
+  if (aw.size === 0 && bw.size === 0) return 1;
+  const inter = [...aw].filter(w => bw.has(w)).length;
+  const union = new Set([...aw, ...bw]).size;
+  return union === 0 ? 0 : inter / union;
+}
+
 // Handle humanize request
-async function handleHumanizeRequest(text, tone, toneIntensity, tabId, frameId) {
+async function handleHumanizeRequest(text, tone, toneIntensity, forceRewrite, tabId, frameId) {
   try {
-    console.log(`[Background] 📤 Sending to edge function with tone: "${tone}" | intensity: "${toneIntensity}"`);
+    console.log(`[Background] 📤 Sending to edge function with tone: "${tone}" | intensity: "${toneIntensity}" | force_rewrite: ${forceRewrite}`);
     await safeSendMessage(tabId, { action: 'showProcessing' }, { frameId });
     
     const result = await callSupabaseFunction('humanize-text-hybrid', {
       text: text,
       tone: tone,
       tone_intensity: toneIntensity,
+      force_rewrite: forceRewrite,
       source: 'extension'
     });
     
-    console.log('[Background] ✅ Text humanized successfully with tone:', tone, '| intensity:', toneIntensity);
+    console.log('[Background] ✅ Response received - tone:', tone, 'intensity:', toneIntensity);
     
     // Extract humanized text (edge function returns snake_case)
     const humanizedText = result.humanized_text || result.humanizedText;
@@ -433,12 +445,27 @@ async function handleHumanizeRequest(text, tone, toneIntensity, tabId, frameId) 
       throw new Error('Empty response from humanization service');
     }
     
-    // Automatically replace text
-    await safeSendMessage(tabId, {
-      action: 'replaceText',
-      originalText: text,
-      humanizedText: humanizedText
-    }, { frameId });
+    // Check if result is too similar to original
+    const similarity = quickSimilarity(text, humanizedText);
+    console.log(`[Background] Similarity check: ${(similarity * 100).toFixed(1)}%`);
+    
+    if (similarity > 0.9 && tone !== 'regular') {
+      // Too similar - show result dialog with warning instead of silent replace
+      console.warn('[Background] Result too similar to original, showing dialog with warning');
+      await safeSendMessage(tabId, {
+        action: 'showResult',
+        originalText: text,
+        humanizedText: humanizedText,
+        warning: `⚠️ Text came back ${(similarity * 100).toFixed(0)}% similar. Try a different tone or stronger intensity.`
+      }, { frameId });
+    } else {
+      // Good change - automatically replace text
+      await safeSendMessage(tabId, {
+        action: 'replaceText',
+        originalText: text,
+        humanizedText: humanizedText
+      }, { frameId });
+    }
     
   } catch (error) {
     console.error('[Background] Error humanizing:', error);

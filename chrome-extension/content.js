@@ -463,6 +463,14 @@ function createDialog(text, wordCount, wordBalance, selectedTone = null) {
         <option value="light">Light — subtle</option>
       </select>
     </div>
+
+    <div style="margin-bottom: 16px;">
+      <label style="display: flex; align-items: center; font-size: 14px; color: #333; cursor: pointer;">
+        <input type="checkbox" id="sapienwrite-force-rewrite" checked style="margin-right: 8px; width: 18px; height: 18px; cursor: pointer;">
+        <span><strong>Force rewrite</strong> (allow sentence reordering for stronger tone)</span>
+      </label>
+      <p style="margin: 4px 0 0 26px; font-size: 12px; color: #666;">Enabling this allows reordering sentences within paragraphs for clearer tone expression.</p>
+    </div>
     
     <div id="sapienwrite-dialog-content" style="min-height: 50px;">
       <div style="display: flex; gap: 12px;">
@@ -592,6 +600,21 @@ function showProcessing() {
   }
 }
 
+// Simple word diff calculator
+function getWordDiff(original, humanized) {
+  const origWords = original.toLowerCase().split(/\s+/).filter(Boolean);
+  const humWords = humanized.toLowerCase().split(/\s+/).filter(Boolean);
+  const origSet = new Set(origWords);
+  const humSet = new Set(humWords);
+  
+  const removed = origWords.filter(w => !humSet.has(w)).length;
+  const added = humWords.filter(w => !origSet.has(w)).length;
+  const total = Math.max(origWords.length, humWords.length);
+  const changePct = Math.round(((removed + added) / (total * 2)) * 100);
+  
+  return { removed, added, changePct };
+}
+
 function showResult(originalText, humanizedText) {
   const dialog = document.getElementById('sapienwrite-dialog');
   if (!dialog) return;
@@ -618,13 +641,21 @@ function showResult(originalText, humanizedText) {
   const toneDisplay = toneDisplayNames[selectedTone] || selectedTone;
   const intensityDisplay = intensityDisplayNames[selectedToneIntensity] || selectedToneIntensity;
   
+  // Calculate word diff
+  const diff = getWordDiff(originalText, humanizedText);
+  
   content.innerHTML = `
     <div style="margin-bottom: 16px;">
       <div style="background: #dbeafe; border-left: 4px solid #2563eb; padding: 8px 12px; border-radius: 6px; margin-bottom: 8px;">
-        <p style=\"margin: 0; font-size: 12px; color: #1e40af; font-weight: 600;\">✓ Humanized with ${toneDisplay} tone — ${intensityDisplay}</p>`
+        <p style="margin: 0; font-size: 12px; color: #1e40af; font-weight: 600;">✓ Humanized with ${toneDisplay} tone — ${intensityDisplay}</p>
+      </div>
+      <div style="background: #f0fdf4; border-left: 4px solid #22c55e; padding: 8px 12px; border-radius: 6px; margin-bottom: 12px;">
+        <p style="margin: 0; font-size: 12px; color: #166534;">
+          📊 Changes: ~${diff.changePct}% of words changed (${diff.removed} removed, ${diff.added} added)
+        </p>
       </div>
       <div style="background: #f0fdf4; border-left: 4px solid #22c55e; padding: 12px; border-radius: 8px; margin-bottom: 12px;">
-        <p style="margin: 0; font-size: 13px; color: #166534; line-height: 1.5;">${humanizedText}</p>
+        <p style="margin: 0; font-size: 13px; color: #166534; line-height: 1.5; max-height: 200px; overflow-y: auto;">${humanizedText}</p>
       </div>
     </div>
     <div style="display: flex; gap: 8px;">
@@ -830,6 +861,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   
   if (message.action === 'showResult') {
+    if (message.warning) {
+      // Show warning notification first
+      showNotification(message.warning, 'info');
+    }
     showResult(message.originalText, message.humanizedText);
   }
   

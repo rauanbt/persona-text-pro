@@ -79,16 +79,17 @@ function jaccardSimilarity(a: string, b: string): number {
   }
 }
 
+// STRICTER thresholds and higher change targets for FORCE mode
 const INTENSITY_THRESHOLDS: Record<string, number> = {
-  light: 0.85,
-  medium: 0.75,
-  strong: 0.6,
+  light: 0.80,
+  medium: 0.70,
+  strong: 0.55,
 };
 
 const CHANGE_TARGET: Record<string, number> = {
-  light: 0.15,   // 15% word change
-  medium: 0.25,  // 25% word change
-  strong: 0.40,  // 40% word change
+  light: 0.30,   // 30% word change minimum
+  medium: 0.45,  // 45% word change minimum
+  strong: 0.60,  // 60% word change minimum
 };
 
 serve(async (req) => {
@@ -108,7 +109,11 @@ serve(async (req) => {
       throw new Error('User not authenticated');
     }
 
-    const { text, tone, source = 'web', tone_intensity = 'strong' } = await req.json(); // source: 'web' or 'extension'
+    const { text, tone, source = 'web', tone_intensity = 'strong', force_rewrite = true } = await req.json(); // source: 'web' or 'extension'
+    
+    if (force_rewrite) {
+      console.log('[HYBRID-HUMANIZE|FORCE] Force rewrite mode ENABLED - allowing sentence reordering');
+    }
     
     if (!text || !tone) {
       throw new Error('Text and tone are required');
@@ -250,7 +255,7 @@ HUMAN WRITING RULES:
 
 STRUCTURE PRESERVATION:
 - Output in exact same language as input (${inputLangName} [${inputLangCode}])
-- Keep EVERY line break exactly where it appears
+${force_rewrite ? '- Preserve paragraph boundaries and list-item boundaries, but you MAY reorder sentences within paragraphs' : '- Keep EVERY line break exactly where it appears'}
 - Preserve list formatting (1. 2. 3. or - bullets)
 - Plain text only, no markdown
 
@@ -270,7 +275,7 @@ PROFESSIONAL HUMAN WRITING:
 
 STRUCTURE PRESERVATION:
 - Output in exact same language as input (${inputLangName} [${inputLangCode}])
-- Keep EVERY line break exactly where it appears
+${force_rewrite ? '- Preserve paragraph boundaries and list-item boundaries, but you MAY reorder sentences within paragraphs for better professional flow' : '- Keep EVERY line break exactly where it appears'}
 - Preserve list formatting exactly
 - Plain text only, no markdown
 
@@ -290,7 +295,7 @@ PERSUASIVE HUMAN WRITING:
 
 STRUCTURE PRESERVATION:
 - Output in exact same language as input (${inputLangName} [${inputLangCode}])
-- Keep EVERY line break exactly where it appears
+${force_rewrite ? '- Preserve paragraph boundaries, but you MAY reorder sentences for maximum persuasive impact' : '- Keep EVERY line break exactly where it appears'}
 - Preserve list formatting exactly
 - Plain text only, no markdown
 
@@ -310,7 +315,7 @@ EMPATHETIC HUMAN WRITING:
 
 STRUCTURE PRESERVATION:
 - Output in exact same language as input (${inputLangName} [${inputLangCode}])
-- Keep EVERY line break exactly where it appears
+${force_rewrite ? '- Preserve paragraph boundaries, but you MAY reorder sentences to lead with empathy and acknowledgment' : '- Keep EVERY line break exactly where it appears'}
 - Preserve list formatting exactly
 - Plain text only, no markdown
 
@@ -330,7 +335,7 @@ SARCASTIC HUMAN WRITING:
 
 STRUCTURE PRESERVATION:
 - Output in exact same language as input (${inputLangName} [${inputLangCode}])
-- Keep EVERY line break exactly where it appears
+${force_rewrite ? '- Preserve paragraph boundaries, but you MAY reorder for comic timing and sarcastic punch' : '- Keep EVERY line break exactly where it appears'}
 - Preserve list formatting exactly
 - Plain text only, no markdown
 
@@ -350,7 +355,7 @@ FUNNY HUMAN WRITING:
 
 STRUCTURE PRESERVATION:
 - Output in exact same language as input (${inputLangName} [${inputLangCode}])
-- Keep EVERY line break exactly where it appears
+${force_rewrite ? '- Preserve paragraph boundaries, but you MAY reorder for comedic build-up and payoff' : '- Keep EVERY line break exactly where it appears'}
 - Preserve list formatting exactly
 - Plain text only, no markdown
 
@@ -655,35 +660,50 @@ PRESERVE STRUCTURE:
       console.error('[LANG] Post-generation language verification failed:', e);
     }
 
-    // TONE BOOSTER: Enforce visible tone changes
+    // MULTI-ENGINE TONE BOOSTER with SHORT-TEXT mode
     const intensity = ['light','medium','strong'].includes(tone_intensity) ? tone_intensity : 'strong';
     const threshold = INTENSITY_THRESHOLDS[intensity] ?? INTENSITY_THRESHOLDS.strong;
-    let sim = jaccardSimilarity(text, finalText);
-    console.log(`[TONE] Requested tone="${tone}" intensity="${intensity}" similarity(before)=${sim.toFixed(3)} threshold=${threshold}`);
+    const isShortText = wordCount < 30;
+    let simBefore = jaccardSimilarity(text, finalText);
+    let sim = simBefore;
+    
+    console.log(`[TONE] tone="${tone}" intensity="${intensity}" force_rewrite=${force_rewrite} short_text=${isShortText} similarity(before)=${sim.toFixed(3)} threshold=${threshold}`);
 
     if (tone !== 'regular' && sim > threshold) {
       const changePct = Math.round(CHANGE_TARGET[intensity] * 100);
       const toneReinforcements: Record<string, string> = {
-        formal: 'Use "However," "Additionally," "Therefore" naturally; reduce contractions a bit; executive clarity.',
-        persuasive: 'Address the reader with "you" and "your", add rhetorical questions and a subtle sense of urgency.',
-        empathetic: 'Use warm phrases like "I understand," "That makes sense," "Let\'s take it step by step."',
-        sarcastic: 'Dry wit with phrases like "Oh great," "Sure," "Obviously"; use fragments for punch.',
-        funny: 'Use playful exaggerations and unexpected comparisons; comedic rhythm with short setups and punchy payoffs.',
+        formal: 'Use "However," "Additionally," "Therefore" naturally; reduce contractions; executive clarity; permit clause inversion for emphasis.',
+        persuasive: 'Second-person "you/your"; rhetorical questions; urgency; vary rhythm deliberately; reorder for strongest hook.',
+        empathetic: '"I understand," "That makes sense," "Let\'s take it step by step"; soften starts; reorder to acknowledge feelings first.',
+        sarcastic: '"Oh great," "Sure," "Obviously"; dry wit; fragments allowed; invert statements for irony.',
+        funny: 'Playful exaggerations, unexpected comparisons; comedic pacing; sentence reshuffle allowed.',
         regular: ''
       };
 
-      const boosterPromptBase = (extraToneReinforcement: string) => `
+      const structureRule = force_rewrite 
+        ? 'Preserve paragraph boundaries and list-item boundaries. Within paragraphs, you MAY reorder sentences and clauses to better reflect the tone.'
+        : 'Keep EVERY line break exactly where it appears.';
+
+      const shortTextPromptAddition = isShortText
+        ? `\n\nCRITICAL (Short text): Change at least ${changePct}% of words; allow re-ordering of clauses; keep meaning exact; same language; concise output.`
+        : '';
+
+      const boosterPromptBase = (extraToneReinforcement: string, engineName: string) => `
 You are a human writer. Rewrite the user's text to EXPLICITLY reflect the tone "${tone}".
 Requirements:
-- Change at least ${changePct}% of the words and reorder clauses where natural
+- Change at least ${changePct}% of the words${force_rewrite ? ' and reorder clauses/sentences where natural' : ''}
 - Preserve meaning exactly
-- Keep EVERY line break and list formatting exactly
+- ${structureRule}
+- Preserve list formatting (1. 2. 3. or - bullets)
 - Output ONLY plain text
 - Use the same language as input (${inputLangName} [${inputLangCode}])
-${extraToneReinforcement}`;
+${extraToneReinforcement}${shortTextPromptAddition}
 
-      for (let attempt = 1; attempt <= 2 && sim > threshold; attempt++) {
-        const system = boosterPromptBase(toneReinforcements[tone] || '');
+Engine: ${engineName}`;
+
+      // Booster pass 1: gemini-2.5-pro
+      if (sim > threshold) {
+        const system = boosterPromptBase(toneReinforcements[tone] || '', 'google/gemini-2.5-pro');
         const userContent = `${langRule}
 
 ORIGINAL:
@@ -695,11 +715,12 @@ ${finalText}
 Rewrite CURRENT DRAFT to meet all requirements above while ensuring it is sufficiently different from ORIGINAL.`;
 
         try {
+          console.log('[TONE] Booster pass 1: gemini-2.5-pro');
           const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${lovableApiKey}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              model: 'google/gemini-2.5-flash',
+              model: 'google/gemini-2.5-pro',
               messages: [
                 { role: 'system', content: system },
                 { role: 'user', content: userContent }
@@ -713,20 +734,70 @@ Rewrite CURRENT DRAFT to meet all requirements above while ensuring it is suffic
             if (candidate) {
               finalText = candidate;
               sim = jaccardSimilarity(text, finalText);
-              enginesUsed += attempt === 1 ? '+booster1' : '+booster2';
+              enginesUsed += '+gemini-pro-booster';
               passesCompleted += 1;
-              console.log(`[TONE] Booster attempt ${attempt} similarity=${sim.toFixed(3)} (threshold=${threshold})`);
+              console.log(`[TONE] Booster pass 1 done: similarity=${sim.toFixed(3)} (threshold=${threshold})`);
             }
           } else {
-            console.error('[TONE] Booster API error:', resp.status, await resp.text());
-            break;
+            console.error('[TONE] Booster pass 1 API error:', resp.status, await resp.text());
           }
         } catch (boosterError) {
-          console.error('[TONE] Booster attempt failed:', boosterError);
-          break;
+          console.error('[TONE] Booster pass 1 failed:', boosterError);
         }
       }
-      console.log(`[TONE] Booster complete: final similarity=${sim.toFixed(3)} threshold_met=${sim <= threshold}`);
+
+      // Booster pass 2: openai/gpt-5 (if still above threshold)
+      if (sim > threshold) {
+        const strongerReinforcement = toneReinforcements[tone] 
+          ? toneReinforcements[tone] + '\n\nEXTRA EMPHASIS: Use MORE tone markers, reorder MORE aggressively, change MORE words.'
+          : 'EXTRA EMPHASIS: Use MORE tone markers, reorder MORE aggressively, change MORE words.';
+        
+        const system = boosterPromptBase(strongerReinforcement, 'openai/gpt-5');
+        const userContent = `${langRule}
+
+ORIGINAL:
+${text}
+
+CURRENT DRAFT (after 1st booster):
+${finalText}
+
+This draft is still too similar to ORIGINAL (similarity=${sim.toFixed(3)}). Rewrite MORE aggressively to meet all requirements while preserving meaning.`;
+
+        try {
+          console.log('[TONE] Booster pass 2: openai/gpt-5');
+          const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${lovableApiKey}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model: 'openai/gpt-5',
+              messages: [
+                { role: 'system', content: system },
+                { role: 'user', content: userContent }
+              ],
+              max_completion_tokens: 4000,
+            }),
+          });
+
+          if (resp.ok) {
+            const data = await resp.json();
+            const candidate = data.choices?.[0]?.message?.content?.trim();
+            if (candidate) {
+              finalText = candidate;
+              sim = jaccardSimilarity(text, finalText);
+              enginesUsed += '+gpt5-booster';
+              passesCompleted += 1;
+              console.log(`[TONE] Booster pass 2 done: similarity=${sim.toFixed(3)} (threshold=${threshold})`);
+            }
+          } else {
+            console.error('[TONE] Booster pass 2 API error:', resp.status, await resp.text());
+          }
+        } catch (boosterError) {
+          console.error('[TONE] Booster pass 2 failed:', boosterError);
+        }
+      }
+
+      const thresholdMet = sim <= threshold;
+      console.log(`[TONE] Booster complete: similarity_before=${simBefore.toFixed(3)} similarity_after=${sim.toFixed(3)} threshold=${threshold} threshold_met=${thresholdMet}`);
     }
 
     // Check if output is too long and condense if needed
