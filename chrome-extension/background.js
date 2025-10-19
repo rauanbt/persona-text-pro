@@ -443,9 +443,14 @@ async function handleHumanizeRequest(text, tone, toneIntensity, forceRewrite, ta
     
     console.log('[Background] ✅ Response received - tone:', tone, 'intensity:', toneIntensity);
     
-    // Extract similarity meta if available
+    // Extract humanized_text and similarity meta from result
+    const humanizedText = typeof result.humanized_text === 'string' ? result.humanized_text : (result.humanizedText || '');
     const simBeforeMeta = typeof result.similarity_before === 'number' ? result.similarity_before : undefined;
     const simAfterMeta = typeof result.similarity_after === 'number' ? result.similarity_after : undefined;
+    
+    if (!humanizedText || !humanizedText.trim()) {
+      throw new Error('Empty humanized_text from server');
+    }
 
     // Check if result is too similar to original
     const similarity = quickSimilarity(text, humanizedText);
@@ -462,6 +467,8 @@ async function handleHumanizeRequest(text, tone, toneIntensity, forceRewrite, ta
         action: 'showResult',
         originalText: text,
         humanizedText: humanizedText,
+        tone: tone,
+        toneIntensity: toneIntensity,
         warning: `⚠️ Text came back ${(similarity * 100).toFixed(0)}% similar.${metaLine} Try a different tone or stronger intensity.`
       }, { frameId });
     } else {

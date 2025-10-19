@@ -616,8 +616,54 @@ function getWordDiff(original, humanized) {
 }
 
 function showResult(originalText, humanizedText) {
-  const dialog = document.getElementById('sapienwrite-dialog');
-  if (!dialog) return;
+  let dialog = document.getElementById('sapienwrite-dialog');
+  
+  // If no dialog exists, create a minimal one (resilient for Gmail etc)
+  if (!dialog) {
+    console.log('[Content] No dialog exists, creating minimal container for result');
+    dialog = document.createElement('div');
+    dialog.id = 'sapienwrite-dialog';
+    dialog.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 999999;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      padding: 24px;
+      max-width: 500px;
+      width: 90%;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    `;
+    
+    dialog.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px;">
+        <h3 style="margin: 0; font-size: 20px; font-weight: 700; color: #1a1a1a;">Humanize Result</h3>
+        <button id="sapienwrite-close" style="background: none; border: none; font-size: 24px; cursor: pointer; padding: 0; color: #999;">×</button>
+      </div>
+      <div id="sapienwrite-dialog-content" style="min-height: 50px;"></div>
+    `;
+    
+    const backdrop = document.createElement('div');
+    backdrop.id = 'sapienwrite-backdrop';
+    backdrop.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 999998;
+    `;
+    
+    safeAppendToBody(backdrop);
+    safeAppendToBody(dialog);
+    
+    document.getElementById('sapienwrite-close').onclick = closeDialog;
+    backdrop.onclick = closeDialog;
+  }
   
   const content = dialog.querySelector('#sapienwrite-dialog-content') || document.getElementById('sapienwrite-dialog-content');
   if (!content) return;
@@ -714,6 +760,55 @@ function showResult(originalText, humanizedText) {
 }
 
 function showError(errorMessage) {
+  let dialog = document.getElementById('sapienwrite-dialog');
+  
+  // If no dialog exists, create a minimal one (resilient for Gmail etc)
+  if (!dialog) {
+    console.log('[Content] No dialog exists, creating minimal container for error');
+    dialog = document.createElement('div');
+    dialog.id = 'sapienwrite-dialog';
+    dialog.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 999999;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      padding: 24px;
+      max-width: 500px;
+      width: 90%;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    `;
+    
+    dialog.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px;">
+        <h3 style="margin: 0; font-size: 20px; font-weight: 700; color: #1a1a1a;">Error</h3>
+        <button id="sapienwrite-close" style="background: none; border: none; font-size: 24px; cursor: pointer; padding: 0; color: #999;">×</button>
+      </div>
+      <div id="sapienwrite-dialog-content" style="min-height: 50px;"></div>
+    `;
+    
+    const backdrop = document.createElement('div');
+    backdrop.id = 'sapienwrite-backdrop';
+    backdrop.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 999998;
+    `;
+    
+    safeAppendToBody(backdrop);
+    safeAppendToBody(dialog);
+    
+    document.getElementById('sapienwrite-close').onclick = closeDialog;
+    backdrop.onclick = closeDialog;
+  }
+  
   const content = document.getElementById('sapienwrite-dialog-content');
   if (!content) return;
   
@@ -861,6 +956,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   
   if (message.action === 'showResult') {
+    // Update selected tone from message if provided
+    if (message.tone) {
+      selectedTone = message.tone;
+    }
+    if (message.toneIntensity) {
+      selectedToneIntensity = message.toneIntensity;
+    }
+    
     if (message.warning) {
       // Show warning notification first
       showNotification(message.warning, 'info');
