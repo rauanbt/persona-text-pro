@@ -9,8 +9,20 @@ async function safeSendMessage(tabId, message, options = {}) {
   try {
     await chrome.tabs.sendMessage(tabId, message, options);
   } catch (error) {
-    // Silently ignore "receiving end does not exist" errors
-    if (!error.message?.includes('Receiving end does not exist')) {
+    if (error.message?.includes('Receiving end does not exist')) {
+      // Try without frameId if frameId was specified
+      if (options.frameId !== undefined) {
+        console.log('[Background] Retrying without frameId...');
+        try {
+          await chrome.tabs.sendMessage(tabId, message);
+          return;
+        } catch (retryError) {
+          console.log('[Background] Retry failed:', retryError.message);
+        }
+      }
+      // Silently ignore - this is expected when content script isn't loaded
+      console.log('[Background] Content script not loaded in tab, ignoring');
+    } else {
       console.error('[Background] Message send error:', error);
     }
   }
@@ -201,139 +213,22 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     return;
   }
   
-  // Preflight check: can we replace text in this editor?
-  let preflightOk = false;
-  try {
-    const preflightResponse = await chrome.tabs.sendMessage(tab.id, {
-      action: 'preflightReplace'
-    }, { frameId: info.frameId });
-    
-    preflightOk = preflightResponse?.ok === true;
-    
-    if (!preflightOk) {
-      console.log('[Background] Preflight failed:', preflightResponse?.reason);
-      
-      // OPEN DIALOG INSTEAD OF BLOCKING
-      // Ensure we have a fresh session before checking subscription
-      const sessionResult = await ensureFreshSession();
-      if (!sessionResult.success) {
-        await safeSendMessage(tab.id, {
-          action: 'showNotification',
-          message: 'Reconnect required. Open sapienwrite.com to refresh your session.',
-          type: 'error'
-        }, { frameId: info.frameId });
-        return;
-      }
-      
-      try {
-        const subscriptionData = await checkSubscription();
-        const plan = subscriptionData.plan || 'free';
-        
-        if (plan !== 'extension_only' && plan !== 'master' && plan !== 'ultra') {
-          await safeSendMessage(tab.id, {
-            action: 'showUpgradeRequired',
-            currentPlan: plan
-          }, { frameId: info.frameId });
-          return;
-        }
-        
-        const wordCount = selectedText.trim().split(/\s+/).length;
-        const session = await getSession();
-        
-        // Validate session before using it
-        if (!session || !session.user) {
-          console.error('[Background] No valid session');
-          await safeSendMessage(tab.id, {
-            action: 'showNotification',
-            message: 'Session expired. Please reconnect the extension.',
-            type: 'error'
-          }, { frameId: info.frameId });
-          return;
-        }
-        
-        const extensionLimit = EXTENSION_LIMITS[plan] || 750;
-        
-        const response = await fetch(
-          `${SUPABASE_URL}/rest/v1/usage_tracking?user_id=eq.${session.user.id}&select=words_used,extension_words_used`,
-          {
-            headers: {
-              'apikey': SUPABASE_ANON_KEY,
-              'Authorization': `Bearer ${session.access_token}`
-            }
-          }
-        );
-        
-        const data = await response.json();
-        const usageData = data[0] || { words_used: 0, extension_words_used: 0 };
-        
-        let wordBalance;
-        if (plan === 'free') {
-          const totalUsed = (usageData.words_used || 0) + (usageData.extension_words_used || 0);
-          wordBalance = Math.max(0, extensionLimit - totalUsed);
-        } else if (plan === 'extension_only') {
-          const extensionUsed = usageData.extension_words_used || 0;
-          wordBalance = Math.max(0, extensionLimit - extensionUsed);
-        } else if (plan === 'ultra' || plan === 'master') {
-          const totalUsed = (usageData.words_used || 0) + (usageData.extension_words_used || 0);
-          wordBalance = Math.max(0, 30000 - totalUsed);
-        } else {
-          wordBalance = 0;
-        }
-        
-        // Open dialog with the selected text - user must click "Humanize" (no credit waste yet)
-        await safeSendMessage(tab.id, {
-          action: 'showDialog',
-          text: selectedText,
-          wordCount: wordCount,
-          wordBalance: wordBalance
-        }, { frameId: info.frameId });
-        
-        return; // Stop here - no AI call until user clicks "Humanize" in dialog
-        
-      } catch (error) {
-        console.error('[Background] Error preparing dialog:', error);
-        await safeSendMessage(tab.id, {
-          action: 'showNotification',
-          message: 'Failed to prepare humanize dialog.',
-          type: 'error'
-        }, { frameId: info.frameId });
-        return;
-      }
-    } else {
-      console.log('[Background] Preflight OK, method:', preflightResponse.method);
-    }
-  } catch (preflightError) {
-    console.log('[Background] Preflight check failed:', preflightError.message);
-    // If preflight check itself fails, assume it won't work and open dialog
-    await safeSendMessage(tab.id, {
-      action: 'showNotification',
-      message: 'Cannot check editor compatibility. Opening dialog instead.',
-      type: 'info'
-    }, { frameId: info.frameId });
-    // Try to open dialog as fallback
-    try {
-      const sessionResult = await ensureFreshSession();
-      if (sessionResult.success) {
-        await safeSendMessage(tab.id, {
-          action: 'showDialog',
-          text: selectedText,
-          wordCount: selectedText.trim().split(/\s+/).length,
-          wordBalance: 0
-        }, { frameId: info.frameId });
-      }
-    } catch (e) {
-      console.error('[Background] Failed to open fallback dialog:', e);
-    }
-    return;
-  }
+  // Immediately show dialog with selected text and temporary word balance
+  const wordCount = selectedText.trim().split(/\s+/).length;
+  await safeSendMessage(tab.id, {
+    action: 'showDialog',
+    text: selectedText,
+    wordCount: wordCount,
+    wordBalance: '…', // Placeholder while we fetch
+    tone: tone
+  }, { frameId: info.frameId });
   
-  // Ensure we have a fresh session before checking subscription
+  // Background: Ensure fresh session and compute word balance
   const sessionResult = await ensureFreshSession();
   if (!sessionResult.success) {
     await safeSendMessage(tab.id, {
-      action: 'showNotification',
-      message: 'Reconnect required. Open sapienwrite.com to refresh your session.',
-      type: 'error'
+      action: 'showError',
+      message: 'Reconnect required. Open sapienwrite.com to refresh your session.'
     }, { frameId: info.frameId });
     return;
   }
@@ -350,16 +245,12 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       return;
     }
     
-    const wordCount = selectedText.trim().split(/\s+/).length;
     const session = await getSession();
-    
-    // Validate session before using it
     if (!session || !session.user) {
       console.error('[Background] No valid session');
       await safeSendMessage(tab.id, {
-        action: 'showNotification',
-        message: 'Session expired. Please reconnect the extension.',
-        type: 'error'
+        action: 'showError',
+        message: 'Session expired. Please reconnect the extension.'
       }, { frameId: info.frameId });
       return;
     }
@@ -393,25 +284,17 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       wordBalance = 0;
     }
     
-    // Check if user has enough words
-    if (wordCount > wordBalance) {
-      await safeSendMessage(tab.id, {
-        action: 'showNotification',
-        message: `Not enough words! Need ${wordCount}, have ${wordBalance}.`,
-        type: 'error'
-      }, { frameId: info.frameId });
-      return;
-    }
-    
-    // Start humanization immediately
-    await handleHumanizeRequest(selectedText, tone, tab.id, info.frameId);
+    // Update dialog with actual word balance
+    await safeSendMessage(tab.id, {
+      action: 'updateDialogUsage',
+      wordBalance: wordBalance
+    }, { frameId: info.frameId });
     
   } catch (error) {
-    console.error('[Background] Error:', error);
+    console.error('[Background] Error fetching usage:', error);
     await safeSendMessage(tab.id, {
-      action: 'showNotification',
-      message: 'Failed to check account. Please try again.',
-      type: 'error'
+      action: 'showError',
+      message: 'Failed to check account. Please try again.'
     }, { frameId: info.frameId });
   }
 });

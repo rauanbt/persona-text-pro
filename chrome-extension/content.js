@@ -628,7 +628,7 @@ function restoreOriginalText() {
 }
 
 // Create humanize dialog
-function createDialog(text, wordCount, wordBalance) {
+function createDialog(text, wordCount, wordBalance, selectedTone = null) {
   // Remove existing dialog
   const existing = document.getElementById('sapienwrite-dialog');
   if (existing) existing.remove();
@@ -656,13 +656,19 @@ function createDialog(text, wordCount, wordBalance) {
     <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px;">
       <div>
         <h3 style="margin: 0; font-size: 20px; font-weight: 700; color: #1a1a1a;">Humanize Text</h3>
-        <p style="margin: 4px 0 0; font-size: 14px; color: #666;">${wordCount} words • ${wordBalance} remaining</p>
+        <p id="sapienwrite-usage-info" style="margin: 4px 0 0; font-size: 14px; color: #666;">${wordCount} words • ${wordBalance} remaining</p>
       </div>
       <button id="sapienwrite-close" style="background: none; border: none; font-size: 24px; cursor: pointer; padding: 0; color: #999;">×</button>
     </div>
     
-    <div style="background: #f5f5f5; padding: 12px; border-radius: 8px; margin-bottom: 16px; max-height: 100px; overflow-y: auto;">
+    <div style="background: #f5f5f5; padding: 12px; border-radius: 8px; margin-bottom: 12px; max-height: 100px; overflow-y: auto;">
       <p style="margin: 0; font-size: 14px; color: #333; line-height: 1.5;">${truncatedText}</p>
+    </div>
+    
+    <div style="background: #fef3c7; padding: 8px 12px; border-radius: 6px; margin-bottom: 16px;">
+      <p style="margin: 0; font-size: 12px; color: #92400e; line-height: 1.4;">
+        💡 Some editors block auto-replacement. Use <strong>Copy</strong> if needed.
+      </p>
     </div>
     
     <div style="margin-bottom: 16px;">
@@ -704,6 +710,14 @@ function createDialog(text, wordCount, wordBalance) {
   
   safeAppendToBody(backdrop);
   safeAppendToBody(dialog);
+  
+  // Set selected tone if provided
+  if (selectedTone) {
+    const toneSelect = document.getElementById('sapienwrite-tone');
+    if (toneSelect) {
+      toneSelect.value = selectedTone;
+    }
+  }
   
   // Event listeners
   document.getElementById('sapienwrite-close').onclick = closeDialog;
@@ -1047,7 +1061,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   
   if (message.action === 'showDialog') {
-    createDialog(message.text, message.wordCount, message.wordBalance);
+    createDialog(message.text, message.wordCount, message.wordBalance, message.tone);
+  }
+  
+  if (message.action === 'updateDialogUsage') {
+    const usageInfo = document.getElementById('sapienwrite-usage-info');
+    if (usageInfo) {
+      const wordCount = usageInfo.textContent.split(' ')[0];
+      usageInfo.textContent = `${wordCount} words • ${message.wordBalance} remaining`;
+    }
   }
   
   if (message.action === 'showProcessing') {
