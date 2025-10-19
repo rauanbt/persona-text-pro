@@ -237,11 +237,18 @@ async function handleHumanizeRequest(text, tone, tabId, frameId) {
     
     console.log('[Background] Text humanized successfully');
     
+    // Extract humanized text (edge function returns snake_case)
+    const humanizedText = result.humanized_text || result.humanizedText;
+    
+    if (!humanizedText || humanizedText.trim() === '') {
+      throw new Error('Empty response from humanization service');
+    }
+    
     // Automatically replace text
     chrome.tabs.sendMessage(tabId, {
       action: 'replaceText',
       originalText: text,
-      humanizedText: result.humanizedText
+      humanizedText: humanizedText
     }, { frameId });
     
   } catch (error) {

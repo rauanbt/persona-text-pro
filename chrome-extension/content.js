@@ -874,6 +874,14 @@ window.addEventListener('message', (event) => {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('[Content] Message received:', message);
   
+  // Relay session request from background to web page
+  if (message.type === 'SAPIENWRITE_REQUEST_SESSION') {
+    console.log('[Content] Relaying session request to web page');
+    window.postMessage({ type: 'SAPIENWRITE_REQUEST_SESSION' }, '*');
+    sendResponse({ received: true });
+    return;
+  }
+  
   if (message.action === 'showNotification') {
     showNotification(message.message, message.type || 'info');
   }
