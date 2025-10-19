@@ -88,14 +88,17 @@ const ExtensionAuth = () => {
                   ? 'Payment Successful!' 
                   : 'Extension Connected!'}
               </h1>
-              <p className="text-muted-foreground mb-4">
+              <p className="text-muted-foreground mb-6">
                 {new URLSearchParams(window.location.search).get('payment') === 'success'
-                  ? 'Your subscription is active. Extension is ready!'
-                  : 'Your Chrome Extension is now connected.'}
+                  ? 'Your subscription is active. You can now close this tab and return to the extension.'
+                  : 'Your Chrome Extension is now connected. You can close this tab and return to the extension.'}
               </p>
-              <p className="text-sm text-muted-foreground">
-                This window will close automatically...
-              </p>
+              <button
+                onClick={() => window.close()}
+                className="w-full px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 font-semibold transition-colors"
+              >
+                ✓ Done - Close This Tab
+              </button>
             </>
           )}
 
