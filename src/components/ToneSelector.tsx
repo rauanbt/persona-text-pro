@@ -19,7 +19,7 @@ export const ToneSelector = ({ selectedTone, onToneChange }: ToneSelectorProps) 
     { value: "persuasive", label: "Persuasive/Sales", description: "Compelling, convincing tone" },
     { value: "empathetic", label: "Empathetic/Warm", description: "Understanding, caring tone" },
     { value: "sarcastic", label: "Sarcastic", description: "Witty, ironic tone" },
-    { value: "funny", label: "Funny", description: "Humorous, entertaining tone" }
+    { value: "grammar", label: "Grammar Fix", description: "Fix errors, keep your style" }
   ];
 
   return (

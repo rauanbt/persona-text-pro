@@ -168,7 +168,7 @@ chrome.runtime.onInstalled.addListener(() => {
     { id: 'tone-persuasive', title: 'Persuasive/Sales - Compelling, convincing' },
     { id: 'tone-empathetic', title: 'Empathetic/Warm - Understanding, caring' },
     { id: 'tone-sarcastic', title: 'Sarcastic - Witty, ironic' },
-    { id: 'tone-funny', title: 'Funny - Humorous, entertaining' }
+    { id: 'tone-grammar', title: 'Grammar Fix - Correct errors only' }
   ];
   
   tones.forEach(tone => {
@@ -192,7 +192,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     'tone-persuasive': 'persuasive',
     'tone-empathetic': 'empathetic',
     'tone-sarcastic': 'sarcastic',
-    'tone-funny': 'funny'
+    'tone-grammar': 'grammar'
   };
   
   const tone = toneMap[info.menuItemId];

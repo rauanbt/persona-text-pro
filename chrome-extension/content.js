@@ -451,7 +451,7 @@ function createDialog(text, wordCount, wordBalance, selectedTone = null) {
         <option value="persuasive">Persuasive - Compelling, convincing</option>
         <option value="empathetic">Empathetic - Understanding, caring</option>
         <option value="sarcastic">Sarcastic - Witty, ironic</option>
-        <option value="funny">Funny - Humorous, entertaining</option>
+        <option value="grammar">Grammar Fix - Correct errors only</option>
       </select>
     </div>
 

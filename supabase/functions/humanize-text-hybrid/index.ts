@@ -84,12 +84,14 @@ const INTENSITY_THRESHOLDS: Record<string, number> = {
   light: 0.80,
   medium: 0.70,
   strong: 0.55,
+  grammar: 0.95,  // Grammar mode allows 95% similarity (minimal changes)
 };
 
 const CHANGE_TARGET: Record<string, number> = {
   light: 0.30,   // 30% word change minimum
   medium: 0.45,  // 45% word change minimum
   strong: 0.60,  // 60% word change minimum
+  grammar: 0.05, // Grammar mode only 5% change (fix errors only)
 };
 
 serve(async (req) => {
@@ -253,9 +255,11 @@ HUMAN WRITING RULES:
 7. Vary punctuation - not every sentence needs perfect grammar
 8. Add conversational touches when natural: "basically," "honestly," "you know what"
 
-STRUCTURE PRESERVATION:
+STRUCTURE PRESERVATION (CRITICAL):
 - Output in exact same language as input (${inputLangName} [${inputLangCode}])
-${force_rewrite ? '- Preserve paragraph boundaries and list-item boundaries, but you MAY reorder sentences within paragraphs' : '- Keep EVERY line break exactly where it appears'}
+- Keep EVERY line break exactly where it appears
+- Keep EVERY sentence in its original order
+- Maintain exact paragraph structure
 - Preserve list formatting (1. 2. 3. or - bullets)
 - Plain text only, no markdown
 
@@ -273,9 +277,11 @@ PROFESSIONAL HUMAN WRITING:
 5. Break up long sentences with semicolons or split them
 6. NO em-dashes (—), use colons (:) or regular hyphens (-)
 
-STRUCTURE PRESERVATION:
+STRUCTURE PRESERVATION (CRITICAL):
 - Output in exact same language as input (${inputLangName} [${inputLangCode}])
-${force_rewrite ? '- Preserve paragraph boundaries and list-item boundaries, but you MAY reorder sentences within paragraphs for better professional flow' : '- Keep EVERY line break exactly where it appears'}
+- Keep EVERY line break exactly where it appears
+- Keep EVERY sentence in its original order
+- Maintain exact paragraph structure
 - Preserve list formatting exactly
 - Plain text only, no markdown
 
@@ -293,9 +299,11 @@ PERSUASIVE HUMAN WRITING:
 5. Add emotion and urgency naturally
 6. NO perfect parallelism - humans don't write that way
 
-STRUCTURE PRESERVATION:
+STRUCTURE PRESERVATION (CRITICAL):
 - Output in exact same language as input (${inputLangName} [${inputLangCode}])
-${force_rewrite ? '- Preserve paragraph boundaries, but you MAY reorder sentences for maximum persuasive impact' : '- Keep EVERY line break exactly where it appears'}
+- Keep EVERY line break exactly where it appears
+- Keep EVERY sentence in its original order
+- Maintain exact paragraph structure
 - Preserve list formatting exactly
 - Plain text only, no markdown
 
@@ -313,9 +321,11 @@ EMPATHETIC HUMAN WRITING:
 5. Break up text with empathetic pauses (shorter paragraphs)
 6. NO clinical language - write like you're talking to a friend
 
-STRUCTURE PRESERVATION:
+STRUCTURE PRESERVATION (CRITICAL):
 - Output in exact same language as input (${inputLangName} [${inputLangCode}])
-${force_rewrite ? '- Preserve paragraph boundaries, but you MAY reorder sentences to lead with empathy and acknowledgment' : '- Keep EVERY line break exactly where it appears'}
+- Keep EVERY line break exactly where it appears
+- Keep EVERY sentence in its original order
+- Maintain exact paragraph structure
 - Preserve list formatting exactly
 - Plain text only, no markdown
 
@@ -333,33 +343,48 @@ SARCASTIC HUMAN WRITING:
 5. Break grammar rules for effect - fragment sentences on purpose
 6. Casual tone always - sarcasm doesn't work formally
 
-STRUCTURE PRESERVATION:
+STRUCTURE PRESERVATION (CRITICAL):
 - Output in exact same language as input (${inputLangName} [${inputLangCode}])
-${force_rewrite ? '- Preserve paragraph boundaries, but you MAY reorder for comic timing and sarcastic punch' : '- Keep EVERY line break exactly where it appears'}
+- Keep EVERY line break exactly where it appears
+- Keep EVERY sentence in its original order
+- Maintain exact paragraph structure
 - Preserve list formatting exactly
 - Plain text only, no markdown
 
 Write with human wit and dry humor, not AI-generated "sarcasm."`,
 
-      funny: `ANTI-AI-DETECTION RULES (HIGHEST PRIORITY):
-❌ FORBIDDEN: Moreover, Ultimately, Consequently - comedy killer
-✅ USE: But, So, And, Plus, Then - setup for punchlines
+      grammar: `GRAMMAR FIX MODE - MINIMAL CHANGES ONLY:
 
-FUNNY HUMAN WRITING:
-1. Use contractions (it's, don't, won't) - funnier and more casual
-2. Vary rhythm for comedic timing - build up. Then payoff.
-3. Add unexpected comparisons and exaggerations
-4. Use fragments and run-ons for comic effect
-5. Break rules intentionally - grammar can be funny when broken
-6. NO perfect structure - humor thrives on chaos
+PRIMARY GOAL: Fix grammar mistakes while changing as little as possible.
 
-STRUCTURE PRESERVATION:
+WHAT TO FIX:
+1. Subject-verb agreement (he walk → he walks)
+2. Verb tense errors (I go yesterday → I went yesterday)
+3. Articles (I have idea → I have an idea)
+4. Preposition errors (different with → different from)
+5. Plural/singular mismatches (one cars → one car)
+6. Capitalization (start of sentences, proper nouns)
+7. Missing or wrong punctuation (commas, periods)
+8. Replace em-dashes (—) and en-dashes (–) with regular hyphens (-)
+9. Basic spelling errors
+
+WHAT NOT TO CHANGE:
+❌ Don't rewrite sentences for "better" wording
+❌ Don't change word choice unless grammatically wrong
+❌ Don't add or remove sentences
+❌ Don't reorder sentences
+❌ Don't change tone or style
+❌ Don't make it "sound better" - just fix errors
+
+STRUCTURE PRESERVATION (CRITICAL):
 - Output in exact same language as input (${inputLangName} [${inputLangCode}])
-${force_rewrite ? '- Preserve paragraph boundaries, but you MAY reorder for comedic build-up and payoff' : '- Keep EVERY line break exactly where it appears'}
-- Preserve list formatting exactly
+- Keep EVERY line break exactly where it appears
+- Keep EVERY sentence in its original order
+- Keep EVERY paragraph structure unchanged
+- If a sentence is grammatically correct, DON'T touch it
 - Plain text only, no markdown
 
-Write like a funny human, not an AI trying to tell jokes.`
+Fix ONLY what's grammatically wrong. If input is already correct, return it almost unchanged.`
     };
 
     const systemPrompt = tonePrompts[tone as keyof typeof tonePrompts] || tonePrompts.regular;
@@ -676,12 +701,13 @@ PRESERVE STRUCTURE:
     
     console.log(`[TONE] tone="${tone}" intensity="${intensity}" force_rewrite=${force_rewrite} short_text=${isShortText} similarity(before)=${sim.toFixed(3)} threshold=${threshold}`);
 
-    // Always run at least one booster for non-regular tones when:
+    // Skip tone booster entirely for grammar mode (minimal changes only)
+    // Always run at least one booster for non-regular, non-grammar tones when:
     // - force_rewrite is true (default), or
     // - similarity above intensity threshold, or very high (>= 0.85), or extremely low (<= 0.01), or
     // - draft equals original text
     const shouldForceBooster = (
-      tone !== 'regular' && (
+      tone !== 'regular' && tone !== 'grammar' && (
         force_rewrite || sim > threshold || sim >= 0.85 || finalText.trim() === text.trim() || sim <= 0.01
       )
     );
@@ -689,17 +715,15 @@ PRESERVE STRUCTURE:
     if (shouldForceBooster) {
       const changePct = Math.round(CHANGE_TARGET[intensity] * 100);
       const toneReinforcements: Record<string, string> = {
-        formal: 'Use "However," "Additionally," "Therefore" naturally; reduce contractions; executive clarity; permit clause inversion for emphasis.',
-        persuasive: 'Second-person "you/your"; rhetorical questions; urgency; vary rhythm deliberately; reorder for strongest hook.',
-        empathetic: '"I understand," "That makes sense," "Let\'s take it step by step"; soften starts; reorder to acknowledge feelings first.',
-        sarcastic: '"Oh great," "Sure," "Obviously"; dry wit; fragments allowed; invert statements for irony.',
-        funny: 'Playful exaggerations, unexpected comparisons; comedic pacing; sentence reshuffle allowed.',
-        regular: ''
+        formal: 'Use "However," "Additionally," "Therefore" naturally; reduce contractions; executive clarity.',
+        persuasive: 'Second-person "you/your"; rhetorical questions; urgency; vary rhythm deliberately.',
+        empathetic: '"I understand," "That makes sense," "Let\'s take it step by step"; soften starts.',
+        sarcastic: '"Oh great," "Sure," "Obviously"; dry wit; fragments allowed.',
+        regular: '',
+        grammar: '' // Grammar mode doesn't use booster
       };
 
-      const structureRule = force_rewrite 
-        ? 'Preserve paragraph boundaries and list-item boundaries. Within paragraphs, you MAY reorder sentences and clauses to better reflect the tone.'
-        : 'Keep EVERY line break exactly where it appears.';
+      const structureRule = 'Keep EVERY line break exactly where it appears. Keep EVERY sentence in its original order. Maintain exact paragraph structure.';
 
       const shortTextPromptAddition = isShortText
         ? `\n\nCRITICAL (Short text): Change at least ${changePct}% of words; allow re-ordering of clauses; keep meaning exact; same language; concise output.`
