@@ -23,6 +23,45 @@ function safeAppendToBody(node) {
   }
 }
 
+// Helper functions for DOM path-based selection restoration
+function getNodePath(node, root) {
+  const path = [];
+  let n = node;
+  while (n && n !== root) {
+    const p = n.parentNode;
+    if (!p) break;
+    const idx = Array.from(p.childNodes).indexOf(n);
+    if (idx === -1) break;
+    path.unshift(idx);
+    n = p;
+  }
+  return path;
+}
+
+function getNodeFromPath(root, path) {
+  let n = root;
+  for (const i of path) {
+    n = n?.childNodes?.[i];
+    if (!n) break;
+  }
+  return n;
+}
+
+function firstTextNodeIn(node) {
+  if (!node) return null;
+  const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+  return walker.nextNode();
+}
+
+function lastTextNodeIn(node) {
+  if (!node) return null;
+  const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+  let last = null;
+  let cur;
+  while (cur = walker.nextNode()) last = cur;
+  return last;
+}
+
 // Request session from web app on load - repeat for 5 seconds
 console.log('[Content] Starting session request broadcast (10 attempts over 5s)');
 let requestAttempts = 0;
@@ -160,10 +199,10 @@ document.addEventListener('contextmenu', () => {
       valueSnapshot: t.value
     };
   } else {
-    // Enhanced selection tracking for contenteditable
+    // Enhanced selection tracking for contenteditable with DOM path capture
     const sel = window.getSelection();
     if (sel && sel.rangeCount > 0 && sel.toString().trim()) {
-      const range = sel.getRangeAt(0).cloneRange();
+      const range = sel.getRangeAt(0);
       const selectedText = sel.toString();
       
       // Find the contenteditable container
@@ -180,29 +219,44 @@ document.addEventListener('contextmenu', () => {
       }
       
       if (editableElement) {
-        // Get surrounding context for text matching
+        // Capture exact DOM paths for reliable restoration
+        const sc = range.startContainer;
+        const ec = range.endContainer;
+        
+        // Get text nodes if not already
+        const startTextNode = sc.nodeType === 3 ? sc : firstTextNodeIn(sc) || sc;
+        const endTextNode = ec.nodeType === 3 ? ec : lastTextNodeIn(ec) || ec;
+        
+        const startPath = getNodePath(startTextNode, editableElement);
+        const endPath = getNodePath(endTextNode, editableElement);
+        
+        // Get surrounding context for fallback text matching
         const fullText = editableElement.innerText || editableElement.textContent || '';
         const selectedIndex = fullText.indexOf(selectedText);
         
         lastSelection = {
           text: selectedText,
-          range: range,
+          range: range.cloneRange(),
           container: editableElement,
+          startPath: startPath,
+          endPath: endPath,
+          startOffset: range.startOffset,
+          endOffset: range.endOffset,
           textBefore: selectedIndex >= 0 ? fullText.substring(Math.max(0, selectedIndex - 50), selectedIndex) : '',
           textAfter: selectedIndex >= 0 ? fullText.substring(selectedIndex + selectedText.length, selectedIndex + selectedText.length + 50) : '',
           timestamp: Date.now()
         };
         
-        console.log('[Content] Enhanced selection stored:', {
+        console.log('[Content] Path-based selection captured:', {
           textLength: selectedText.length,
           hasContainer: !!editableElement,
-          hasContext: !!lastSelection.textBefore || !!lastSelection.textAfter
+          hasPaths: startPath.length > 0 && endPath.length > 0
         });
       } else {
         // Fallback to simple selection
         lastSelection = {
           text: selectedText,
-          range: range
+          range: range.cloneRange()
         };
       }
     }
@@ -225,9 +279,16 @@ document.addEventListener('keyup', () => {
   }
 }, true);
 
-// Replace text in DOM - with enhanced context-based text matching
+// Replace text in DOM - with path-based selection restoration
 function replaceSelectedText(originalText, humanizedText) {
   closeDialog();
+  
+  // Safety check
+  if (!humanizedText || humanizedText.trim() === '') {
+    console.error('[Content] Empty humanized text, aborting');
+    showNotification('Replacement failed: empty result', 'error');
+    return false;
+  }
   
   console.log('[Content] Attempting replacement:', {
     originalLength: originalText.length,
@@ -266,144 +327,199 @@ function replaceSelectedText(originalText, humanizedText) {
       return true;
     }
     
-    // PATH 2: CONTENTEDITABLE with enhanced selection tracking
-    if (lastSelection && lastSelection.container) {
+    // PATH 2A: CONTENTEDITABLE with path-based restoration (PRIMARY)
+    if (lastSelection?.container && lastSelection?.startPath && lastSelection?.endPath) {
       const editableElement = lastSelection.container;
       
-      console.log('[Content] Trying contenteditable replacement');
+      console.log('[Content] Trying path-based restoration');
       
-      // Try Method 1: Use stored Range if still valid
-      let range = lastSelection.range?.cloneRange();
-      let rangeValid = false;
+      let startNode = getNodeFromPath(editableElement, lastSelection.startPath);
+      let endNode = getNodeFromPath(editableElement, lastSelection.endPath);
       
-      if (range) {
-        try {
-          // Test if range is still attached to DOM
-          const rangeText = range.toString();
-          if (rangeText === lastSelection.text) {
-            rangeValid = true;
-            console.log('[Content] Range is still valid');
-          }
-        } catch (e) {
-          console.log('[Content] Range invalid:', e.message);
+      if (startNode && endNode) {
+        // Ensure we have text nodes
+        if (startNode.nodeType !== 3) {
+          startNode = firstTextNodeIn(startNode) || startNode;
         }
-      }
-      
-      // Method 2: Find text using context matching
-      if (!rangeValid && lastSelection.text) {
-        console.log('[Content] Range invalid, trying context-based text matching...');
-        
-        const fullText = editableElement.innerText || editableElement.textContent || '';
-        
-        // Try to find using context
-        let targetIndex = -1;
-        
-        if (lastSelection.textBefore || lastSelection.textAfter) {
-          const searchText = lastSelection.textBefore + lastSelection.text + lastSelection.textAfter;
-          const searchIndex = fullText.indexOf(searchText);
-          
-          if (searchIndex !== -1) {
-            targetIndex = searchIndex + lastSelection.textBefore.length;
-            console.log('[Content] Found text using context matching');
-          }
+        if (endNode.nodeType !== 3) {
+          endNode = lastTextNodeIn(endNode) || endNode;
         }
         
-        // Fallback: direct text search
-        if (targetIndex === -1) {
-          targetIndex = fullText.indexOf(lastSelection.text);
-          console.log('[Content] Using direct text search, found at:', targetIndex);
-        }
-        
-        if (targetIndex !== -1) {
-          // Create new Range by walking the text nodes
-          range = document.createRange();
-          let charCount = 0;
-          let startNode = null, startOffset = 0;
-          let endNode = null, endOffset = 0;
-          let found = false;
-          
-          const walker = document.createTreeWalker(
-            editableElement,
-            NodeFilter.SHOW_TEXT,
-            null,
-            false
-          );
-          
-          let node;
-          while (node = walker.nextNode()) {
-            const nodeLength = node.textContent.length;
+        // Validate nodes are text nodes
+        if (startNode.nodeType === 3 && endNode.nodeType === 3) {
+          try {
+            const range = document.createRange();
+            const safeStartOffset = Math.min(lastSelection.startOffset, startNode.textContent?.length ?? 0);
+            const safeEndOffset = Math.min(lastSelection.endOffset, endNode.textContent?.length ?? 0);
             
-            if (!startNode && charCount + nodeLength > targetIndex) {
-              startNode = node;
-              startOffset = targetIndex - charCount;
+            range.setStart(startNode, safeStartOffset);
+            range.setEnd(endNode, safeEndOffset);
+            
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            
+            let success = false;
+            
+            // Try execCommand first
+            try {
+              success = document.execCommand('insertText', false, humanizedText);
+              if (success) {
+                console.log('[Content] ✓ path-restore via execCommand');
+              }
+            } catch (e) {
+              console.log('[Content] execCommand failed:', e.message);
             }
             
-            if (startNode && charCount + nodeLength >= targetIndex + lastSelection.text.length) {
-              endNode = node;
-              endOffset = (targetIndex + lastSelection.text.length) - charCount;
-              found = true;
-              break;
+            // Fallback to manual insertion
+            if (!success) {
+              range.deleteContents();
+              const textNode = document.createTextNode(humanizedText);
+              range.insertNode(textNode);
+              
+              // Move caret after inserted text
+              range.setStartAfter(textNode);
+              range.setEndAfter(textNode);
+              selection.removeAllRanges();
+              selection.addRange(range);
+              
+              console.log('[Content] ✓ path-restore via manual insertion');
             }
             
-            charCount += nodeLength;
-          }
-          
-          if (found && startNode && endNode) {
-            range.setStart(startNode, startOffset);
-            range.setEnd(endNode, endOffset);
-            rangeValid = true;
-            console.log('[Content] ✓ Found text using context matching');
+            // Trigger editor events
+            editableElement.dispatchEvent(new Event('input', { bubbles: true }));
+            editableElement.dispatchEvent(new Event('change', { bubbles: true }));
+            editableElement.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+            
+            lastReplacement = {
+              originalText: originalText,
+              humanizedText: humanizedText,
+              element: editableElement
+            };
+            
+            showNotification('Text replaced successfully!', 'success');
+            return true;
+            
+          } catch (e) {
+            console.log('[Content] Path-based restoration failed:', e.message);
           }
         }
       }
+    }
+    
+    // PATH 2B: CONTENTEDITABLE with context-based text matching (FALLBACK)
+    if (lastSelection && lastSelection.container && lastSelection.text) {
+      const editableElement = lastSelection.container;
       
-      // Perform replacement if we have a valid range
-      if (rangeValid && range) {
-        const selection = window.getSelection();
-        selection.removeAllRanges();
-        selection.addRange(range);
+      console.log('[Content] Path-restore failed, trying context-based matching');
+      
+      const fullText = editableElement.innerText || editableElement.textContent || '';
+      let targetIndex = -1;
+      
+      // Try to find using context
+      if (lastSelection.textBefore || lastSelection.textAfter) {
+        const searchText = lastSelection.textBefore + lastSelection.text + lastSelection.textAfter;
+        const searchIndex = fullText.indexOf(searchText);
         
-        let success = false;
+        if (searchIndex !== -1) {
+          targetIndex = searchIndex + lastSelection.textBefore.length;
+          console.log('[Content] Found text using context matching');
+        }
+      }
+      
+      // Fallback: direct text search
+      if (targetIndex === -1) {
+        targetIndex = fullText.indexOf(lastSelection.text);
+        console.log('[Content] Using direct text search, found at:', targetIndex);
+      }
+      
+      if (targetIndex !== -1) {
+        // Create new Range by walking the text nodes
+        const range = document.createRange();
+        let charCount = 0;
+        let startNode = null, startOffset = 0;
+        let endNode = null, endOffset = 0;
+        let found = false;
         
-        // Try execCommand first
-        try {
-          success = document.execCommand('insertText', false, humanizedText);
-          console.log('[Content] execCommand success:', success);
-        } catch (e) {
-          console.log('[Content] execCommand failed:', e.message);
+        const walker = document.createTreeWalker(
+          editableElement,
+          NodeFilter.SHOW_TEXT,
+          null,
+          false
+        );
+        
+        let node;
+        while (node = walker.nextNode()) {
+          const nodeLength = node.textContent.length;
+          
+          if (!startNode && charCount + nodeLength > targetIndex) {
+            startNode = node;
+            startOffset = targetIndex - charCount;
+          }
+          
+          if (startNode && charCount + nodeLength >= targetIndex + lastSelection.text.length) {
+            endNode = node;
+            endOffset = (targetIndex + lastSelection.text.length) - charCount;
+            found = true;
+            break;
+          }
+          
+          charCount += nodeLength;
         }
         
-        // Fallback to manual insertion
-        if (!success) {
-          range.deleteContents();
-          const textNode = document.createTextNode(humanizedText);
-          range.insertNode(textNode);
+        if (found && startNode && endNode) {
+          range.setStart(startNode, startOffset);
+          range.setEnd(endNode, endOffset);
           
-          range.setStartAfter(textNode);
-          range.setEndAfter(textNode);
+          const selection = window.getSelection();
           selection.removeAllRanges();
           selection.addRange(range);
+          
+          let success = false;
+          
+          // Try execCommand first
+          try {
+            success = document.execCommand('insertText', false, humanizedText);
+            if (success) {
+              console.log('[Content] ✓ context-restore via execCommand');
+            }
+          } catch (e) {
+            console.log('[Content] execCommand failed:', e.message);
+          }
+          
+          // Fallback to manual insertion
+          if (!success) {
+            range.deleteContents();
+            const textNode = document.createTextNode(humanizedText);
+            range.insertNode(textNode);
+            
+            range.setStartAfter(textNode);
+            range.setEndAfter(textNode);
+            selection.removeAllRanges();
+            selection.addRange(range);
+            
+            console.log('[Content] ✓ context-restore via manual insertion');
+          }
+          
+          // Trigger editor events
+          editableElement.dispatchEvent(new Event('input', { bubbles: true }));
+          editableElement.dispatchEvent(new Event('change', { bubbles: true }));
+          editableElement.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+          
+          lastReplacement = {
+            originalText: originalText,
+            humanizedText: humanizedText,
+            element: editableElement
+          };
+          
+          showNotification('Text replaced successfully!', 'success');
+          return true;
         }
-        
-        // Trigger editor events
-        editableElement.dispatchEvent(new Event('input', { bubbles: true }));
-        editableElement.dispatchEvent(new Event('change', { bubbles: true }));
-        editableElement.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
-        
-        lastReplacement = {
-          originalText: originalText,
-          humanizedText: humanizedText,
-          element: editableElement
-        };
-        
-        console.log('[Content] ✓ Replaced in contenteditable');
-        showNotification('Text replaced successfully!', 'success');
-        return true;
       }
     }
     
     // PATH 3: Clipboard fallback
-    console.log('[Content] No replacement method worked, using clipboard');
+    console.log('[Content] clipboard-fallback: No replacement method worked');
     try {
       navigator.clipboard.writeText(humanizedText);
       showNotification('Text copied to clipboard. Paste it to replace.', 'info');
