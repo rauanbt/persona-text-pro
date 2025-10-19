@@ -183,7 +183,7 @@ chrome.runtime.onInstalled.addListener(() => {
   console.log('[Background] Context menu with tone submenu created');
 });
 
-// Handle context menu clicks
+// Handle context menu clicks - IMMEDIATE one-click humanize
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   // Check if it's a tone submenu item
   const toneMap = {
@@ -198,7 +198,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   const tone = toneMap[info.menuItemId];
   if (!tone) return; // Not a tone item
   
-  console.log('[Background] Context menu clicked with tone:', tone);
+  console.log(`[Background] Context menu → starting humanize immediately (tone=${tone}, intensity=strong, force=true)`);
   
   const selectedText = info.selectionText;
   if (!selectedText) return;
@@ -213,17 +213,12 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     return;
   }
   
-  // Immediately show dialog with selected text and temporary word balance
-  const wordCount = selectedText.trim().split(/\s+/).length;
-  await safeSendMessage(tab.id, {
-    action: 'showDialog',
-    text: selectedText,
-    wordCount: wordCount,
-    wordBalance: '…', // Placeholder while we fetch
-    tone: tone
+  // Send processing status IMMEDIATELY (best effort - don't wait)
+  safeSendMessage(tab.id, {
+    action: 'showProcessing'
   }, { frameId: info.frameId });
   
-  // Background: Ensure fresh session and compute word balance
+  // Validate session and check subscription
   const sessionResult = await ensureFreshSession();
   if (!sessionResult.success) {
     await safeSendMessage(tab.id, {
@@ -284,14 +279,24 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       wordBalance = 0;
     }
     
-    // Update dialog with actual word balance
-    await safeSendMessage(tab.id, {
-      action: 'updateDialogUsage',
-      wordBalance: wordBalance
-    }, { frameId: info.frameId });
+    const wordCount = selectedText.trim().split(/\s+/).length;
+    
+    // Check if enough words
+    if (wordCount > wordBalance) {
+      await safeSendMessage(tab.id, {
+        action: 'showUpgradeRequired',
+        currentPlan: plan
+      }, { frameId: info.frameId });
+      return;
+    }
+    
+    console.log('[Background] Usage check passed:', { plan, wordBalance, wordCount });
+    
+    // IMMEDIATELY start humanization - don't wait for dialog button
+    await handleHumanizeRequest(selectedText, tone, 'strong', true, tab.id, info.frameId);
     
   } catch (error) {
-    console.error('[Background] Error fetching usage:', error);
+    console.error('[Background] Error in context menu handler:', error);
     await safeSendMessage(tab.id, {
       action: 'showError',
       message: 'Failed to check account. Please try again.'

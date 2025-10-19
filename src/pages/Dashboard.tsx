@@ -59,6 +59,38 @@ const Dashboard = () => {
     fetchUsage();
   }, []);
 
+  // Realtime subscription for usage updates
+  useEffect(() => {
+    if (!user) return;
+
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    
+    console.log('[Dashboard] Setting up realtime subscription for usage_tracking');
+    
+    const channel = supabase
+      .channel('usage-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'usage_tracking',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          console.log('[Dashboard] Realtime usage update received:', payload);
+          // Refresh usage when extension or web updates usage
+          fetchUsage();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log('[Dashboard] Cleaning up realtime subscription');
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
   // Debug: Monitor humanizedText state changes
   useEffect(() => {
     console.log('[DEBUG] humanizedText state changed:', {
@@ -508,7 +540,16 @@ const Dashboard = () => {
                 <CardDescription>
                   {isExtensionOnlyPlan 
                     ? 'Extension-Only plan - use the Chrome Extension to humanize text'
-                    : 'Monthly usage resets on the 1st of each month'}
+                    : (
+                      <>
+                        Monthly usage resets on the 1st of each month
+                        {currentPlan === 'ultra' && (
+                          <span className="block text-xs mt-1 text-muted-foreground">
+                            Web-only usage shown. Extension shares the same monthly pool.
+                          </span>
+                        )}
+                      </>
+                    )}
                 </CardDescription>
               </CardHeader>
               <CardContent>
