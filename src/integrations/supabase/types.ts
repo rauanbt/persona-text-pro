@@ -47,6 +47,57 @@ export type Database = {
         }
         Relationships: []
       }
+      feedback_submissions: {
+        Row: {
+          admin_notes: string | null
+          app_state: Json | null
+          created_at: string
+          current_page: string | null
+          current_url: string | null
+          email: string | null
+          feedback_type: string
+          id: string
+          message: string
+          plan: string | null
+          severity: string | null
+          status: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          admin_notes?: string | null
+          app_state?: Json | null
+          created_at?: string
+          current_page?: string | null
+          current_url?: string | null
+          email?: string | null
+          feedback_type: string
+          id?: string
+          message: string
+          plan?: string | null
+          severity?: string | null
+          status?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          admin_notes?: string | null
+          app_state?: Json | null
+          created_at?: string
+          current_page?: string | null
+          current_url?: string | null
+          email?: string | null
+          feedback_type?: string
+          id?: string
+          message?: string
+          plan?: string | null
+          severity?: string | null
+          status?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       humanization_requests: {
         Row: {
           created_at: string
