@@ -1,8 +1,5 @@
 project_id = "nycrxoppbsakpkkeiqzb"
 
-[functions.submit-feedback]
-verify_jwt = false
-
 [functions.humanize-text]
 verify_jwt = true
 
@@ -28,4 +25,7 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.ai-detection-lovable]
+verify_jwt = false
+
+[functions.submit-feedback]
 verify_jwt = false
