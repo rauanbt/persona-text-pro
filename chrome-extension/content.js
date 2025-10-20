@@ -878,10 +878,10 @@ function showUpgradeRequiredDialog(currentPlan) {
   };
   
   dialog.innerHTML = `
-    <div style="font-size: 48px; margin-bottom: 16px;">🔒</div>
-    <h3 style="margin: 0 0 12px; font-size: 24px; font-weight: 700; color: #1a1a1a;">Upgrade Required</h3>
+    <div style="font-size: 48px; margin-bottom: 16px;">🚀</div>
+    <h3 style="margin: 0 0 12px; font-size: 24px; font-weight: 700; color: #1a1a1a;">Chrome Extension is Premium</h3>
     <p style="margin: 0 0 24px; font-size: 15px; color: #666; line-height: 1.6;">
-      The Chrome Extension is available for <strong>Extension-Only</strong> and <strong>Ultra</strong> subscribers.
+      Humanize text anywhere on the web with our Chrome Extension. Available with <strong>Extension-Only ($12.95/mo)</strong> or <strong>Ultra</strong> plans.
     </p>
     <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 16px; border-radius: 12px; margin-bottom: 24px;">
       <p style="margin: 0; font-size: 14px; color: #92400e;">

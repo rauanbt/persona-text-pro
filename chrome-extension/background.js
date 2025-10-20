@@ -235,7 +235,8 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     const subscriptionData = await checkSubscription();
     const plan = subscriptionData.plan || 'free';
     
-    if (plan !== 'extension_only' && plan !== 'master' && plan !== 'ultra') {
+    // Block free and pro users from extension access
+    if (plan === 'free' || plan === 'pro') {
       await safeSendMessage(tab.id, {
         action: 'showUpgradeRequired',
         currentPlan: plan

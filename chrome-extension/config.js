@@ -8,7 +8,7 @@ const LOGIN_URL = "https://sapienwrite.com/auth";
 
 // Plan limits for Chrome Extension
 const EXTENSION_LIMITS = {
-  free: 750,           // Shared pool with web
+  free: 750,           // Web only - no extension access
   extension_only: 5000, // Extension only
   ultra: 30000,         // Shared pool with web (no separate bonus)
   master: 30000         // Shared pool with web (no separate bonus, legacy)
