@@ -4,6 +4,9 @@ console.log('[Background] Service worker initialized');
 
 self.importScripts('config.js', 'auth.js');
 
+// Track in-flight humanize requests to prevent concurrent calls
+const inFlight = new Map(); // key: `${tabId}:${frameId}`, value: AbortController
+
 // Safe message sending helper
 async function safeSendMessage(tabId, message, options = {}) {
   try {
@@ -321,6 +324,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   
+  if (message.action === 'cancelHumanize') {
+    const key = `${sender.tab?.id}:${sender.frameId}`;
+    const controller = inFlight.get(key);
+    if (controller) {
+      console.log('[Background] Canceling humanize request for', key);
+      controller.abort();
+      inFlight.delete(key);
+    }
+    sendResponse({ canceled: true });
+    return true;
+  }
+  
   if (message.action === 'checkAuth') {
     isAuthenticated().then(authenticated => {
       sendResponse({ authenticated });
@@ -427,19 +442,59 @@ function quickSimilarity(a, b) {
   return union === 0 ? 0 : inter / union;
 }
 
-// Handle humanize request
+// Handle humanize request with timeout and cancel support
 async function handleHumanizeRequest(text, tone, toneIntensity, forceRewrite, tabId, frameId) {
+  const key = `${tabId}:${frameId}`;
+  
+  // Single-flight guard: prevent concurrent humanize from same frame
+  if (inFlight.has(key)) {
+    console.log('[Background] Request already in flight for', key, '- ignoring duplicate');
+    return;
+  }
+  
+  const controller = new AbortController();
+  inFlight.set(key, controller);
+  
+  // Hard timeout: 20 seconds
+  const timeout = setTimeout(() => {
+    console.log('[Background] Request timeout for', key);
+    controller.abort(new DOMException('Request timed out', 'AbortError'));
+  }, 20000);
+  
   try {
     console.log(`[Background] 📤 Sending to edge function with tone: "${tone}" | intensity: "${toneIntensity}" | force_rewrite: ${forceRewrite}`);
     await safeSendMessage(tabId, { action: 'showProcessing' }, { frameId });
     
-    const result = await callSupabaseFunction('humanize-text-hybrid', {
-      text: text,
-      tone: tone,
-      tone_intensity: toneIntensity,
-      force_rewrite: forceRewrite,
-      source: 'extension'
+    // Get session for auth
+    const session = await getSession();
+    if (!session) {
+      throw new Error('Session expired. Please reconnect the extension.');
+    }
+    
+    // Direct fetch with abort signal instead of callSupabaseFunction
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/humanize-text-hybrid`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+        'apikey': SUPABASE_ANON_KEY
+      },
+      body: JSON.stringify({
+        text: text,
+        tone: tone,
+        tone_intensity: toneIntensity,
+        force_rewrite: forceRewrite,
+        source: 'extension'
+      }),
+      signal: controller.signal
     });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Request failed: ${errorText}`);
+    }
+    
+    const result = await response.json();
     
     console.log('[Background] ✅ Response received - tone:', tone, 'intensity:', toneIntensity);
     
@@ -449,7 +504,7 @@ async function handleHumanizeRequest(text, tone, toneIntensity, forceRewrite, ta
     const simAfterMeta = typeof result.similarity_after === 'number' ? result.similarity_after : undefined;
     
     if (!humanizedText || !humanizedText.trim()) {
-      throw new Error('Empty humanized_text from server');
+      throw new Error('Empty result from server');
     }
 
     // Check if result is too similar to original
@@ -458,7 +513,7 @@ async function handleHumanizeRequest(text, tone, toneIntensity, forceRewrite, ta
     
     const tooSimilar = (similarity > 0.85) || (humanizedText.trim() === text.trim());
     if (tone !== 'regular' && tooSimilar) {
-      // Too similar - show result dialog with warning instead of silent replace
+      // Too similar - show result dialog with warning
       console.warn('[Background] Result too similar to original, showing dialog with warning');
       const metaLine = (simBeforeMeta !== undefined && simAfterMeta !== undefined)
         ? ` (server similarity: before ${(simBeforeMeta*100).toFixed(0)}% → after ${(simAfterMeta*100).toFixed(0)}%)`
@@ -482,9 +537,20 @@ async function handleHumanizeRequest(text, tone, toneIntensity, forceRewrite, ta
     
   } catch (error) {
     console.error('[Background] Error humanizing:', error);
-    await safeSendMessage(tabId, {
-      action: 'showError',
-      message: error.message || 'Failed to humanize text'
-    }, { frameId });
+    
+    if (error.name === 'AbortError') {
+      await safeSendMessage(tabId, {
+        action: 'showError',
+        message: 'Request canceled or timed out. Please try again.'
+      }, { frameId });
+    } else {
+      await safeSendMessage(tabId, {
+        action: 'showError',
+        message: error.message || 'Failed to humanize text'
+      }, { frameId });
+    }
+  } finally {
+    clearTimeout(timeout);
+    inFlight.delete(key);
   }
 }

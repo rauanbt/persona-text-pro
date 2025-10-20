@@ -39,6 +39,10 @@ const Dashboard = () => {
   const [highlightedPlan, setHighlightedPlan] = useState<string | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  
+  // Request tracking to ignore stale results
+  const requestIdRef = useRef(0);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const currentPlan = subscriptionData.plan;
   const isExtensionOnlyPlan = currentPlan === 'extension_only';
@@ -264,51 +268,100 @@ const Dashboard = () => {
       return;
     }
 
+    // Increment request ID to invalidate any previous requests
+    const myRequestId = ++requestIdRef.current;
+    
     setIsProcessing(true);
-    setHumanizedText(''); // Clear old results
-    setShowResult(false); // Hide result panel
+    setHumanizedText('');
+    setShowResult(false);
+    
+    // Create new abort controller for this request
+    abortControllerRef.current = new AbortController();
+    const signal = abortControllerRef.current.signal;
+    
+    // Set up 25s timeout
+    const timeoutId = setTimeout(() => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    }, 25000);
+    
     console.log('[DEBUG] Starting humanization:', { 
       textLength: inputText.length, 
       wordCount,
-      tone: selectedTone 
+      tone: selectedTone,
+      requestId: myRequestId
     });
 
     try {
       console.log('[DEBUG] Calling humanize-text-hybrid edge function...');
       
-      const { data, error } = await supabase.functions.invoke('humanize-text-hybrid', {
-        body: { text: inputText, tone: selectedTone, source: 'web' },
+      if (!session?.access_token) {
+        throw new Error('Not authenticated');
+      }
+      
+      const SUPABASE_URL = 'https://nycrxoppbsakpkkeiqzb.supabase.co';
+      const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55Y3J4b3BwYnNha3Bra2VpcXpiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg4Nzc2NDMsImV4cCI6MjA3NDQ1MzY0M30.On7TSxxCpJT868Kygk1PgfUACyPodjx78G5lKxejt74';
+      
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/humanize-text-hybrid`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': SUPABASE_ANON_KEY
+        },
+        body: JSON.stringify({ 
+          text: inputText, 
+          tone: selectedTone, 
+          source: 'web' 
+        }),
+        signal
+      });
+      
+      // Check if this request was superseded
+      if (requestIdRef.current !== myRequestId) {
+        console.log('[DEBUG] Request superseded, ignoring result');
+        return;
+      }
+
+      console.log('[DEBUG] Raw response:', { 
+        status: response.status,
+        ok: response.ok
       });
 
-      console.log('[DEBUG] Raw edge function response:', { 
-        hasError: !!error, 
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[DEBUG] Response error:', errorText);
+        throw new Error(errorText || 'Failed to humanize text');
+      }
+
+      const data = await response.json();
+      
+      // Check again if this request was superseded
+      if (requestIdRef.current !== myRequestId) {
+        console.log('[DEBUG] Request superseded after response, ignoring');
+        return;
+      }
+
+      console.log('[DEBUG] Response data:', {
         hasData: !!data,
         dataType: typeof data,
         dataKeys: data && typeof data === 'object' ? Object.keys(data) : []
       });
 
-      if (error) {
-        console.error('[DEBUG] Supabase error:', error);
-        throw error;
-      }
-
       if (!data) {
-        console.error('[DEBUG] No data returned from edge function');
         throw new Error('No data returned from humanization');
       }
 
-      // Normalize any shape (string, nested, etc.)
+      // Normalize response
       const normalized = normalizeFnResponse(data);
 
       console.log('[DEBUG] Normalized response:', {
         type: typeof normalized,
         keys: normalized && typeof normalized === 'object' ? Object.keys(normalized) : [],
-        sample: typeof normalized === 'string' ? normalized.substring(0, 100) : null,
-        hasErrorField: !!normalized?.error,
-        statusHints: { total_remaining: normalized?.total_remaining, remaining_words: normalized?.remaining_words }
+        hasErrorField: !!normalized?.error
       });
 
-      // If the function returned an error in-body (status 200 with {error})
       if (normalized?.error) {
         throw new Error(normalized.error);
       }
@@ -316,15 +369,13 @@ const Dashboard = () => {
       const humanizedResult = pickHumanizedText(normalized);
 
       if (humanizedResult.trim().length === 0) {
-        console.warn('[DEBUG] No usable humanized text found. Raw object:', normalized);
+        console.warn('[DEBUG] No usable humanized text found');
         setHumanizedText('No output text was returned. Please try again.');
         setShowResult(true);
-        console.log('[DEBUG] Showing result panel with fallback message');
       } else {
         setHumanizedText(humanizedResult);
         setShowResult(true);
-        console.log('[DEBUG] Showing result panel with humanized text, length:', humanizedResult.length);
-        console.log('[DEBUG] First 100 chars:', humanizedResult.substring(0, 100));
+        console.log('[DEBUG] Humanized text set, length:', humanizedResult.length);
       }
       
       setActiveTab('humanize');
@@ -335,7 +386,6 @@ const Dashboard = () => {
         requests_count: prev.requests_count + 1
       }));
       
-      // Update extra words if they were used
       if (normalized.extra_words_remaining !== undefined) {
         setExtraWords(normalized.extra_words_remaining);
       }
@@ -345,11 +395,22 @@ const Dashboard = () => {
         description: `Used ${wordCount} words. ${normalized.total_remaining || normalized.remaining_words || 'Unknown'} words remaining.`,
       });
       
-      console.log('[DEBUG] Humanization complete - toast shown');
     } catch (error: any) {
+      // Check if this request was superseded
+      if (requestIdRef.current !== myRequestId) {
+        console.log('[DEBUG] Request superseded during error handling, ignoring');
+        return;
+      }
+      
       console.error('[DEBUG] Error in handleHumanize:', error);
       
-      if (error.message?.includes('Word limit exceeded')) {
+      if (error.name === 'AbortError') {
+        toast({
+          title: "Request canceled",
+          description: "The humanization request was canceled or timed out.",
+          variant: "destructive",
+        });
+      } else if (error.message?.includes('Word limit exceeded')) {
         toast({
           title: "Word limit exceeded",
           description: "Upgrade your plan to continue humanizing text.",
@@ -363,9 +424,26 @@ const Dashboard = () => {
         });
       }
     } finally {
-      setIsProcessing(false);
-      console.log('[DEBUG] Processing complete, isProcessing set to false');
+      clearTimeout(timeoutId);
+      // Only update state if this is still the current request
+      if (requestIdRef.current === myRequestId) {
+        setIsProcessing(false);
+      }
+      console.log('[DEBUG] Processing complete');
     }
+  };
+  
+  const handleCancelHumanize = () => {
+    console.log('[DEBUG] User canceled humanization');
+    requestIdRef.current++; // Invalidate current request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    setIsProcessing(false);
+    toast({
+      title: "Canceled",
+      description: "Humanization request canceled.",
+    });
   };
 
   const handleUpgrade = async (priceId: string) => {
@@ -813,24 +891,37 @@ const Dashboard = () => {
                         </div>
                       </div>
 
-                      <Button 
-                        onClick={handleHumanize}
-                        disabled={isProcessing || !inputText.trim() || totalAvailableWords <= 0}
-                        className="w-full"
-                        size="lg"
-                      >
-                        {isProcessing ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Humanizing Text...
-                          </>
-                        ) : (
-                          <>
-                            <Zap className="mr-2 h-4 w-4" />
-                            Humanize Text
-                          </>
+                      <div className="flex gap-2">
+                        <Button 
+                          onClick={handleHumanize}
+                          disabled={isProcessing || !inputText.trim() || totalAvailableWords <= 0}
+                          className="flex-1"
+                          size="lg"
+                        >
+                          {isProcessing ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Humanizing Text...
+                            </>
+                          ) : (
+                            <>
+                              <Zap className="mr-2 h-4 w-4" />
+                              Humanize Text
+                            </>
+                          )}
+                        </Button>
+                        
+                        {isProcessing && (
+                          <Button 
+                            onClick={handleCancelHumanize}
+                            variant="outline"
+                            size="lg"
+                            className="px-6"
+                          >
+                            Cancel
+                          </Button>
                         )}
-                      </Button>
+                      </div>
 
                       {showResult && (
                         <div ref={resultRef}>

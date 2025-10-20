@@ -588,8 +588,19 @@ function showProcessing() {
     <div style="text-align: center; padding: 20px;">
       <div style="display: inline-block; width: 40px; height: 40px; border: 4px solid #e0e0e0; border-top-color: #2563eb; border-radius: 50%; animation: spin 1s linear infinite;"></div>
       <p style="margin: 12px 0 0; color: #666; font-size: 14px;">Humanizing your text...</p>
+      <button id="sapienwrite-cancel-processing" style="margin-top: 16px; padding: 8px 16px; background: #f5f5f5; color: #666; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">Cancel</button>
     </div>
   `;
+  
+  // Add cancel button handler
+  const cancelBtn = document.getElementById('sapienwrite-cancel-processing');
+  if (cancelBtn) {
+    cancelBtn.onclick = () => {
+      console.log('[Content] User clicked cancel');
+      safeChromeMessage({ action: 'cancelHumanize' });
+      closeDialog();
+    };
+  }
   
   // Add animation
   if (!document.getElementById('sapienwrite-spin-style')) {
@@ -598,6 +609,17 @@ function showProcessing() {
     style.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';
     safeAppendToHead(style);
   }
+  
+  // Safety timeout: auto-close after 25 seconds if still showing spinner
+  setTimeout(() => {
+    const stillProcessing = document.getElementById('sapienwrite-cancel-processing');
+    if (stillProcessing) {
+      console.warn('[Content] Processing timeout - closing dialog');
+      closeDialog();
+      showNotification('Request timed out. Please try again.', 'error');
+    }
+  }, 25000);
+}
 }
 
 // Simple word diff calculator
