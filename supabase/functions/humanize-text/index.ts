@@ -39,7 +39,27 @@ serve(async (req) => {
       throw new Error('Text and tone are required');
     }
 
+    // Validate text input to prevent resource exhaustion and cost escalation
+    if (typeof text !== 'string' || text.length > 100000) {
+      return new Response(JSON.stringify({ 
+        error: 'Text must be a string with maximum 100,000 characters'
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const wordCount = text.trim().split(/\s+/).length;
+    
+    // Validate word count to prevent excessive API costs
+    if (wordCount > 15000) {
+      return new Response(JSON.stringify({ 
+        error: 'Text must contain fewer than 15,000 words'
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     const currentMonth = new Date().toISOString().slice(0, 7); // "2024-01"
 
     // Get user profile to check plan and extra words
