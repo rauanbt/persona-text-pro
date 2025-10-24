@@ -278,7 +278,14 @@ serve(async (req) => {
 
     // Tone-specific system prompts with ANTI-AI-DETECTION rules as PRIMARY goal
     const tonePrompts = {
-      regular: `ANTI-AI-DETECTION RULES (HIGHEST PRIORITY):
+      regular: `CRITICAL LENGTH RULES (MUST ENFORCE):
+- Output must be ±10-15% of input word count (STRICT LIMIT)
+- Don't add extra sentences or explanations
+- Don't expand phrases unnecessarily
+- Focus on word choice, not word addition
+- Keep it tight and concise
+
+ANTI-AI-DETECTION RULES (HIGHEST PRIORITY):
 ❌ FORBIDDEN WORDS: Moreover, Furthermore, Ultimately, Consequently, Therefore, Nevertheless, Subsequently, Additionally, Specifically, Particularly, Essentially
 ✅ USE INSTEAD: But, So, And, Plus, Also, Now, Then, Still, Yet, Though
 
@@ -302,7 +309,13 @@ STRUCTURE PRESERVATION (CRITICAL):
 
 Rewrite naturally as if a real human typed this casually.`,
 
-      formal: `ANTI-AI-DETECTION RULES (HIGHEST PRIORITY):
+      formal: `CRITICAL LENGTH RULES (MUST ENFORCE):
+- Output must be ±10-15% of input word count (STRICT LIMIT)
+- Don't add extra sentences or explanations
+- Don't expand phrases unnecessarily
+- Professional through word choice, not verbosity
+
+ANTI-AI-DETECTION RULES (HIGHEST PRIORITY):
 ❌ REDUCE: Moreover, Furthermore, Consequently (use sparingly, max 1x)
 ✅ FORMAL ALTERNATIVES: However, Additionally, Therefore (but vary them)
 
@@ -324,7 +337,13 @@ STRUCTURE PRESERVATION (CRITICAL):
 
 Write professionally but with natural human flow.`,
 
-      persuasive: `ANTI-AI-DETECTION RULES (HIGHEST PRIORITY):
+      persuasive: `CRITICAL LENGTH RULES (MUST ENFORCE):
+- Output must be ±10-15% of input word count (STRICT LIMIT)
+- Don't add extra sentences or fluff
+- Impact through word choice, not length
+- Keep it punchy and tight
+
+ANTI-AI-DETECTION RULES (HIGHEST PRIORITY):
 ❌ AVOID: Moreover, Ultimately, Consequently - these kill persuasion
 ✅ USE: But, So, And, Because, Plus - direct and powerful
 
@@ -346,7 +365,13 @@ STRUCTURE PRESERVATION (CRITICAL):
 
 Make it compelling like a human sales pitch, not an AI essay.`,
 
-      empathetic: `ANTI-AI-DETECTION RULES (HIGHEST PRIORITY):
+      empathetic: `CRITICAL LENGTH RULES (MUST ENFORCE):
+- Output must be ±10-15% of input word count (STRICT LIMIT)
+- Don't add extra reassurances or explanations
+- Warmth through tone, not verbosity
+- Keep it genuine and concise
+
+ANTI-AI-DETECTION RULES (HIGHEST PRIORITY):
 ❌ FORBIDDEN: Moreover, Furthermore, Ultimately - these sound cold
 ✅ USE: And, But, So, Plus - warm and connecting
 
@@ -368,7 +393,14 @@ STRUCTURE PRESERVATION (CRITICAL):
 
 Write with genuine warmth like a caring human, not a counseling AI.`,
 
-      sarcastic: `ANTI-AI-DETECTION RULES (HIGHEST PRIORITY):
+      sarcastic: `CRITICAL LENGTH RULES (MUST ENFORCE):
+- Output must be ±10-15% of input word count (STRICT LIMIT)
+- DON'T add extra sarcastic commentary
+- Sarcasm through WORD CHOICE, not WORD ADDITION
+- Keep it sharp and tight - no rambling
+- If input is 50 words, output should be 45-60 words MAX
+
+ANTI-AI-DETECTION RULES (HIGHEST PRIORITY):
 ❌ NEVER: Moreover, Furthermore, Consequently - ruins sarcasm completely
 ✅ USE: But, So, And, Plus, Oh - casual and biting
 
@@ -390,7 +422,12 @@ STRUCTURE PRESERVATION (CRITICAL):
 
 Write with human wit and dry humor, not AI-generated "sarcasm."`,
 
-      grammar: `GRAMMAR FIX MODE - MINIMAL CHANGES ONLY:
+      grammar: `CRITICAL LENGTH RULES (MUST ENFORCE):
+- Output must be ±5% of input word count (VERY STRICT)
+- Only fix errors - don't rewrite anything
+- Grammar fix should barely change length
+
+GRAMMAR FIX MODE - MINIMAL CHANGES ONLY:
 
 PRIMARY GOAL: Fix grammar mistakes while changing as little as possible.
 
@@ -447,7 +484,7 @@ Fix ONLY what's grammatically wrong. If input is already correct, return it almo
             model: 'google/gemini-2.5-flash',
             messages: [
               { role: 'system', content: systemPrompt },
-              { role: 'user', content: `${langRule}\n\nABSOLUTELY CRITICAL:\n- Keep EVERY line break exactly where it appears\n- If there are numbered lists (1. 2. 3.), preserve that exact format\n- FORBIDDEN to merge separate lines into paragraphs\n\nInput text:\n${text}` }
+              { role: 'user', content: `${langRule}\n\nINPUT WORD COUNT: ${wordCount} words\nOUTPUT TARGET: ${Math.floor(wordCount * 0.9)}-${Math.ceil(wordCount * 1.15)} words (±15% max)\n\nABSOLUTELY CRITICAL:\n- Keep EVERY line break exactly where it appears\n- If there are numbered lists (1. 2. 3.), preserve that exact format\n- FORBIDDEN to merge separate lines into paragraphs\n- DON'T add extra sentences or expand unnecessarily\n\nInput text:\n${text}` }
             ],
           }),
         }, 15000);
@@ -491,7 +528,7 @@ Fix ONLY what's grammatically wrong. If input is already correct, return it almo
             model: 'google/gemini-2.5-flash',
             messages: [
               { role: 'system', content: systemPrompt },
-              { role: 'user', content: `${langRule}\n\nABSOLUTELY CRITICAL:\n- Keep EVERY line break exactly where it appears\n- If there are numbered lists (1. 2. 3.), preserve that exact format\n- FORBIDDEN to merge separate lines into paragraphs\n\nInput text:\n${text}` }
+              { role: 'user', content: `${langRule}\n\nINPUT WORD COUNT: ${wordCount} words\nOUTPUT TARGET: ${Math.floor(wordCount * 0.9)}-${Math.ceil(wordCount * 1.15)} words (±15% max)\n\nABSOLUTELY CRITICAL:\n- Keep EVERY line break exactly where it appears\n- If there are numbered lists (1. 2. 3.), preserve that exact format\n- FORBIDDEN to merge separate lines into paragraphs\n- DON'T add extra sentences or expand unnecessarily\n\nInput text:\n${text}` }
             ],
           }),
         }, 15000);
@@ -521,7 +558,7 @@ Fix ONLY what's grammatically wrong. If input is already correct, return it almo
               model: 'gpt-5-nano',
               messages: [
                 { role: 'system', content: `${systemPrompt}\n\nRefine for accuracy and natural flow.` },
-                { role: 'user', content: `${langRule}\n\nABSOLUTELY CRITICAL:\n- Keep EVERY line break exactly where it appears\n- If there are numbered lists, preserve that exact format\n- FORBIDDEN to merge separate lines into paragraphs\n\nInput text:\n${pass1Result}` }
+                { role: 'user', content: `${langRule}\n\nINPUT WORD COUNT: ${wordCount} words\nOUTPUT TARGET: ${Math.floor(wordCount * 0.9)}-${Math.ceil(wordCount * 1.15)} words (±15% max)\n\nABSOLUTELY CRITICAL:\n- Keep EVERY line break exactly where it appears\n- If there are numbered lists, preserve that exact format\n- FORBIDDEN to merge separate lines into paragraphs\n- DON'T add extra sentences or expand unnecessarily\n\nInput text:\n${pass1Result}` }
               ],
               max_completion_tokens: Math.min(Math.ceil(wordCount * 2), 4000),
             }),
@@ -578,7 +615,7 @@ Fix ONLY what's grammatically wrong. If input is already correct, return it almo
             model: 'google/gemini-2.5-flash',
             messages: [
               { role: 'system', content: systemPrompt },
-              { role: 'user', content: `${langRule}\n\nABSOLUTELY CRITICAL:\n- Keep EVERY line break exactly where it appears\n- If there are numbered lists (1. 2. 3.), preserve that exact format\n- FORBIDDEN to merge separate lines into paragraphs\n\nInput text:\n${text}` }
+              { role: 'user', content: `${langRule}\n\nINPUT WORD COUNT: ${wordCount} words\nOUTPUT TARGET: ${Math.floor(wordCount * 0.9)}-${Math.ceil(wordCount * 1.15)} words (±15% max)\n\nABSOLUTELY CRITICAL:\n- Keep EVERY line break exactly where it appears\n- If there are numbered lists (1. 2. 3.), preserve that exact format\n- FORBIDDEN to merge separate lines into paragraphs\n- DON'T add extra sentences or expand unnecessarily\n\nInput text:\n${text}` }
             ],
           }),
         }, 15000);
@@ -607,7 +644,7 @@ Fix ONLY what's grammatically wrong. If input is already correct, return it almo
               model: 'gpt-5-nano',
               messages: [
                 { role: 'system', content: `${systemPrompt}\n\nRefine for accuracy and clarity.` },
-                { role: 'user', content: `${langRule}\n\nABSOLUTELY CRITICAL:\n- Keep EVERY line break exactly where it appears\n- If there are numbered lists, preserve that exact format\n- FORBIDDEN to merge separate lines into paragraphs\n\nInput text:\n${pass1Result}` }
+                { role: 'user', content: `${langRule}\n\nINPUT WORD COUNT: ${wordCount} words\nOUTPUT TARGET: ${Math.floor(wordCount * 0.9)}-${Math.ceil(wordCount * 1.15)} words (±15% max)\n\nABSOLUTELY CRITICAL:\n- Keep EVERY line break exactly where it appears\n- If there are numbered lists, preserve that exact format\n- FORBIDDEN to merge separate lines into paragraphs\n- DON'T add extra sentences or expand unnecessarily\n\nInput text:\n${pass1Result}` }
               ],
               max_completion_tokens: Math.min(Math.ceil(wordCount * 2), 4000),
             }),
@@ -643,7 +680,7 @@ Fix ONLY what's grammatically wrong. If input is already correct, return it almo
                   model: 'anthropic/claude-sonnet-4-20250514',
                   messages: [
                     { role: 'system', content: `${systemPrompt}\n\nYou are the final polishing layer. Perfect the tone, add nuanced personality, and ensure authentic human voice.` },
-                    { role: 'user', content: `${langRule}\n\nABSOLUTELY CRITICAL:\n- Keep EVERY line break exactly where it appears\n- If there are numbered lists, preserve that exact format\n- FORBIDDEN to merge separate lines into paragraphs\n\nInput text:\n${pass2Result}` }
+                    { role: 'user', content: `${langRule}\n\nINPUT WORD COUNT: ${wordCount} words\nOUTPUT TARGET: ${Math.floor(wordCount * 0.9)}-${Math.ceil(wordCount * 1.15)} words (±15% max)\n\nABSOLUTELY CRITICAL:\n- Keep EVERY line break exactly where it appears\n- If there are numbered lists, preserve that exact format\n- FORBIDDEN to merge separate lines into paragraphs\n- DON'T add extra sentences or expand unnecessarily\n\nInput text:\n${pass2Result}` }
                   ],
                 }),
               }, 15000);
@@ -685,6 +722,24 @@ Fix ONLY what's grammatically wrong. If input is already correct, return it almo
     }
 
     console.log(`[HYBRID-HUMANIZE] Humanization complete - ${passesCompleted} passes (max 4 for Ultra) using ${enginesUsed}`);
+
+    // Post-processing length validation
+    const inputWords = text.trim().split(/\s+/).length;
+    const outputWords = (finalText || bestSoFar).trim().split(/\s+/).length;
+    const wordChangePercent = Math.abs(outputWords - inputWords) / inputWords * 100;
+    const wordsAdded = outputWords - inputWords;
+    const wordsRemoved = inputWords - outputWords;
+    
+    console.log(`[LENGTH-CHECK] Word count validation: input=${inputWords}, output=${outputWords}, change=${wordChangePercent.toFixed(1)}% (${wordsAdded >= 0 ? '+' : ''}${wordsAdded} words)`);
+    
+    if (wordChangePercent > 25) {
+      console.warn(`[LENGTH-CHECK] ⚠️ Output length exceeded 25% threshold! This should not happen with new constraints.`);
+      console.warn(`[LENGTH-CHECK] Details: ${inputWords} → ${outputWords} words (${wordChangePercent.toFixed(1)}% change)`);
+    } else if (wordChangePercent > 20) {
+      console.log(`[LENGTH-CHECK] ℹ️ Output length slightly high (20-25%), but acceptable range`);
+    } else {
+      console.log(`[LENGTH-CHECK] ✅ Output length within acceptable range (≤20%)`);
+    }
 
     // Post-generation language verification and correction if needed (SKIP in speed mode)
     if (!speed_mode) {
