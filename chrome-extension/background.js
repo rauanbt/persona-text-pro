@@ -18,6 +18,7 @@ const sessionCache = {
 async function safeSendMessage(tabId, message, options = {}) {
   try {
     await chrome.tabs.sendMessage(tabId, message, options);
+    return true;
   } catch (error) {
     if (error.message?.includes('Receiving end does not exist')) {
       // Try without frameId if frameId was specified
@@ -25,15 +26,46 @@ async function safeSendMessage(tabId, message, options = {}) {
         console.log('[Background] Retrying without frameId...');
         try {
           await chrome.tabs.sendMessage(tabId, message);
-          return;
+          return true;
         } catch (retryError) {
-          console.log('[Background] Retry failed:', retryError.message);
+          console.log('[Background] Retry failed, attempting broadcast to all frames...');
         }
       }
-      // Silently ignore - this is expected when content script isn't loaded
-      console.log('[Background] Content script not loaded in tab, ignoring');
+      
+      // Final fallback: broadcast to all frames
+      try {
+        const frames = await chrome.webNavigation.getAllFrames({ tabId });
+        if (frames && frames.length > 0) {
+          console.log(`[Background] Broadcasting to ${frames.length} frames`);
+          for (const frame of frames) {
+            try {
+              await chrome.tabs.sendMessage(tabId, message, { frameId: frame.frameId });
+              console.log(`[Background] Message delivered to frameId ${frame.frameId}`);
+              return true;
+            } catch (frameError) {
+              // Try next frame
+            }
+          }
+        }
+      } catch (navError) {
+        console.log('[Background] getAllFrames failed:', navError.message);
+      }
+      
+      // Still failed - try notification as last resort for critical messages
+      if (message.action === 'showDialog' || message.action === 'showError') {
+        chrome.notifications.create({
+          type: 'basic',
+          title: 'SapienWrite',
+          message: 'Please refresh the page and try again',
+          iconUrl: 'icons/icon-48.png'
+        });
+      }
+      
+      console.log('[Background] All delivery attempts failed');
+      return false;
     } else {
       console.error('[Background] Message send error:', error);
+      return false;
     }
   }
 }
@@ -245,7 +277,7 @@ chrome.runtime.onStartup.addListener(() => {
 // Register context menu immediately when service worker loads
 setupContextMenu();
 
-// Handle context menu clicks - IMMEDIATE one-click humanize
+// Handle context menu clicks - APPROVAL-FIRST flow
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   // Check if it's a tone submenu item
   const toneMap = {
@@ -260,7 +292,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   const tone = toneMap[info.menuItemId];
   if (!tone) return; // Not a tone item
   
-  console.log(`[Background] Context menu → starting humanize immediately (tone=${tone}, intensity=medium, force=true)`);
+  console.log(`[Background] Context menu → showing approval dialog (tone=${tone})`);
   
   const selectedText = info.selectionText;
   if (!selectedText) return;
@@ -274,11 +306,6 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     }, { frameId: info.frameId });
     return;
   }
-  
-  // Send processing status IMMEDIATELY (best effort - don't wait)
-  safeSendMessage(tab.id, {
-    action: 'showProcessing'
-  }, { frameId: info.frameId });
   
   // Validate session and check subscription
   const sessionResult = await ensureFreshSession();
@@ -353,10 +380,22 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       return;
     }
     
-    console.log('[Background] Usage check passed:', { plan, wordBalance, wordCount });
+    console.log('[Background] Usage check passed, showing dialog:', { plan, wordBalance, wordCount });
     
-    // IMMEDIATELY start humanization - don't wait for dialog button (using medium intensity for speed)
-    await handleHumanizeRequest(selectedText, tone, 'medium', true, tab.id, info.frameId);
+    // Show dialog immediately with tone preselected
+    const delivered = await safeSendMessage(tab.id, {
+      action: 'showDialog',
+      text: selectedText,
+      wordCount: wordCount,
+      wordBalance: wordBalance,
+      tone: tone
+    }, { frameId: info.frameId });
+    
+    if (delivered) {
+      console.log('[Background] Dialog message delivered successfully');
+    } else {
+      console.warn('[Background] Dialog delivery failed - user should see notification');
+    }
     
   } catch (error) {
     console.error('[Background] Error in context menu handler:', error);
@@ -394,6 +433,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
     sendResponse({ canceled: true });
     return true;
+  }
+  
+  if (message.action === 'processingAck') {
+    console.log('[Background] ✅ Processing UI rendered successfully in tab', sender.tab?.id);
+    return false;
   }
   
   if (message.action === 'checkAuth') {

@@ -751,6 +751,9 @@ function showProcessing() {
     safeAppendToHead(style);
   }
   
+  // Send acknowledgment that processing UI is rendered
+  safeChromeMessage({ action: 'processingAck' });
+  
   // Safety timeout: auto-close after 25 seconds if still showing spinner
   setTimeout(() => {
     const stillProcessing = document.getElementById('sapienwrite-cancel-processing');
