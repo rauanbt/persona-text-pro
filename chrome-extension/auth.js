@@ -283,6 +283,29 @@ async function signOut() {
   console.log('[Auth] Signed out completely');
 }
 
+// Check if session is healthy (exists, valid, and not near expiry)
+async function isSessionHealthy() {
+  const data = await storageGet([
+    'access_token',
+    'refresh_token',
+    'expires_at'
+  ]);
+  
+  if (!data.access_token || !data.refresh_token) {
+    return false;
+  }
+  
+  const now = Math.floor(Date.now() / 1000);
+  const buffer = 600; // 10 minutes buffer
+  
+  // Check if token exists and is not expired or near expiry
+  if (data.expires_at && now >= (data.expires_at - buffer)) {
+    return false;
+  }
+  
+  return true;
+}
+
 // Check if user is authenticated
 async function isAuthenticated() {
   const session = await getSession();

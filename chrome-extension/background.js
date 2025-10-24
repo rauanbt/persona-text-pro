@@ -172,6 +172,43 @@ async function injectOverlay(tabId, type, payload = {}) {
             return wrap;
           }
           clear();
+          
+          // Reconnect dialog (centered overlay)
+          if (type === 'reconnect') {
+            root.style.pointerEvents = 'auto';
+            root.style.background = 'rgba(0,0,0,0.7)';
+            root.style.display = 'flex';
+            root.style.alignItems = 'center';
+            root.style.justifyContent = 'center';
+            const dialog = document.createElement('div');
+            dialog.style.background = '#fff';
+            dialog.style.padding = '32px';
+            dialog.style.borderRadius = '12px';
+            dialog.style.maxWidth = '400px';
+            dialog.style.boxShadow = '0 20px 50px rgba(0,0,0,0.3)';
+            dialog.style.textAlign = 'center';
+            dialog.innerHTML = `
+              <div style="font-size:48px;margin-bottom:16px;">🔒</div>
+              <h2 style="margin:0 0 12px;font-size:20px;color:#1a1a1a;">Session Expired</h2>
+              <p style="margin:0 0 24px;color:#666;line-height:1.5;">${payload.message || 'Your session expired. Click "Reconnect" to sign in again.'}</p>
+              <button id="sapienwrite-reconnect-btn" style="background:#7C3AED;color:#fff;border:none;padding:12px 24px;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;margin-right:8px;">
+                Reconnect Now
+              </button>
+              <button id="sapienwrite-dismiss-btn" style="background:#e5e5e5;color:#333;border:none;padding:12px 24px;border-radius:8px;font-size:15px;cursor:pointer;">
+                Dismiss
+              </button>
+            `;
+            root.appendChild(dialog);
+            document.getElementById('sapienwrite-reconnect-btn').onclick = () => {
+              window.open('https://sapienwrite.com/extension-auth', '_blank');
+              root.remove();
+            };
+            document.getElementById('sapienwrite-dismiss-btn').onclick = () => {
+              root.remove();
+            };
+            return;
+          }
+          
           const wrap = box();
           if (type === 'processing') {
             const el = document.createElement('div');
@@ -442,6 +479,28 @@ function setupContextMenu() {
   });
 }
 
+// Periodic session health check (every 5 minutes)
+setInterval(async () => {
+  const healthy = await isSessionHealthy();
+  if (!healthy) {
+    console.log('[Background] Periodic check: session unhealthy');
+    const data = await chrome.storage.local.get(['refresh_token']);
+    if (data.refresh_token) {
+      console.log('[Background] Attempting proactive refresh...');
+      await refreshSession();
+    }
+  }
+}, 5 * 60 * 1000);
+
+// Try to sync session on startup
+(async () => {
+  const session = await getSession();
+  if (!session) {
+    console.log('[Background] No session on startup, requesting from web app...');
+    await requestSessionFromWebApp(2000);
+  }
+})();
+
 // Register context menu on install
 chrome.runtime.onInstalled.addListener(() => {
   console.log('[Background] Extension installed');
@@ -475,6 +534,25 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   console.log(`[Background] ========= TONE CLICKED: ${tone} =========`);
   console.log('[Background] Tab:', tab.id, 'Frame:', info.frameId);
   
+  // STEP 0: CHECK SESSION HEALTH FIRST - before showing any UI
+  const sessionHealthy = await isSessionHealthy();
+  if (!sessionHealthy) {
+    console.log('[Background] Session unhealthy, attempting auto-reconnect');
+    
+    // Try to get session from open SapienWrite tabs
+    const reconnected = await requestSessionFromWebApp(3000);
+    
+    if (!reconnected.success) {
+      // Show reconnect dialog
+      await injectOverlay(tab.id, 'reconnect', {
+        message: 'Your session expired. Click "Reconnect" to sign in again.'
+      });
+      return;
+    }
+    
+    console.log('[Background] Auto-reconnect successful, continuing...');
+  }
+  
   // STEP 1: Get selected text
   let selectedText = info.selectionText;
   
@@ -502,11 +580,12 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   
   console.log('[Background] ✅ Selected text:', selectedText.substring(0, 100));
   
-  // STEP 2: Show spinner INSTANTLY (no checks, no delays)
+  // STEP 2: Show spinner INSTANTLY
   console.log('[Background] 🎬 Showing spinner NOW');
   await broadcastToAllFrames(tab.id, { action: 'showProcessing' });
-  const ack = await waitForProcessingAck(tab.id, 700);
+  const ack = await waitForProcessingAck(tab.id, 500);
   if (!ack) {
+    console.log('[Background] No processingAck received, injecting fallback spinner');
     await injectOverlay(tab.id, 'processing');
   }
   // STEP 3: Call edge function immediately (backend handles ALL validation)
