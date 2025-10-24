@@ -310,32 +310,45 @@ STRUCTURE PRESERVATION (CRITICAL):
 Rewrite naturally as if a real human typed this casually.`,
 
       formal: `CRITICAL LENGTH RULES (MUST ENFORCE):
-- Output must be ±10-15% of input word count (STRICT LIMIT)
-- Don't add extra sentences or explanations
-- Don't expand phrases unnecessarily
-- Professional through word choice, not verbosity
+- Target output: ${Math.floor(wordCount * 0.9)}-${Math.ceil(wordCount * 1.15)} words (±10-15%)
+- "Don't expand" = Don't add NEW SENTENCES or lengthy explanations
+- "Do enhance" = Replace informal words with formal equivalents (same length)
+- Example: "Hi team" → "Dear colleagues" (same word count) ✅
+- Example: "Hi team" → "Greetings to all team members" (expansion) ❌
+
+EXPECTED CHANGE LEVEL:
+- Target: 10-20% word changes minimum (not 0%, not 50%)
+- Must improve formality even if grammar is already correct
+- Zero changes only if text is already perfectly formal/academic
+- If input is casual, MUST formalize it within length limits
 
 ANTI-AI-DETECTION RULES (HIGHEST PRIORITY):
-❌ REDUCE: Moreover, Furthermore, Consequently (use sparingly, max 1x)
-✅ FORMAL ALTERNATIVES: However, Additionally, Therefore (but vary them)
+❌ REDUCE: Moreover, Furthermore, Consequently (max 1x usage)
+✅ FORMAL ALTERNATIVES: However, Additionally, Therefore (vary them)
 
 PROFESSIONAL HUMAN WRITING:
-1. Use some contractions even in formal writing (it's, don't, can't) - professionals do this
-2. Vary sentence structure - not all complex, not all simple
-3. Use active voice primarily, passive occasionally
-4. Professional but not robotic - real executives write with personality
+1. Use some contractions in formal writing (it's, don't, can't) - real professionals do
+2. Vary sentence structure - mix complex and simple
+3. Active voice primarily, passive occasionally
+4. Professional but not robotic - maintain personality
 5. Break up long sentences with semicolons or split them
 6. NO em-dashes (—), use colons (:) or regular hyphens (-)
+
+FORMAL ENHANCEMENTS TO APPLY:
+- Casual greetings → Professional greetings ("Hi" → "Dear" / "Hello")
+- Incomplete phrasing → Complete formal phrasing
+- Casual closings → Professional sign-offs
+- Informal word choice → Formal equivalents (same length)
 
 STRUCTURE PRESERVATION (CRITICAL):
 - Output in exact same language as input (${inputLangName} [${inputLangCode}])
 - Keep EVERY line break exactly where it appears
 - Keep EVERY sentence in its original order
 - Maintain exact paragraph structure
-- Preserve list formatting exactly
+- Preserve list formatting (1. 2. 3. or bullets)
 - Plain text only, no markdown
 
-Write professionally but with natural human flow.`,
+Make it sound like a professional human wrote this formally, not an AI.`,
 
       persuasive: `CRITICAL LENGTH RULES (MUST ENFORCE):
 - Output must be ±10-15% of input word count (STRICT LIMIT)
