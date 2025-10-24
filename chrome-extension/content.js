@@ -778,7 +778,13 @@ function getWordDiff(original, humanized) {
 }
 
 function showResult(originalText, humanizedText) {
+  console.log('[Content] showResult() called with:', {
+    originalLength: originalText?.length,
+    humanizedLength: humanizedText?.length
+  });
+  
   let dialog = document.getElementById('sapienwrite-dialog');
+  console.log('[Content] Existing dialog:', !!dialog);
   
   // If no dialog exists, create a minimal one (resilient for Gmail etc)
   if (!dialog) {
@@ -822,6 +828,7 @@ function showResult(originalText, humanizedText) {
     
     safeAppendToBody(backdrop);
     safeAppendToBody(dialog);
+    console.log('[Content] Dialog and backdrop appended to body');
     
     document.getElementById('sapienwrite-close').onclick = closeDialog;
     backdrop.onclick = closeDialog;
@@ -878,6 +885,8 @@ function showResult(originalText, humanizedText) {
       </button>
     </div>
   `;
+  
+  console.log('[Content] Result content populated, dialog should be visible now');
   
   document.getElementById('sapienwrite-replace').onclick = () => {
     const replaced = replaceSelectedText(originalText, humanizedText);
@@ -1118,19 +1127,35 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   
   if (message.action === 'showResult') {
-    // Update selected tone from message if provided
-    if (message.tone) {
-      selectedTone = message.tone;
-    }
-    if (message.toneIntensity) {
-      selectedToneIntensity = message.toneIntensity;
-    }
+    console.log('[Content] ===== SHOW RESULT CALLED =====');
+    console.log('[Content] originalText:', message.originalText?.substring(0, 50));
+    console.log('[Content] humanizedText:', message.humanizedText?.substring(0, 50));
+    console.log('[Content] tone:', message.tone);
+    console.log('[Content] toneIntensity:', message.toneIntensity);
     
-    if (message.warning) {
-      // Show warning notification first
-      showNotification(message.warning, 'info');
+    try {
+      // Update selected tone from message if provided
+      if (message.tone) {
+        selectedTone = message.tone;
+        console.log('[Content] Set selectedTone:', selectedTone);
+      }
+      if (message.toneIntensity) {
+        selectedToneIntensity = message.toneIntensity;
+        console.log('[Content] Set selectedToneIntensity:', selectedToneIntensity);
+      }
+      
+      if (message.warning) {
+        console.log('[Content] Showing warning:', message.warning);
+        showNotification(message.warning, 'info');
+      }
+      
+      console.log('[Content] Calling showResult()...');
+      showResult(message.originalText, message.humanizedText);
+      console.log('[Content] showResult() completed');
+    } catch (error) {
+      console.error('[Content] ERROR in showResult handler:', error);
+      showNotification('Failed to display result: ' + error.message, 'error');
     }
-    showResult(message.originalText, message.humanizedText);
   }
   
   if (message.action === 'showError') {

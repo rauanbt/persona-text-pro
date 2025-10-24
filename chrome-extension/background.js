@@ -597,14 +597,23 @@ async function handleHumanizeRequest(text, tone, toneIntensity, forceRewrite, ta
     }
     
     // ALWAYS show result dialog for user verification
-    await safeSendMessage(tabId, {
+    console.log('[Background] ===== SENDING SHOW RESULT MESSAGE =====');
+    console.log('[Background] tabId:', tabId, 'frameId:', frameId);
+    console.log('[Background] originalText length:', text.length);
+    console.log('[Background] humanizedText length:', humanizedText.length);
+    
+    const resultMessage = {
       action: 'showResult',
       originalText: text,
       humanizedText: humanizedText,
       tone: tone,
       toneIntensity: toneIntensity,
       warning: warning
-    }, { frameId });
+    };
+    
+    console.log('[Background] Sending message:', resultMessage);
+    await safeSendMessage(tabId, resultMessage, { frameId });
+    console.log('[Background] Message sent successfully');
     
   } catch (error) {
     console.error('[Background] Error humanizing:', error);
