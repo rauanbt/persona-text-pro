@@ -84,6 +84,21 @@ async function safeSendMessage(tabId, message, options = {}) {
   }
 }
 
+// Broadcast message to all frames in a tab
+async function broadcastToAllFrames(tabId, message) {
+  try {
+    const frames = await chrome.webNavigation.getAllFrames({ tabId });
+    if (frames && frames.length) {
+      await Promise.all(frames.map(f => chrome.tabs.sendMessage(tabId, message, { frameId: f.frameId }).catch(() => {})));
+    }
+    // Also send to top frame as some pages handle only root
+    await chrome.tabs.sendMessage(tabId, message).catch(() => {});
+    console.log('[Background] Broadcast sent to all frames:', message.action);
+  } catch (e) {
+    console.warn('[Background] Broadcast failed:', e.message);
+  }
+}
+
 // Fast session check for humanization (uses cache)
 async function ensureFreshSessionFast() {
   const now = Date.now();
@@ -329,27 +344,26 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     return;
   }
   
-  // Show spinner IMMEDIATELY
-  const frameOptions = Number.isInteger(info.frameId) ? { frameId: info.frameId } : {};
-  await safeSendMessage(tab.id, { action: 'showProcessing' }, frameOptions);
+  // Show spinner IMMEDIATELY (broadcast so the right frame always shows it)
+  await broadcastToAllFrames(tab.id, { action: 'showProcessing' });
   
   // Fast auth check
   const authenticated = await isAuthenticated();
   if (!authenticated) {
-    await safeSendMessage(tab.id, {
+    await broadcastToAllFrames(tab.id, {
       action: 'showError',
       message: 'Please login to use SapienWrite extension'
-    }, frameOptions);
+    });
     return;
   }
   
   // Fast session check (uses cache)
   const sessionResult = await ensureFreshSessionFast();
   if (!sessionResult.success) {
-    await safeSendMessage(tab.id, {
+    await broadcastToAllFrames(tab.id, {
       action: 'showError',
       message: 'Reconnect required. Open sapienwrite.com to refresh your session.'
-    }, frameOptions);
+    });
     return;
   }
   

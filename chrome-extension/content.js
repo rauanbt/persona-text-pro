@@ -227,23 +227,29 @@ document.addEventListener('selectionchange', () => {
 document.addEventListener('select', (e) => {
   const t = e.target;
   if (t && (t.tagName === 'TEXTAREA' || t.tagName === 'INPUT')) {
-    lastInputSelection = {
-      element: t,
-      start: t.selectionStart ?? 0,
-      end: t.selectionEnd ?? 0,
-      valueSnapshot: t.value
-    };
+      const start = t.selectionStart ?? 0;
+      const end = t.selectionEnd ?? 0;
+      lastInputSelection = {
+        element: t,
+        start,
+        end,
+        valueSnapshot: t.value,
+        text: typeof t.value === 'string' ? t.value.substring(start, end) : ''
+      };
   }
 }, true);
 
 document.addEventListener('contextmenu', () => {
   const t = document.activeElement;
   if (t && (t.tagName === 'TEXTAREA' || t.tagName === 'INPUT')) {
+    const start = t.selectionStart ?? 0;
+    const end = t.selectionEnd ?? 0;
     lastInputSelection = {
       element: t,
-      start: t.selectionStart ?? 0,
-      end: t.selectionEnd ?? 0,
-      valueSnapshot: t.value
+      start,
+      end,
+      valueSnapshot: t.value,
+      text: typeof t.value === 'string' ? t.value.substring(start, end) : ''
     };
   } else {
     const sel = window.getSelection();
@@ -266,6 +272,7 @@ document.addEventListener('keyup', () => {
         element: t,
         start: start,
         end: end,
+        text: typeof t.value === 'string' ? t.value.substring(start, end) : '',
         valueSnapshot: t.value,
         // Store element identifiers for verification
         elementId: t.id || null,
@@ -1111,7 +1118,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   
   // Return last selection for fallback
   if (message.action === 'getLastSelection') {
-    const text = lastInputSelection?.text || lastSelection?.text || '';
+    let text = '';
+    if (lastInputSelection?.element) {
+      const val = lastInputSelection.valueSnapshot ?? lastInputSelection.element.value ?? '';
+      const s = lastInputSelection.start ?? 0;
+      const e = lastInputSelection.end ?? 0;
+      if (e > s) text = val.substring(s, e);
+    }
+    if (!text && lastSelection?.text) text = lastSelection.text;
     console.log('[Content] Returning last selection:', text.substring(0, 50));
     sendResponse({ text });
     return;
