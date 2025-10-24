@@ -14,59 +14,73 @@ const sessionCache = {
   ttl: 30000 // 30 seconds
 };
 
-// Safe message sending helper
+// Safe message sending helper with robust fallbacks
 async function safeSendMessage(tabId, message, options = {}) {
+  if (!tabId) {
+    console.warn('[safeSend] No tabId provided');
+    return false;
+  }
+  
+  // Sanitize frameId - only use if it's a valid integer
+  const hasValidFrameId = Number.isInteger(options?.frameId);
+  const sendOptions = hasValidFrameId ? { frameId: options.frameId } : undefined;
+  
+  // Primary attempt: send with sanitized options
   try {
-    await chrome.tabs.sendMessage(tabId, message, options);
+    if (sendOptions) {
+      await chrome.tabs.sendMessage(tabId, message, sendOptions);
+      console.log(`[safeSend] ✓ Delivered to tab ${tabId}, frame ${sendOptions.frameId}:`, message.action);
+    } else {
+      await chrome.tabs.sendMessage(tabId, message);
+      console.log(`[safeSend] ✓ Delivered to tab ${tabId} (no frame):`, message.action);
+    }
     return true;
   } catch (error) {
-    if (error.message?.includes('Receiving end does not exist')) {
-      // Try without frameId if frameId was specified
-      if (options.frameId !== undefined) {
-        console.log('[Background] Retrying without frameId...');
-        try {
-          await chrome.tabs.sendMessage(tabId, message);
-          return true;
-        } catch (retryError) {
-          console.log('[Background] Retry failed, attempting broadcast to all frames...');
-        }
-      }
-      
-      // Final fallback: broadcast to all frames
+    console.warn(`[safeSend] Primary send failed to tab ${tabId}:`, error.message);
+    
+    // Fallback 1: Try without frameId if we initially used one
+    if (hasValidFrameId) {
       try {
-        const frames = await chrome.webNavigation.getAllFrames({ tabId });
-        if (frames && frames.length > 0) {
-          console.log(`[Background] Broadcasting to ${frames.length} frames`);
-          for (const frame of frames) {
-            try {
-              await chrome.tabs.sendMessage(tabId, message, { frameId: frame.frameId });
-              console.log(`[Background] Message delivered to frameId ${frame.frameId}`);
-              return true;
-            } catch (frameError) {
-              // Try next frame
-            }
+        await chrome.tabs.sendMessage(tabId, message);
+        console.log(`[safeSend] ✓ Fallback 1: Delivered without frameId to tab ${tabId}:`, message.action);
+        return true;
+      } catch (err2) {
+        console.warn(`[safeSend] Fallback 1 failed:`, err2.message);
+      }
+    }
+    
+    // Fallback 2: Broadcast to all frames
+    try {
+      const frames = await chrome.webNavigation.getAllFrames({ tabId });
+      if (frames && frames.length > 0) {
+        console.log(`[safeSend] Attempting broadcast to ${frames.length} frames`);
+        for (const frame of frames) {
+          try {
+            await chrome.tabs.sendMessage(tabId, message, { frameId: frame.frameId });
+            console.log(`[safeSend] ✓ Broadcast delivered to frame ${frame.frameId}:`, message.action);
+            return true;
+          } catch (frameErr) {
+            // Silently continue to next frame
           }
         }
-      } catch (navError) {
-        console.log('[Background] getAllFrames failed:', navError.message);
+        console.warn(`[safeSend] Broadcast failed - no frames responded`);
       }
-      
-      // Still failed - try notification as last resort for critical messages
-      if (message.action === 'showDialog' || message.action === 'showError') {
-        chrome.notifications.create({
-          type: 'basic',
-          title: 'SapienWrite',
-          message: 'Please refresh the page and try again',
-          iconUrl: 'icons/icon-48.png'
-        });
-      }
-      
-      console.log('[Background] All delivery attempts failed');
-      return false;
-    } else {
-      console.error('[Background] Message send error:', error);
-      return false;
+    } catch (err3) {
+      console.warn(`[safeSend] Broadcast fallback failed:`, err3.message);
     }
+    
+    // Final fallback: Show notification for critical UI messages
+    if (['showDialog', 'showError', 'showUpgradeRequired'].includes(message.action)) {
+      console.log(`[safeSend] Showing notification fallback for ${message.action}`);
+      chrome.notifications.create({
+        type: 'basic',
+        iconUrl: 'icons/icon-128.png',
+        title: 'SapienWrite',
+        message: 'Please refresh the page and try again.'
+      });
+    }
+    
+    return false;
   }
 }
 
@@ -303,7 +317,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       action: 'showNotification',
       message: 'Please login to use SapienWrite extension',
       type: 'error'
-    }, { frameId: info.frameId });
+    }, Number.isInteger(info.frameId) ? { frameId: info.frameId } : {});
     return;
   }
   
@@ -313,7 +327,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     await safeSendMessage(tab.id, {
       action: 'showError',
       message: 'Reconnect required. Open sapienwrite.com to refresh your session.'
-    }, { frameId: info.frameId });
+    }, Number.isInteger(info.frameId) ? { frameId: info.frameId } : {});
     return;
   }
   
@@ -326,7 +340,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       await safeSendMessage(tab.id, {
         action: 'showUpgradeRequired',
         currentPlan: plan
-      }, { frameId: info.frameId });
+      }, Number.isInteger(info.frameId) ? { frameId: info.frameId } : {});
       return;
     }
     
@@ -336,7 +350,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       await safeSendMessage(tab.id, {
         action: 'showError',
         message: 'Session expired. Please reconnect the extension.'
-      }, { frameId: info.frameId });
+      }, Number.isInteger(info.frameId) ? { frameId: info.frameId } : {});
       return;
     }
     
@@ -376,7 +390,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       await safeSendMessage(tab.id, {
         action: 'showUpgradeRequired',
         currentPlan: plan
-      }, { frameId: info.frameId });
+      }, Number.isInteger(info.frameId) ? { frameId: info.frameId } : {});
       return;
     }
     
@@ -389,12 +403,12 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       wordCount: wordCount,
       wordBalance: wordBalance,
       tone: tone
-    }, { frameId: info.frameId });
+    }, Number.isInteger(info.frameId) ? { frameId: info.frameId } : {});
     
     if (delivered) {
-      console.log('[Background] Dialog message delivered successfully');
+      console.log('[Background] ✓ Dialog message delivered successfully');
     } else {
-      console.warn('[Background] Dialog delivery failed - user should see notification');
+      console.error('[Background] ✗ Dialog delivery failed after all fallbacks');
     }
     
   } catch (error) {
@@ -402,7 +416,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     await safeSendMessage(tab.id, {
       action: 'showError',
       message: 'Failed to check account. Please try again.'
-    }, { frameId: info.frameId });
+    }, Number.isInteger(info.frameId) ? { frameId: info.frameId } : {});
   }
 });
 
@@ -576,7 +590,7 @@ async function handleHumanizeRequest(text, tone, toneIntensity, forceRewrite, ta
   
   try {
     console.log(`[Background] 📤 Sending to edge function with tone: "${tone}" | intensity: "${toneIntensity}" | force_rewrite: ${forceRewrite}`);
-    await safeSendMessage(tabId, { action: 'showProcessing' }, { frameId });
+    await safeSendMessage(tabId, { action: 'showProcessing' }, Number.isInteger(frameId) ? { frameId } : {});
     
     // Fast session check (uses cache to avoid slow reconnects)
     const sessionCheck = await ensureFreshSessionFast();
@@ -656,7 +670,7 @@ async function handleHumanizeRequest(text, tone, toneIntensity, forceRewrite, ta
     };
     
     console.log('[Background] Sending message:', resultMessage);
-    await safeSendMessage(tabId, resultMessage, { frameId });
+    await safeSendMessage(tabId, resultMessage, Number.isInteger(frameId) ? { frameId } : {});
     console.log('[Background] Message sent successfully');
     
   } catch (error) {
@@ -666,12 +680,12 @@ async function handleHumanizeRequest(text, tone, toneIntensity, forceRewrite, ta
       await safeSendMessage(tabId, {
         action: 'showError',
         message: 'Request canceled or timed out. Please try again.'
-      }, { frameId });
+      }, Number.isInteger(frameId) ? { frameId } : {});
     } else {
       await safeSendMessage(tabId, {
         action: 'showError',
         message: error.message || 'Failed to humanize text'
-      }, { frameId });
+      }, Number.isInteger(frameId) ? { frameId } : {});
     }
   } finally {
     clearTimeout(timeout);
