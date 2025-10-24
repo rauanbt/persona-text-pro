@@ -195,37 +195,55 @@ function mapToneToSupported(tone) {
 }
 
 // Create context menu with tone submenu
-chrome.runtime.onInstalled.addListener(() => {
-  console.log('[Background] Extension installed');
+function setupContextMenu() {
+  console.log('[Background] Setting up context menu...');
   
-  // Create parent menu item
-  chrome.contextMenus.create({
-    id: 'humanize-parent',
-    title: 'Humanize with SapienWrite',
-    contexts: ['selection']
-  });
-  
-  // Create tone submenu items
-  const tones = [
-    { id: 'tone-regular', title: 'Regular - Natural, balanced' },
-    { id: 'tone-formal', title: 'Formal/Academic - Professional, scholarly' },
-    { id: 'tone-persuasive', title: 'Persuasive/Sales - Compelling, convincing' },
-    { id: 'tone-empathetic', title: 'Empathetic/Warm - Understanding, caring' },
-    { id: 'tone-sarcastic', title: 'Sarcastic - Witty, ironic' },
-    { id: 'tone-grammar', title: 'Grammar Fix - Correct errors only' }
-  ];
-  
-  tones.forEach(tone => {
+  // Remove existing menus to avoid duplicates
+  chrome.contextMenus.removeAll(() => {
+    // Create parent menu item
     chrome.contextMenus.create({
-      id: tone.id,
-      parentId: 'humanize-parent',
-      title: tone.title,
+      id: 'humanize-parent',
+      title: 'Humanize with SapienWrite',
       contexts: ['selection']
     });
+    
+    // Create tone submenu items
+    const tones = [
+      { id: 'tone-regular', title: 'Regular - Natural, balanced' },
+      { id: 'tone-formal', title: 'Formal/Academic - Professional, scholarly' },
+      { id: 'tone-persuasive', title: 'Persuasive/Sales - Compelling, convincing' },
+      { id: 'tone-empathetic', title: 'Empathetic/Warm - Understanding, caring' },
+      { id: 'tone-sarcastic', title: 'Sarcastic - Witty, ironic' },
+      { id: 'tone-grammar', title: 'Grammar Fix - Correct errors only' }
+    ];
+    
+    tones.forEach(tone => {
+      chrome.contextMenus.create({
+        id: tone.id,
+        parentId: 'humanize-parent',
+        title: tone.title,
+        contexts: ['selection']
+      });
+    });
+    
+    console.log('[Background] Context menu created');
   });
-  
-  console.log('[Background] Context menu with tone submenu created');
+}
+
+// Register context menu on install
+chrome.runtime.onInstalled.addListener(() => {
+  console.log('[Background] Extension installed');
+  setupContextMenu();
 });
+
+// Register context menu on browser startup
+chrome.runtime.onStartup.addListener(() => {
+  console.log('[Background] Browser started');
+  setupContextMenu();
+});
+
+// Register context menu immediately when service worker loads
+setupContextMenu();
 
 // Handle context menu clicks - IMMEDIATE one-click humanize
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
