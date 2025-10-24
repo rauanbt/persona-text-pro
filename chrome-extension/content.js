@@ -690,9 +690,16 @@ function closeDialog() {
 }
 
 function showProcessing() {
+  console.log('[Content] 🎬 showProcessing() CALLED');
+  console.log('[Content] Document ready state:', document.readyState);
+  console.log('[Content] Body exists:', !!document.body);
+  
   // Check if dialog exists, create minimal one if not
   let dialog = document.getElementById('sapienwrite-dialog');
+  console.log('[Content] Existing dialog:', !!dialog);
+  
   if (!dialog) {
+    console.log('[Content] Creating new dialog...');
     dialog = document.createElement('div');
     dialog.id = 'sapienwrite-dialog';
     dialog.style.cssText = `
@@ -700,10 +707,10 @@ function showProcessing() {
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      z-index: 999999;
+      z-index: 2147483647 !important;
       background: white;
       border-radius: 16px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
       padding: 24px;
       max-width: 500px;
       width: 90%;
@@ -721,17 +728,23 @@ function showProcessing() {
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0,0,0,0.5);
-      z-index: 999998;
+      background: rgba(0,0,0,0.6);
+      z-index: 2147483646 !important;
     `;
     
+    console.log('[Content] Appending backdrop and dialog to body...');
     safeAppendToBody(backdrop);
     safeAppendToBody(dialog);
+    console.log('[Content] ✅ Dialog appended');
   }
   
   const content = document.getElementById('sapienwrite-dialog-content');
-  if (!content) return;
+  if (!content) {
+    console.error('[Content] ❌ No content div found!');
+    return;
+  }
   
+  console.log('[Content] Setting spinner HTML...');
   content.innerHTML = `
     <div style="text-align: center; padding: 20px;">
       <div style="display: inline-block; width: 40px; height: 40px; border: 4px solid #e0e0e0; border-top-color: #2563eb; border-radius: 50%; animation: spin 1s linear infinite;"></div>
@@ -757,6 +770,8 @@ function showProcessing() {
     style.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';
     safeAppendToHead(style);
   }
+  
+  console.log('[Content] ✅ Spinner shown successfully');
   
   // Send acknowledgment that processing UI is rendered
   safeChromeMessage({ action: 'processingAck' });
@@ -1148,7 +1163,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   
   if (message.action === 'showProcessing') {
-    showProcessing();
+    console.log('[Content] 🎬 SHOW PROCESSING MESSAGE RECEIVED');
+    console.log('[Content] Current URL:', window.location.href);
+    console.log('[Content] Frame:', window === window.top ? 'TOP' : 'IFRAME');
+    try {
+      showProcessing();
+      console.log('[Content] ✅ showProcessing() completed');
+    } catch (e) {
+      console.error('[Content] ❌ showProcessing() failed:', e);
+    }
   }
   
   if (message.action === 'showResult') {

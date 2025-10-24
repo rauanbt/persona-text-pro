@@ -84,18 +84,44 @@ async function safeSendMessage(tabId, message, options = {}) {
   }
 }
 
-// Broadcast message to all frames in a tab
+// Ultra-simple broadcast - send to ALL frames aggressively
 async function broadcastToAllFrames(tabId, message) {
+  console.log('[Background] 🔊 Broadcasting:', message.action, 'to tab', tabId);
+  
+  // Strategy 1: Send to main tab (no frameId)
+  try {
+    await chrome.tabs.sendMessage(tabId, message);
+    console.log('[Background] ✅ Sent to main tab');
+  } catch (e) {
+    console.warn('[Background] ❌ Main tab failed:', e.message);
+  }
+  
+  // Strategy 2: Send to ALL known frames
   try {
     const frames = await chrome.webNavigation.getAllFrames({ tabId });
     if (frames && frames.length) {
-      await Promise.all(frames.map(f => chrome.tabs.sendMessage(tabId, message, { frameId: f.frameId }).catch(() => {})));
+      console.log('[Background] Found', frames.length, 'frames');
+      for (const frame of frames) {
+        try {
+          await chrome.tabs.sendMessage(tabId, message, { frameId: frame.frameId });
+        } catch (e) {
+          // Silent - some frames won't respond
+        }
+      }
+      console.log('[Background] ✅ Broadcast to all frames complete');
     }
-    // Also send to top frame as some pages handle only root
-    await chrome.tabs.sendMessage(tabId, message).catch(() => {});
-    console.log('[Background] Broadcast sent to all frames:', message.action);
   } catch (e) {
-    console.warn('[Background] Broadcast failed:', e.message);
+    console.warn('[Background] ❌ Frame broadcast failed:', e.message);
+  }
+  
+  // Strategy 3: Notify via chrome.notifications as last resort
+  if (message.action === 'showError' && message.message) {
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: 'icons/icon-48.png',
+      title: 'SapienWrite',
+      message: message.message
+    });
   }
 }
 
@@ -321,53 +347,42 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   const tone = toneMap[info.menuItemId];
   if (!tone) return; // Not a tone item
   
-  console.log(`[Background] Tone clicked: ${tone} → instant spinner + auto-run`);
+  console.log(`[Background] ========= TONE CLICKED: ${tone} =========`);
+  console.log('[Background] Tab:', tab.id, 'Frame:', info.frameId);
   
+  // STEP 1: Get selected text
   let selectedText = info.selectionText;
   
-  // Fallback: if no selectionText, try to get from content script
   if (!selectedText || !selectedText.trim()) {
-    console.log('[Background] No selectionText, requesting from content script...');
+    console.log('[Background] No selectionText, requesting from content...');
     try {
       const response = await chrome.tabs.sendMessage(tab.id, { action: 'getLastSelection' });
       if (response?.text) {
         selectedText = response.text;
-        console.log('[Background] Got selection from content script:', selectedText.substring(0, 50));
+        console.log('[Background] Got text from content:', selectedText.substring(0, 50));
       }
     } catch (e) {
-      console.warn('[Background] Could not get selection from content:', e.message);
+      console.warn('[Background] getLastSelection failed:', e.message);
     }
   }
   
   if (!selectedText || !selectedText.trim()) {
-    console.log('[Background] No text selected');
+    console.log('[Background] ❌ No text selected, aborting');
+    await broadcastToAllFrames(tab.id, {
+      action: 'showError',
+      message: 'No text selected. Please select text and try again.'
+    });
     return;
   }
   
-  // Show spinner IMMEDIATELY (broadcast so the right frame always shows it)
+  console.log('[Background] ✅ Selected text:', selectedText.substring(0, 100));
+  
+  // STEP 2: Show spinner INSTANTLY (no checks, no delays)
+  console.log('[Background] 🎬 Showing spinner NOW');
   await broadcastToAllFrames(tab.id, { action: 'showProcessing' });
   
-  // Fast auth check
-  const authenticated = await isAuthenticated();
-  if (!authenticated) {
-    await broadcastToAllFrames(tab.id, {
-      action: 'showError',
-      message: 'Please login to use SapienWrite extension'
-    });
-    return;
-  }
-  
-  // Fast session check (uses cache)
-  const sessionResult = await ensureFreshSessionFast();
-  if (!sessionResult.success) {
-    await broadcastToAllFrames(tab.id, {
-      action: 'showError',
-      message: 'Reconnect required. Open sapienwrite.com to refresh your session.'
-    });
-    return;
-  }
-  
-  // Start humanization immediately - backend will enforce limits
+  // STEP 3: Call edge function immediately (backend handles ALL validation)
+  console.log('[Background] 🚀 Calling edge function');
   const mappedTone = mapToneToSupported(tone);
   await handleHumanizeRequest(
     selectedText, 
@@ -375,8 +390,10 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     'strong', 
     true, 
     tab.id, 
-    Number.isInteger(info.frameId) ? info.frameId : undefined
+    undefined // Let broadcast handle all frames
   );
+  
+  console.log('[Background] ========= TONE HANDLER COMPLETE =========');
 });
 
 // Handle messages
