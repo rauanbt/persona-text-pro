@@ -1169,6 +1169,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     try {
       showProcessing();
       console.log('[Content] ✅ showProcessing() completed');
+      try { chrome.runtime.sendMessage({ action: 'processingAck' }); } catch {}
     } catch (e) {
       console.error('[Content] ❌ showProcessing() failed:', e);
     }

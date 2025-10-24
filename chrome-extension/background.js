@@ -125,6 +125,131 @@ async function broadcastToAllFrames(tabId, message) {
   }
 }
 
+// Waiters for processing ACKs per tab
+const processingAckWaiters = new Map();
+
+function waitForProcessingAck(tabId, timeoutMs = 500) {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      processingAckWaiters.delete(tabId);
+      resolve(false);
+    }, timeoutMs);
+    processingAckWaiters.set(tabId, () => {
+      clearTimeout(timer);
+      processingAckWaiters.delete(tabId);
+      resolve(true);
+    });
+  });
+}
+
+// Minimal overlay injection fallback using chrome.scripting
+async function injectOverlay(tabId, type, payload = {}) {
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId, allFrames: true },
+      func: (type, payload) => {
+        try {
+          const ROOT_ID = 'sapienwrite-overlay-root';
+          let root = document.getElementById(ROOT_ID);
+          if (!root) {
+            root = document.createElement('div');
+            root.id = ROOT_ID;
+            root.style.position = 'fixed';
+            root.style.inset = '0';
+            root.style.zIndex = '2147483647';
+            root.style.pointerEvents = 'none';
+            document.documentElement.appendChild(root);
+          }
+          function clear() { while (root.firstChild) root.removeChild(root.firstChild); }
+          function box() {
+            const wrap = document.createElement('div');
+            wrap.style.position = 'absolute';
+            wrap.style.top = '20px';
+            wrap.style.right = '20px';
+            wrap.style.maxWidth = '420px';
+            wrap.style.pointerEvents = 'auto';
+            wrap.style.fontFamily = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif";
+            return wrap;
+          }
+          clear();
+          const wrap = box();
+          if (type === 'processing') {
+            const el = document.createElement('div');
+            el.style.background = '#111827CC';
+            el.style.color = '#F9FAFB';
+            el.style.padding = '12px 14px';
+            el.style.borderRadius = '10px';
+            el.style.boxShadow = '0 8px 24px rgba(0,0,0,0.3)';
+            el.textContent = 'SapienWrite: processing…';
+            wrap.appendChild(el);
+            root.appendChild(wrap);
+          } else if (type === 'result') {
+            const { humanizedText } = payload || {};
+            const el = document.createElement('div');
+            el.style.background = '#111827';
+            el.style.color = '#F9FAFB';
+            el.style.padding = '14px';
+            el.style.borderRadius = '10px';
+            el.style.boxShadow = '0 8px 24px rgba(0,0,0,0.3)';
+            el.style.display = 'grid';
+            el.style.gap = '10px';
+            const pre = document.createElement('pre');
+            pre.style.margin = '0';
+            pre.style.whiteSpace = 'pre-wrap';
+            pre.style.fontFamily = 'inherit';
+            pre.textContent = humanizedText || '(empty)';
+            const actions = document.createElement('div');
+            actions.style.display = 'flex';
+            actions.style.gap = '8px';
+            const copy = document.createElement('button');
+            copy.textContent = 'Copy';
+            copy.style.background = '#2563EB';
+            copy.style.color = '#fff';
+            copy.style.border = '0';
+            copy.style.padding = '8px 10px';
+            copy.style.borderRadius = '8px';
+            copy.style.cursor = 'pointer';
+            copy.addEventListener('click', async () => {
+              try { await navigator.clipboard.writeText(humanizedText || ''); copy.textContent = 'Copied!'; } catch {}
+            });
+            const close = document.createElement('button');
+            close.textContent = 'Close';
+            close.style.background = '#374151';
+            close.style.color = '#E5E7EB';
+            close.style.border = '0';
+            close.style.padding = '8px 10px';
+            close.style.borderRadius = '8px';
+            close.style.cursor = 'pointer';
+            close.addEventListener('click', () => { clear(); root.remove(); });
+            actions.appendChild(copy);
+            actions.appendChild(close);
+            el.appendChild(pre);
+            el.appendChild(actions);
+            wrap.appendChild(el);
+            root.appendChild(wrap);
+          } else if (type === 'error') {
+            const { message } = payload || {};
+            const el = document.createElement('div');
+            el.style.background = '#FEE2E2';
+            el.style.color = '#991B1B';
+            el.style.padding = '12px 14px';
+            el.style.borderRadius = '10px';
+            el.style.boxShadow = '0 8px 24px rgba(0,0,0,0.25)';
+            el.textContent = message || 'SapienWrite: Something went wrong.';
+            wrap.appendChild(el);
+            root.appendChild(wrap);
+          }
+        } catch (e) { /* no-op */ }
+      },
+      args: [type, payload]
+    });
+    return true;
+  } catch (e) {
+    console.warn('[Background] injectOverlay failed:', e?.message);
+    return false;
+  }
+}
+
 // Fast session check for humanization (uses cache)
 async function ensureFreshSessionFast() {
   const now = Date.now();
@@ -380,17 +505,20 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   // STEP 2: Show spinner INSTANTLY (no checks, no delays)
   console.log('[Background] 🎬 Showing spinner NOW');
   await broadcastToAllFrames(tab.id, { action: 'showProcessing' });
-  
+  const ack = await waitForProcessingAck(tab.id, 700);
+  if (!ack) {
+    await injectOverlay(tab.id, 'processing');
+  }
   // STEP 3: Call edge function immediately (backend handles ALL validation)
   console.log('[Background] 🚀 Calling edge function');
   const mappedTone = mapToneToSupported(tone);
   await handleHumanizeRequest(
-    selectedText, 
-    mappedTone, 
-    'strong', 
-    true, 
-    tab.id, 
-    undefined // Let broadcast handle all frames
+    selectedText,
+    mappedTone,
+    'strong',
+    true,
+    tab.id,
+    undefined
   );
   
   console.log('[Background] ========= TONE HANDLER COMPLETE =========');
@@ -426,7 +554,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   
   if (message.action === 'processingAck') {
-    console.log('[Background] ✅ Processing UI rendered successfully in tab', sender.tab?.id);
+    const tabId = sender.tab?.id;
+    if (tabId && processingAckWaiters.has(tabId)) {
+      try { processingAckWaiters.get(tabId)(); } catch {}
+    }
+    console.log('[Background] ✅ Processing UI rendered successfully in tab', tabId);
     return false;
   }
   
@@ -649,22 +781,35 @@ async function handleHumanizeRequest(text, tone, toneIntensity, forceRewrite, ta
     };
     
     console.log('[Background] Sending message:', resultMessage);
-    await safeSendMessage(tabId, resultMessage, Number.isInteger(frameId) ? { frameId } : {});
+    const delivered = await safeSendMessage(tabId, resultMessage, Number.isInteger(frameId) ? { frameId } : {});
+    if (!delivered) {
+      await injectOverlay(tabId, 'result', { humanizedText: humanizedText });
+    }
     console.log('[Background] Message sent successfully');
     
   } catch (error) {
     console.error('[Background] Error humanizing:', error);
     
     if (error.name === 'AbortError') {
-      await safeSendMessage(tabId, {
-        action: 'showError',
-        message: 'Request canceled or timed out. Please try again.'
-      }, Number.isInteger(frameId) ? { frameId } : {});
+      {
+        const delivered = await safeSendMessage(tabId, {
+          action: 'showError',
+          message: 'Request canceled or timed out. Please try again.'
+        }, Number.isInteger(frameId) ? { frameId } : {});
+        if (!delivered) {
+          await injectOverlay(tabId, 'error', { message: 'Request canceled or timed out. Please try again.' });
+        }
+      }
     } else {
-      await safeSendMessage(tabId, {
-        action: 'showError',
-        message: error.message || 'Failed to humanize text'
-      }, Number.isInteger(frameId) ? { frameId } : {});
+      {
+        const delivered = await safeSendMessage(tabId, {
+          action: 'showError',
+          message: error.message || 'Failed to humanize text'
+        }, Number.isInteger(frameId) ? { frameId } : {});
+        if (!delivered) {
+          await injectOverlay(tabId, 'error', { message: error.message || 'Failed to humanize text' });
+        }
+      }
     }
   } finally {
     clearTimeout(timeout);
