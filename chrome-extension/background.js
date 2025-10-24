@@ -291,7 +291,7 @@ chrome.runtime.onStartup.addListener(() => {
 // Register context menu immediately when service worker loads
 setupContextMenu();
 
-// Handle context menu clicks - APPROVAL-FIRST flow
+// Handle context menu clicks - INSTANT spinner + auto-run
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   // Check if it's a tone submenu item
   const toneMap = {
@@ -306,114 +306,63 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   const tone = toneMap[info.menuItemId];
   if (!tone) return; // Not a tone item
   
-  console.log(`[Background] Context menu → auto-run humanize (tone=${tone})`);
+  console.log(`[Background] Tone clicked: ${tone} → instant spinner + auto-run`);
   
-  const selectedText = info.selectionText;
-  if (!selectedText) return;
+  let selectedText = info.selectionText;
   
-  const authenticated = await isAuthenticated();
-  if (!authenticated) {
-    await safeSendMessage(tab.id, {
-      action: 'showNotification',
-      message: 'Please login to use SapienWrite extension',
-      type: 'error'
-    }, Number.isInteger(info.frameId) ? { frameId: info.frameId } : {});
+  // Fallback: if no selectionText, try to get from content script
+  if (!selectedText || !selectedText.trim()) {
+    console.log('[Background] No selectionText, requesting from content script...');
+    try {
+      const response = await chrome.tabs.sendMessage(tab.id, { action: 'getLastSelection' });
+      if (response?.text) {
+        selectedText = response.text;
+        console.log('[Background] Got selection from content script:', selectedText.substring(0, 50));
+      }
+    } catch (e) {
+      console.warn('[Background] Could not get selection from content:', e.message);
+    }
+  }
+  
+  if (!selectedText || !selectedText.trim()) {
+    console.log('[Background] No text selected');
     return;
   }
   
-  // Validate session and check subscription
-  const sessionResult = await ensureFreshSession();
+  // Show spinner IMMEDIATELY
+  const frameOptions = Number.isInteger(info.frameId) ? { frameId: info.frameId } : {};
+  await safeSendMessage(tab.id, { action: 'showProcessing' }, frameOptions);
+  
+  // Fast auth check
+  const authenticated = await isAuthenticated();
+  if (!authenticated) {
+    await safeSendMessage(tab.id, {
+      action: 'showError',
+      message: 'Please login to use SapienWrite extension'
+    }, frameOptions);
+    return;
+  }
+  
+  // Fast session check (uses cache)
+  const sessionResult = await ensureFreshSessionFast();
   if (!sessionResult.success) {
     await safeSendMessage(tab.id, {
       action: 'showError',
       message: 'Reconnect required. Open sapienwrite.com to refresh your session.'
-    }, Number.isInteger(info.frameId) ? { frameId: info.frameId } : {});
+    }, frameOptions);
     return;
   }
   
-  try {
-    const subscriptionData = await checkSubscription();
-    const plan = subscriptionData.plan || 'free';
-    
-    // Block free and pro users from extension access
-    if (plan === 'free' || plan === 'pro') {
-      await safeSendMessage(tab.id, {
-        action: 'showUpgradeRequired',
-        currentPlan: plan
-      }, Number.isInteger(info.frameId) ? { frameId: info.frameId } : {});
-      return;
-    }
-    
-    const session = await getSession();
-    if (!session || !session.user) {
-      console.error('[Background] No valid session');
-      await safeSendMessage(tab.id, {
-        action: 'showError',
-        message: 'Session expired. Please reconnect the extension.'
-      }, Number.isInteger(info.frameId) ? { frameId: info.frameId } : {});
-      return;
-    }
-    
-    const extensionLimit = EXTENSION_LIMITS[plan] || 750;
-    
-    const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/usage_tracking?user_id=eq.${session.user.id}&select=words_used,extension_words_used`,
-      {
-        headers: {
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${session.access_token}`
-        }
-      }
-    );
-    
-    const data = await response.json();
-    const usageData = data[0] || { words_used: 0, extension_words_used: 0 };
-    
-    let wordBalance;
-    if (plan === 'free') {
-      const totalUsed = (usageData.words_used || 0) + (usageData.extension_words_used || 0);
-      wordBalance = Math.max(0, extensionLimit - totalUsed);
-    } else if (plan === 'extension_only') {
-      const extensionUsed = usageData.extension_words_used || 0;
-      wordBalance = Math.max(0, extensionLimit - extensionUsed);
-    } else if (plan === 'ultra' || plan === 'master') {
-      const totalUsed = (usageData.words_used || 0) + (usageData.extension_words_used || 0);
-      wordBalance = Math.max(0, 30000 - totalUsed);
-    } else {
-      wordBalance = 0;
-    }
-    
-    const wordCount = selectedText.trim().split(/\s+/).length;
-    
-    // Check if enough words
-    if (wordCount > wordBalance) {
-      await safeSendMessage(tab.id, {
-        action: 'showUpgradeRequired',
-        currentPlan: plan
-      }, Number.isInteger(info.frameId) ? { frameId: info.frameId } : {});
-      return;
-    }
-    
-    console.log('[Background] Usage check passed, auto-running humanize:', { plan, wordBalance, wordCount });
-    
-    // Auto-run humanization immediately with selected tone
-    const mappedTone = mapToneToSupported(tone);
-    await handleHumanizeRequest(
-      selectedText, 
-      mappedTone, 
-      'strong', 
-      true, 
-      tab.id, 
-      Number.isInteger(info.frameId) ? info.frameId : undefined
-    );
-    
-  } catch (error) {
-    console.error('[Background] Error in context menu handler:', error);
-    await safeSendMessage(tab.id, {
-      action: 'showError',
-      message: 'Failed to check account. Please try again.'
-    }, Number.isInteger(info.frameId) ? { frameId: info.frameId } : {});
-  }
+  // Start humanization immediately - backend will enforce limits
+  const mappedTone = mapToneToSupported(tone);
+  await handleHumanizeRequest(
+    selectedText, 
+    mappedTone, 
+    'strong', 
+    true, 
+    tab.id, 
+    Number.isInteger(info.frameId) ? info.frameId : undefined
+  );
 });
 
 // Handle messages
@@ -585,21 +534,15 @@ async function handleHumanizeRequest(text, tone, toneIntensity, forceRewrite, ta
   }, 20000);
   
   try {
-    console.log(`[Background] 📤 Sending to edge function with tone: "${tone}" | intensity: "${toneIntensity}" | force_rewrite: ${forceRewrite}`);
-    await safeSendMessage(tabId, { action: 'showProcessing' }, Number.isInteger(frameId) ? { frameId } : {});
+    console.log(`[Background] 📤 Calling edge function (tone: "${tone}" | intensity: "${toneIntensity}")`);
     
-    // Fast session check (uses cache to avoid slow reconnects)
-    const sessionCheck = await ensureFreshSessionFast();
-    if (!sessionCheck.success) {
-      throw new Error('Session expired. Please reconnect the extension.');
-    }
-    
+    // Get session
     const session = await getSession();
     if (!session) {
       throw new Error('Session expired. Please reconnect the extension.');
     }
     
-    // Direct fetch with abort signal instead of callSupabaseFunction
+    // Call edge function - it will enforce all limits
     const response = await fetch(`${SUPABASE_URL}/functions/v1/humanize-text-hybrid`, {
       method: 'POST',
       headers: {
@@ -613,17 +556,26 @@ async function handleHumanizeRequest(text, tone, toneIntensity, forceRewrite, ta
         tone_intensity: toneIntensity,
         force_rewrite: forceRewrite,
         source: 'extension',
-        speed_mode: true  // Enable speed mode for extension (skips tone booster & language verification)
+        speed_mode: true
       }),
       signal: controller.signal
     });
     
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Request failed: ${errorText}`);
+    const result = await response.json();
+    
+    // Handle upgrade/limit errors from backend
+    if (!response.ok || result.upgrade_required) {
+      console.log('[Background] Backend requires upgrade:', result);
+      await safeSendMessage(tabId, {
+        action: 'showUpgradeRequired',
+        currentPlan: result.current_plan || 'free'
+      }, Number.isInteger(frameId) ? { frameId } : {});
+      return;
     }
     
-    const result = await response.json();
+    if (result.error) {
+      throw new Error(result.error);
+    }
     
     console.log('[Background] ✅ Response received - tone:', tone, 'intensity:', toneIntensity);
     

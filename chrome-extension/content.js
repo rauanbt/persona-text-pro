@@ -1109,6 +1109,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return;
   }
   
+  // Return last selection for fallback
+  if (message.action === 'getLastSelection') {
+    const text = lastInputSelection?.text || lastSelection?.text || '';
+    console.log('[Content] Returning last selection:', text.substring(0, 50));
+    sendResponse({ text });
+    return;
+  }
+  
   if (message.action === 'showNotification') {
     showNotification(message.message, message.type || 'info');
   }
