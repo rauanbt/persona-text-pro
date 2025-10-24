@@ -166,9 +166,27 @@ let selectedToneIntensity = 'strong'; // Track selected tone intensity
 document.addEventListener('mouseup', () => {
   const selection = window.getSelection();
   if (selection && selection.toString().trim()) {
+    const range = selection.getRangeAt(0);
+    let container = range.commonAncestorContainer;
+    let currentNode = container.nodeType === 3 ? container.parentElement : container;
+    
+    // Find the contenteditable container
+    while (currentNode) {
+      if (currentNode.isContentEditable) {
+        lastSelection = {
+          text: selection.toString(),
+          range: range.cloneRange(),
+          container: currentNode
+        };
+        return;
+      }
+      currentNode = currentNode.parentElement;
+    }
+    
+    // If not contenteditable, just store range
     lastSelection = {
       text: selection.toString(),
-      range: selection.getRangeAt(0).cloneRange()
+      range: range.cloneRange()
     };
   }
 });
@@ -253,40 +271,52 @@ function replaceSelectedText(originalText, humanizedText) {
     return false;
   }
   
-  console.log('[Content] Attempting replacement');
+  console.log('[Content] Attempting replacement', {
+    hasInputSelection: !!lastInputSelection?.element,
+    inputElement: lastInputSelection?.element?.tagName,
+    hasLastSelection: !!lastSelection,
+    hasContainer: !!lastSelection?.container,
+    hasRange: !!lastSelection?.range,
+    activeElement: document.activeElement?.tagName
+  });
   
   try {
     // TIER 1: INPUT/TEXTAREA (direct value manipulation)
     const inputEl = lastInputSelection?.element ?? document.activeElement;
     if (inputEl?.tagName === 'TEXTAREA' || inputEl?.tagName === 'INPUT') {
-      const start = lastInputSelection?.start ?? inputEl.selectionStart;
-      const end = lastInputSelection?.end ?? inputEl.selectionEnd;
-      
-      if (typeof start === 'number' && typeof end === 'number') {
-        // Focus the element first
-        try {
-          inputEl.focus({ preventScroll: true });
-        } catch (e) {
-          inputEl.focus();
+      // Check if element is still in DOM
+      if (!document.body.contains(inputEl)) {
+        console.log('[Content] Input element no longer in DOM');
+      } else {
+        const start = lastInputSelection?.start ?? inputEl.selectionStart;
+        const end = lastInputSelection?.end ?? inputEl.selectionEnd;
+        
+        if (typeof start === 'number' && typeof end === 'number') {
+          // Focus the element first
+          try {
+            inputEl.focus({ preventScroll: true });
+          } catch (e) {
+            inputEl.focus();
+          }
+          
+          const value = inputEl.value;
+          inputEl.value = value.substring(0, start) + humanizedText + value.substring(end);
+          inputEl.selectionStart = inputEl.selectionEnd = start + humanizedText.length;
+          
+          inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+          inputEl.dispatchEvent(new Event('change', { bubbles: true }));
+          
+          lastReplacement = {
+            originalText: originalText,
+            humanizedText: humanizedText,
+            element: inputEl,
+            startIndex: start,
+            endIndex: start + humanizedText.length
+          };
+          
+          showNotification('Text replaced!', 'success');
+          return true;
         }
-        
-        const value = inputEl.value;
-        inputEl.value = value.substring(0, start) + humanizedText + value.substring(end);
-        inputEl.selectionStart = inputEl.selectionEnd = start + humanizedText.length;
-        
-        inputEl.dispatchEvent(new Event('input', { bubbles: true }));
-        inputEl.dispatchEvent(new Event('change', { bubbles: true }));
-        
-        lastReplacement = {
-          originalText: originalText,
-          humanizedText: humanizedText,
-          element: inputEl,
-          startIndex: start,
-          endIndex: start + humanizedText.length
-        };
-        
-        showNotification('Text replaced!', 'success');
-        return true;
       }
     }
     
@@ -355,9 +385,37 @@ function replaceSelectedText(originalText, humanizedText) {
       }
     }
     
-    // TIER 3: Clipboard fallback
+    // TIER 3: Search for original text in active element
+    const activeEl = document.activeElement;
+    if (activeEl && (activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'INPUT')) {
+      const value = activeEl.value;
+      const index = value.indexOf(originalText);
+      
+      if (index !== -1) {
+        console.log('[Content] Found original text in active element');
+        activeEl.focus();
+        activeEl.value = value.substring(0, index) + humanizedText + value.substring(index + originalText.length);
+        activeEl.selectionStart = activeEl.selectionEnd = index + humanizedText.length;
+        activeEl.dispatchEvent(new Event('input', { bubbles: true }));
+        activeEl.dispatchEvent(new Event('change', { bubbles: true }));
+        
+        lastReplacement = {
+          originalText: originalText,
+          humanizedText: humanizedText,
+          element: activeEl,
+          startIndex: index,
+          endIndex: index + humanizedText.length
+        };
+        
+        showNotification('Text replaced!', 'success');
+        return true;
+      }
+    }
+    
+    // TIER 4: Clipboard fallback (final resort)
     console.log('[Content] Auto-replace blocked, using clipboard');
     navigator.clipboard.writeText(humanizedText).catch(() => {});
+    showNotification('Text copied to clipboard - paste manually', 'info');
     return false;
     
   } catch (error) {
