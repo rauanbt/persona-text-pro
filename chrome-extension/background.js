@@ -7,6 +7,13 @@ self.importScripts('config.js', 'auth.js');
 // Track in-flight humanize requests to prevent concurrent calls
 const inFlight = new Map(); // key: `${tabId}:${frameId}`, value: AbortController
 
+// Session cache - 30 second TTL to avoid slow checks
+const sessionCache = {
+  session: null,
+  timestamp: 0,
+  ttl: 30000 // 30 seconds
+};
+
 // Safe message sending helper
 async function safeSendMessage(tabId, message, options = {}) {
   try {
@@ -31,12 +38,42 @@ async function safeSendMessage(tabId, message, options = {}) {
   }
 }
 
-// Ensure we have a fresh session - self-healing flow
+// Fast session check for humanization (uses cache)
+async function ensureFreshSessionFast() {
+  const now = Date.now();
+  
+  // Check cache first
+  if (sessionCache.session && (now - sessionCache.timestamp) < sessionCache.ttl) {
+    return { success: true };
+  }
+  
+  // Quick authentication check
+  const authenticated = await isAuthenticated();
+  if (authenticated) {
+    const session = await getSession();
+    if (session) {
+      // Update cache
+      sessionCache.session = session;
+      sessionCache.timestamp = now;
+      return { success: true };
+    }
+  }
+  
+  // No session - fail fast (no slow reconnect attempts)
+  return { success: false, reason: 'no_session' };
+}
+
+// Full session check (used by popup and non-urgent flows)
 async function ensureFreshSession() {
   const authenticated = await isAuthenticated();
   if (authenticated) {
     const session = await getSession();
-    if (session) return { success: true };
+    if (session) {
+      // Update cache
+      sessionCache.session = session;
+      sessionCache.timestamp = Date.now();
+      return { success: true };
+    }
   }
   
   // Check for remember_me flag and auto-reconnect
@@ -53,6 +90,10 @@ async function ensureFreshSession() {
       if (result.success) {
         await chrome.storage.local.remove(['needs_reconnect']);
         console.log('[Background] Auto-reconnect successful');
+        // Update cache
+        const session = await getSession();
+        sessionCache.session = session;
+        sessionCache.timestamp = Date.now();
         return { success: true };
       }
       
@@ -359,6 +400,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .then(() => {
         console.log('[Background] Session stored successfully');
         
+        // Update session cache
+        sessionCache.session = message.session;
+        sessionCache.timestamp = Date.now();
+        
         // Notify popup
         chrome.runtime.sendMessage({ action: 'sessionStored' }).catch(() => {
           console.log('[Background] Popup not open');
@@ -383,7 +428,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'signOut') {
     console.log('[Background] Sign out requested');
     signOut()
-      .then(() => sendResponse({ success: true }))
+      .then(() => {
+        // Clear session cache
+        sessionCache.session = null;
+        sessionCache.timestamp = 0;
+        sendResponse({ success: true });
+      })
       .catch(error => sendResponse({ success: false, error: error.message }));
     return true;
   }
@@ -466,7 +516,12 @@ async function handleHumanizeRequest(text, tone, toneIntensity, forceRewrite, ta
     console.log(`[Background] 📤 Sending to edge function with tone: "${tone}" | intensity: "${toneIntensity}" | force_rewrite: ${forceRewrite}`);
     await safeSendMessage(tabId, { action: 'showProcessing' }, { frameId });
     
-    // Get session for auth
+    // Fast session check (uses cache to avoid slow reconnects)
+    const sessionCheck = await ensureFreshSessionFast();
+    if (!sessionCheck.success) {
+      throw new Error('Session expired. Please reconnect the extension.');
+    }
+    
     const session = await getSession();
     if (!session) {
       throw new Error('Session expired. Please reconnect the extension.');
