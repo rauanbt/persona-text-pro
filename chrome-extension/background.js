@@ -69,21 +69,8 @@ async function safeSendMessage(tabId, message, options = {}) {
       console.warn(`[safeSend] Broadcast fallback failed:`, err3.message);
     }
 
-    // Fallback 3: Inject minimal dialog for critical UI
-    if (message.action === 'showDialog') {
-      try {
-        const injected = await injectDialogFallback(tabId, message);
-        if (injected) {
-          console.log('[safeSend] ✓ Injected dialog fallback rendered');
-          return true;
-        }
-      } catch (err4) {
-        console.warn('[safeSend] Inject fallback failed:', err4.message);
-      }
-    }
-    
     // Final fallback: Show notification for critical UI messages
-    if (['showDialog', 'showError', 'showUpgradeRequired'].includes(message.action)) {
+    if (['showError', 'showUpgradeRequired'].includes(message.action)) {
       console.log(`[safeSend] Showing notification fallback for ${message.action}`);
       chrome.notifications.create({
         type: 'basic',
@@ -96,125 +83,6 @@ async function safeSendMessage(tabId, message, options = {}) {
     return false;
   }
 }
-
-// Injects a minimal approval dialog directly into the page as last-resort fallback
-async function injectDialogFallback(tabId, message) {
-  try {
-    const results = await chrome.scripting.executeScript({
-      target: { tabId, allFrames: true },
-      args: [{
-        text: message.text,
-        wordCount: message.wordCount,
-        wordBalance: message.wordBalance,
-        tone: message.tone
-      }],
-      func: (payload) => {
-        try {
-          // Avoid duplicate dialogs
-          if (document.getElementById('sapienwrite-dialog')) return true;
-
-          // Backdrop
-          const backdrop = document.createElement('div');
-          backdrop.id = 'sapienwrite-backdrop';
-          Object.assign(backdrop.style, {
-            position: 'fixed', top: '0', left: '0', width: '100%', height: '100%',
-            background: 'rgba(0,0,0,0.5)', zIndex: '999998'
-          });
-
-          // Dialog
-          const dialog = document.createElement('div');
-          dialog.id = 'sapienwrite-dialog';
-          Object.assign(dialog.style, {
-            position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-            zIndex: '999999', background: 'white', borderRadius: '16px', boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-            padding: '24px', maxWidth: '500px', width: '90%', fontFamily: `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`
-          });
-
-          const truncated = (payload.text || '').length > 100 ? (payload.text || '').slice(0, 100) + '...' : (payload.text || '');
-          dialog.innerHTML = `
-            <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:16px;">
-              <div>
-                <h3 style="margin:0;font-size:20px;font-weight:700;color:#1a1a1a;">Humanize Text</h3>
-                <p id="sapienwrite-usage-info" style="margin:4px 0 0;font-size:14px;color:#666;">${payload.wordCount || 0} words • ${payload.wordBalance ?? '—'} remaining</p>
-              </div>
-              <button id="sapienwrite-close" style="background:none;border:none;font-size:24px;cursor:pointer;padding:0;color:#999;">×</button>
-            </div>
-            <div style="background:#f5f5f5;padding:12px;border-radius:8px;margin-bottom:12px;max-height:100px;overflow-y:auto;">
-              <p style="margin:0;font-size:14px;color:#333;line-height:1.5;">${truncated}</p>
-            </div>
-            <div style="margin-bottom:16px;">
-              <label style="display:block;font-size:14px;font-weight:600;color:#333;margin-bottom:8px;">Tone</label>
-              <select id="sapienwrite-tone" style="width:100%;padding:10px;border:2px solid #e0e0e0;border-radius:8px;font-size:14px;background:white;cursor:pointer;">
-                <option value="regular">Regular - Natural, balanced</option>
-                <option value="formal">Formal - Professional, scholarly</option>
-                <option value="persuasive">Persuasive - Compelling, convincing</option>
-                <option value="empathetic">Empathetic - Understanding, caring</option>
-                <option value="sarcastic">Sarcastic - Witty, ironic</option>
-                <option value="grammar">Grammar Fix - Correct errors only</option>
-              </select>
-            </div>
-            <div style="margin-bottom:16px;">
-              <label style="display:block;font-size:14px;font-weight:600;color:#333;margin-bottom:8px;">Tone intensity</label>
-              <select id="sapienwrite-tone-intensity" style="width:100%;padding:10px;border:2px solid #e0e0e0;border-radius:8px;font-size:14px;background:white;cursor:pointer;">
-                <option value="strong">Strong — clear changes</option>
-                <option value="medium">Medium — balanced</option>
-                <option value="light">Light — subtle</option>
-              </select>
-            </div>
-            <div style="display:flex;gap:12px;">
-              <button id="sapienwrite-humanize" style="flex:1;padding:12px;background:#2563eb;color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">Humanize</button>
-              <button id="sapienwrite-cancel" style="flex:1;padding:12px;background:#f5f5f5;color:#666;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">Cancel</button>
-            </div>
-          `;
-
-          document.body.appendChild(backdrop);
-          document.body.appendChild(dialog);
-
-          // Preselect tone/intensity
-          const toneEl = document.getElementById('sapienwrite-tone');
-          if (toneEl && payload.tone) toneEl.value = payload.tone;
-          const intensityEl = document.getElementById('sapienwrite-tone-intensity');
-          if (intensityEl) intensityEl.value = 'strong';
-
-          const close = () => {
-            document.getElementById('sapienwrite-dialog')?.remove();
-            document.getElementById('sapienwrite-backdrop')?.remove();
-          };
-
-          document.getElementById('sapienwrite-close').onclick = close;
-          document.getElementById('sapienwrite-cancel').onclick = close;
-          backdrop.onclick = close;
-
-          document.getElementById('sapienwrite-humanize').onclick = () => {
-            const toneSel = document.getElementById('sapienwrite-tone');
-            const intensitySel = document.getElementById('sapienwrite-tone-intensity');
-            const tone = toneSel ? toneSel.value : (payload.tone || 'regular');
-            const toneIntensity = intensitySel ? intensitySel.value : 'strong';
-            try {
-              chrome.runtime.sendMessage({
-                action: 'humanizeWithTone',
-                text: payload.text,
-                tone,
-                toneIntensity
-              });
-            } catch (_) {}
-          };
-
-          return true;
-        } catch (e) {
-          return false;
-        }
-      }
-    });
-
-    // If any frame reported success, consider it injected
-    return Array.isArray(results) && results.some(r => r?.result === true);
-  } catch (e) {
-    console.warn('[injectDialogFallback] Error:', e.message);
-    return false;
-  }
-}
-
 
 // Fast session check for humanization (uses cache)
 async function ensureFreshSessionFast() {
@@ -438,7 +306,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   const tone = toneMap[info.menuItemId];
   if (!tone) return; // Not a tone item
   
-  console.log(`[Background] Context menu → showing approval dialog (tone=${tone})`);
+  console.log(`[Background] Context menu → auto-run humanize (tone=${tone})`);
   
   const selectedText = info.selectionText;
   if (!selectedText) return;
@@ -526,22 +394,18 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       return;
     }
     
-    console.log('[Background] Usage check passed, showing dialog:', { plan, wordBalance, wordCount });
+    console.log('[Background] Usage check passed, auto-running humanize:', { plan, wordBalance, wordCount });
     
-    // Show dialog immediately with tone preselected
-    const delivered = await safeSendMessage(tab.id, {
-      action: 'showDialog',
-      text: selectedText,
-      wordCount: wordCount,
-      wordBalance: wordBalance,
-      tone: tone
-    }, Number.isInteger(info.frameId) ? { frameId: info.frameId } : {});
-    
-    if (delivered) {
-      console.log('[Background] ✓ Dialog message delivered successfully');
-    } else {
-      console.error('[Background] ✗ Dialog delivery failed after all fallbacks');
-    }
+    // Auto-run humanization immediately with selected tone
+    const mappedTone = mapToneToSupported(tone);
+    await handleHumanizeRequest(
+      selectedText, 
+      mappedTone, 
+      'strong', 
+      true, 
+      tab.id, 
+      Number.isInteger(info.frameId) ? info.frameId : undefined
+    );
     
   } catch (error) {
     console.error('[Background] Error in context menu handler:', error);
