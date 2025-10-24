@@ -124,7 +124,11 @@ serve(async (req) => {
       throw new Error('User not authenticated');
     }
 
-    const { text, tone, source = 'web', tone_intensity = 'strong', force_rewrite = true } = await req.json(); // source: 'web' or 'extension'
+    const { text, tone, source = 'web', tone_intensity = 'strong', force_rewrite = true, speed_mode = false } = await req.json(); // source: 'web' or 'extension'
+    
+    if (speed_mode) {
+      console.log('[HYBRID-HUMANIZE|SPEED] Speed mode ENABLED - skipping tone booster and language verification for fast response');
+    }
     
     if (force_rewrite) {
       console.log('[HYBRID-HUMANIZE|FORCE] Force rewrite mode ENABLED - allowing sentence reordering');
@@ -682,37 +686,41 @@ Fix ONLY what's grammatically wrong. If input is already correct, return it almo
 
     console.log(`[HYBRID-HUMANIZE] Humanization complete - ${passesCompleted} passes (max 4 for Ultra) using ${enginesUsed}`);
 
-    // Post-generation language verification and correction if needed
-    try {
-      const outLang = await detectLanguageIso(finalText);
-      console.log(`[LANG] Output language detected: ${outLang.name} [${outLang.code}]`);
-      if (outLang.code !== inputLangCode) {
-        console.warn(`[LANG] Mismatch detected: input=${inputLangCode}, output=${outLang.code} — correcting`);
-        const correctionResp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${lovableApiKey}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model: 'google/gemini-2.5-flash',
-            messages: [
-              { role: 'system', content: `Rewrite the user's text into ${inputLangName} [${inputLangCode}] without changing meaning, tone ("${tone}"), structure, or formatting. Keep every line break and list exactly as-is. Output plain text only. Do NOT add commentary.` },
-              { role: 'user', content: `${langRule}\n\nRewrite this text into the exact same language as specified while keeping tone and structure identical:\n${finalText}` }
-            ],
-          }),
-        });
-        if (correctionResp.ok) {
-          const corr = await correctionResp.json();
-          finalText = corr.choices?.[0]?.message?.content || finalText;
-          if (finalText && finalText.trim().length > 0) { bestSoFar = finalText; }
-          console.log('[LANG] Correction applied successfully');
-        } else {
-          console.error('[LANG] Correction failed:', correctionResp.status, correctionResp.statusText);
+    // Post-generation language verification and correction if needed (SKIP in speed mode)
+    if (!speed_mode) {
+      try {
+        const outLang = await detectLanguageIso(finalText);
+        console.log(`[LANG] Output language detected: ${outLang.name} [${outLang.code}]`);
+        if (outLang.code !== inputLangCode) {
+          console.warn(`[LANG] Mismatch detected: input=${inputLangCode}, output=${outLang.code} — correcting`);
+          const correctionResp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${lovableApiKey}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model: 'google/gemini-2.5-flash',
+              messages: [
+                { role: 'system', content: `Rewrite the user's text into ${inputLangName} [${inputLangCode}] without changing meaning, tone ("${tone}"), structure, or formatting. Keep every line break and list exactly as-is. Output plain text only. Do NOT add commentary.` },
+                { role: 'user', content: `${langRule}\n\nRewrite this text into the exact same language as specified while keeping tone and structure identical:\n${finalText}` }
+              ],
+            }),
+          });
+          if (correctionResp.ok) {
+            const corr = await correctionResp.json();
+            finalText = corr.choices?.[0]?.message?.content || finalText;
+            if (finalText && finalText.trim().length > 0) { bestSoFar = finalText; }
+            console.log('[LANG] Correction applied successfully');
+          } else {
+            console.error('[LANG] Correction failed:', correctionResp.status, correctionResp.statusText);
+          }
         }
+      } catch (e) {
+        console.error('[LANG] Post-generation language verification failed:', e);
       }
-    } catch (e) {
-      console.error('[LANG] Post-generation language verification failed:', e);
+    } else {
+      console.log('[LANG] Skipping post-generation language verification (speed mode)');
     }
 
-    // MULTI-ENGINE TONE BOOSTER with SHORT-TEXT mode
+    // MULTI-ENGINE TONE BOOSTER with SHORT-TEXT mode (SKIP in speed mode)
     const intensity = ['light','medium','strong'].includes(tone_intensity) ? tone_intensity : 'strong';
     const threshold = INTENSITY_THRESHOLDS[intensity] ?? INTENSITY_THRESHOLDS.strong;
     const isShortText = wordCount < 30;
@@ -726,20 +734,25 @@ Fix ONLY what's grammatically wrong. If input is already correct, return it almo
     let simBefore = jaccardSimilarity(text, finalText);
     let sim = simBefore;
     
-    console.log(`[TONE] tone="${tone}" intensity="${intensity}" force_rewrite=${force_rewrite} short_text=${isShortText} similarity(before)=${sim.toFixed(3)} threshold=${threshold}`);
+    console.log(`[TONE] tone="${tone}" intensity="${intensity}" force_rewrite=${force_rewrite} short_text=${isShortText} similarity(before)=${sim.toFixed(3)} threshold=${threshold} speed_mode=${speed_mode}`);
 
+    // Skip tone booster entirely in speed mode (saves 5-10 seconds)
+    if (speed_mode) {
+      console.log('[TONE] Skipping tone booster entirely (speed mode) - saved ~5-10 seconds');
+    }
     // Skip tone booster entirely for grammar mode (minimal changes only)
     // Always run at least one booster for non-regular, non-grammar tones when:
     // - force_rewrite is true (default), or
     // - similarity above intensity threshold, or very high (>= 0.85), or extremely low (<= 0.01), or
     // - draft equals original text
-    const shouldForceBooster = (
-      tone !== 'regular' && tone !== 'grammar' && (
-        force_rewrite || sim > threshold || sim >= 0.85 || finalText.trim() === text.trim() || sim <= 0.01
-      )
-    );
+    else {
+      const shouldForceBooster = (
+        tone !== 'regular' && tone !== 'grammar' && (
+          force_rewrite || sim > threshold || sim >= 0.85 || finalText.trim() === text.trim() || sim <= 0.01
+        )
+      );
 
-    if (shouldForceBooster) {
+      if (shouldForceBooster) {
       const changePct = Math.round(CHANGE_TARGET[intensity] * 100);
       const toneReinforcements: Record<string, string> = {
         formal: 'Use "However," "Additionally," "Therefore" naturally; reduce contractions; executive clarity.',
@@ -864,8 +877,9 @@ This draft is still too similar to ORIGINAL (similarity=${sim.toFixed(3)}). Rewr
         }
       }
 
-      const thresholdMet = sim <= threshold;
-      console.log(`[TONE] Booster complete: similarity_before=${simBefore.toFixed(3)} similarity_after=${sim.toFixed(3)} threshold=${threshold} threshold_met=${thresholdMet}`);
+        const thresholdMet = sim <= threshold;
+        console.log(`[TONE] Booster complete: similarity_before=${simBefore.toFixed(3)} similarity_after=${sim.toFixed(3)} threshold=${threshold} threshold_met=${thresholdMet}`);
+      }
     }
 
     // Check if output is too long and condense if needed

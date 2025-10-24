@@ -540,7 +540,8 @@ async function handleHumanizeRequest(text, tone, toneIntensity, forceRewrite, ta
         tone: tone,
         tone_intensity: toneIntensity,
         force_rewrite: forceRewrite,
-        source: 'extension'
+        source: 'extension',
+        speed_mode: true  // Enable speed mode for extension (skips tone booster & language verification)
       }),
       signal: controller.signal
     });
