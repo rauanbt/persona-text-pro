@@ -176,8 +176,18 @@ document.addEventListener('mouseup', () => {
         lastSelection = {
           text: selection.toString(),
           range: range.cloneRange(),
-          container: currentNode
+          container: currentNode,
+          // Store element identifiers for verification
+          elementId: currentNode.id || null,
+          elementClass: currentNode.className || null,
+          elementTagName: currentNode.tagName || null
         };
+        console.log('[Content] Selection stored:', {
+          text: lastSelection.text.substring(0, 50),
+          tagName: currentNode.tagName,
+          id: currentNode.id,
+          className: currentNode.className
+        });
         return;
       }
       currentNode = currentNode.parentElement;
@@ -256,8 +266,20 @@ document.addEventListener('keyup', () => {
         element: t,
         start: start,
         end: end,
-        valueSnapshot: t.value
+        valueSnapshot: t.value,
+        // Store element identifiers for verification
+        elementId: t.id || null,
+        elementClass: t.className || null,
+        elementName: t.name || null,
+        elementPlaceholder: t.placeholder || null
       };
+      console.log('[Content] Input selection stored:', {
+        text: t.value.substring(start, end).substring(0, 50),
+        tagName: t.tagName,
+        id: t.id,
+        name: t.name,
+        placeholder: t.placeholder
+      });
     }
   }
 }, true);
@@ -280,6 +302,14 @@ function replaceSelectedText(originalText, humanizedText) {
     activeElement: document.activeElement?.tagName
   });
   
+  // Helper function for similarity check
+  function quickSimilarityCheck(a, b) {
+    const aw = a.toLowerCase().trim().split(/\s+/);
+    const bw = b.toLowerCase().trim().split(/\s+/);
+    const matches = aw.filter(word => bw.includes(word)).length;
+    return matches / Math.max(aw.length, bw.length);
+  }
+  
   try {
     // TIER 1: INPUT/TEXTAREA (direct value manipulation)
     const inputEl = lastInputSelection?.element ?? document.activeElement;
@@ -288,10 +318,46 @@ function replaceSelectedText(originalText, humanizedText) {
       if (!document.body.contains(inputEl)) {
         console.log('[Content] Input element no longer in DOM');
       } else {
+        // VERIFY this is the correct element
+        const isCorrectElement = lastInputSelection?.element === inputEl || (
+          inputEl.id === lastInputSelection?.elementId &&
+          inputEl.name === lastInputSelection?.elementName
+        );
+        
+        if (!isCorrectElement && lastInputSelection?.element) {
+          console.warn('[Content] Element mismatch detected!', {
+            expected: {
+              id: lastInputSelection.elementId,
+              name: lastInputSelection.elementName,
+              placeholder: lastInputSelection.elementPlaceholder
+            },
+            actual: {
+              id: inputEl.id,
+              name: inputEl.name,
+              placeholder: inputEl.placeholder
+            }
+          });
+          showNotification('⚠️ Wrong input field detected. Please select text again and retry.', 'info');
+          return false;
+        }
+        
         const start = lastInputSelection?.start ?? inputEl.selectionStart;
         const end = lastInputSelection?.end ?? inputEl.selectionEnd;
         
         if (typeof start === 'number' && typeof end === 'number') {
+          // Verify the original text is still at this location
+          const currentText = inputEl.value.substring(start, end);
+          const similarity = quickSimilarityCheck(originalText, currentText);
+          
+          if (similarity < 0.7) {
+            console.warn('[Content] Original text not found at expected location', {
+              expected: originalText.substring(0, 50),
+              found: currentText.substring(0, 50)
+            });
+            showNotification('⚠️ Text has changed. Please select again and retry.', 'info');
+            return false;
+          }
+          
           // Focus the element first
           try {
             inputEl.focus({ preventScroll: true });
@@ -314,7 +380,7 @@ function replaceSelectedText(originalText, humanizedText) {
             endIndex: start + humanizedText.length
           };
           
-          showNotification('Text replaced!', 'success');
+          showNotification('✓ Text replaced in correct location!', 'success');
           return true;
         }
       }
@@ -324,16 +390,33 @@ function replaceSelectedText(originalText, humanizedText) {
     if (lastSelection?.range && lastSelection?.container) {
       try {
         const container = lastSelection.container;
-        const range = lastSelection.range;
         
-        // Focus the contenteditable container
-        if (container.focus) {
-          try {
-            container.focus({ preventScroll: true });
-          } catch (e) {
-            container.focus();
+        // Verify container is still in DOM
+        if (!document.body.contains(container)) {
+          console.log('[Content] Container no longer in DOM');
+        } else {
+          // VERIFY this is the correct container
+          const isCorrectContainer = (
+            (!lastSelection.elementId || container.id === lastSelection.elementId) &&
+            (!lastSelection.elementClass || container.className === lastSelection.elementClass)
+          );
+          
+          if (!isCorrectContainer) {
+            console.warn('[Content] Container mismatch detected!');
+            showNotification('⚠️ Wrong element detected. Please select text again and retry.', 'info');
+            return false;
           }
-        }
+          
+          const range = lastSelection.range;
+          
+          // Focus the contenteditable container
+          if (container.focus) {
+            try {
+              container.focus({ preventScroll: true });
+            } catch (e) {
+              container.focus();
+            }
+          }
         
         // Restore selection
         const sel = window.getSelection();

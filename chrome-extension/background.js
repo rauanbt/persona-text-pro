@@ -587,28 +587,24 @@ async function handleHumanizeRequest(text, tone, toneIntensity, forceRewrite, ta
     console.log(`[Background] Similarity check: ${(similarity * 100).toFixed(1)}%`, simBeforeMeta !== undefined ? `(server before=${(simBeforeMeta*100).toFixed(1)}% after=${(simAfterMeta*100).toFixed(1)}%)` : '');
     
     const tooSimilar = (similarity > 0.85) || (humanizedText.trim() === text.trim());
+    let warning = undefined;
+    
     if (tone !== 'regular' && tooSimilar) {
-      // Too similar - show result dialog with warning
-      console.warn('[Background] Result too similar to original, showing dialog with warning');
       const metaLine = (simBeforeMeta !== undefined && simAfterMeta !== undefined)
         ? ` (server similarity: before ${(simBeforeMeta*100).toFixed(0)}% → after ${(simAfterMeta*100).toFixed(0)}%)`
         : '';
-      await safeSendMessage(tabId, {
-        action: 'showResult',
-        originalText: text,
-        humanizedText: humanizedText,
-        tone: tone,
-        toneIntensity: toneIntensity,
-        warning: `⚠️ Text came back ${(similarity * 100).toFixed(0)}% similar.${metaLine} Try a different tone or stronger intensity.`
-      }, { frameId });
-    } else {
-      // Good change - automatically replace text
-      await safeSendMessage(tabId, {
-        action: 'replaceText',
-        originalText: text,
-        humanizedText: humanizedText
-      }, { frameId });
+      warning = `⚠️ Text came back ${(similarity * 100).toFixed(0)}% similar.${metaLine} Try a different tone or stronger intensity.`;
     }
+    
+    // ALWAYS show result dialog for user verification
+    await safeSendMessage(tabId, {
+      action: 'showResult',
+      originalText: text,
+      humanizedText: humanizedText,
+      tone: tone,
+      toneIntensity: toneIntensity,
+      warning: warning
+    }, { frameId });
     
   } catch (error) {
     console.error('[Background] Error humanizing:', error);
