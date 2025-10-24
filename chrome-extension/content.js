@@ -620,7 +620,6 @@ function showProcessing() {
     }
   }, 25000);
 }
-}
 
 // Simple word diff calculator
 function getWordDiff(original, humanized) {
