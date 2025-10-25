@@ -622,21 +622,22 @@ function createDialog(text, wordCount, wordBalance, selectedTone = null) {
   const dialog = document.createElement('div');
   dialog.id = 'sapienwrite-dialog';
   dialog.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 2147483647;
-    background: #111827;
-    color: #F9FAFB;
-    padding: 16px;
-    border-radius: 10px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    font-size: 13px;
-    max-width: 360px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+    all: initial;
+    position: fixed !important;
+    top: 20px !important;
+    right: 20px !important;
+    z-index: 2147483647 !important;
+    background: #111827 !important;
+    color: #F9FAFB !important;
+    padding: 16px !important;
+    border-radius: 10px !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3) !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    font-size: 13px !important;
+    max-width: 360px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
   `;
   
   const truncatedText = text.length > 80 ? text.substring(0, 80) + '...' : text;
@@ -677,10 +678,10 @@ function createDialog(text, wordCount, wordBalance, selectedTone = null) {
     </div>
     
     <div style="display: flex; gap: 6px; margin-top: 4px;">
-      <button id="sapienwrite-humanize" style="flex: 1; padding: 10px; background: #7C3AED; color: white; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer;">
+      <button id="sapienwrite-humanize" style="flex: 1 !important; padding: 10px !important; background: #7C3AED !important; color: white !important; border: none !important; border-radius: 8px !important; font-size: 12px !important; font-weight: 600 !important; cursor: pointer !important; min-width: 80px !important; white-space: nowrap !important;">
         Humanize
       </button>
-      <button id="sapienwrite-cancel" style="flex: 1; padding: 10px; background: #374151; color: #E5E7EB; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer;">
+      <button id="sapienwrite-cancel" style="flex: 1 !important; padding: 10px !important; background: #374151 !important; color: #E5E7EB !important; border: none !important; border-radius: 8px !important; font-size: 12px !important; font-weight: 600 !important; cursor: pointer !important; min-width: 80px !important; white-space: nowrap !important;">
         Cancel
       </button>
     </div>
@@ -730,18 +731,19 @@ function showProcessing() {
   const dialog = document.createElement('div');
   dialog.id = 'sapienwrite-dialog';
   dialog.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 2147483647;
-    background: #111827CC;
-    color: #F9FAFB;
-    padding: 12px 16px;
-    border-radius: 10px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    font-size: 13px;
-    max-width: 300px;
+    all: initial;
+    position: fixed !important;
+    top: 20px !important;
+    right: 20px !important;
+    z-index: 2147483647 !important;
+    background: #111827CC !important;
+    color: #F9FAFB !important;
+    padding: 12px 16px !important;
+    border-radius: 10px !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3) !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    font-size: 13px !important;
+    max-width: 300px !important;
   `;
   
   dialog.innerHTML = `
@@ -803,21 +805,22 @@ function showResult(originalText, humanizedText) {
   const dialog = document.createElement('div');
   dialog.id = 'sapienwrite-dialog';
   dialog.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 2147483647;
-    background: #111827;
-    color: #F9FAFB;
-    padding: 14px;
-    border-radius: 10px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    font-size: 13px;
-    max-width: 380px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+    all: initial;
+    position: fixed !important;
+    top: 20px !important;
+    right: 20px !important;
+    z-index: 2147483647 !important;
+    background: #111827 !important;
+    color: #F9FAFB !important;
+    padding: 14px !important;
+    border-radius: 10px !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3) !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    font-size: 13px !important;
+    max-width: 380px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
   `;
   
   const toneDisplayNames = {
@@ -835,9 +838,9 @@ function showResult(originalText, humanizedText) {
     <div style="font-size: 11px; color: #9CA3AF; font-weight: 600;">✓ ${toneDisplay} ${selectedToneIntensity || ''}</div>
     <pre style="margin: 0; white-space: pre-wrap; font-family: inherit; font-size: 13px; color: #F9FAFB; line-height: 1.5; max-height: 250px; overflow-y: auto;">${humanizedText}</pre>
     <div style="display: flex; gap: 6px; margin-top: 4px;">
-      <button id="sapienwrite-replace" style="flex: 1; padding: 8px; background: #7C3AED; color: #fff; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer;">Replace</button>
-      <button id="sapienwrite-copy" style="flex: 1; padding: 8px; background: #2563EB; color: #fff; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer;">Copy</button>
-      <button id="sapienwrite-close-result" style="flex: 1; padding: 8px; background: #374151; color: #E5E7EB; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer;">Close</button>
+      <button id="sapienwrite-replace" style="flex: 1 !important; padding: 8px !important; background: #7C3AED !important; color: #fff !important; border: none !important; border-radius: 8px !important; font-size: 12px !important; font-weight: 600 !important; cursor: pointer !important; min-width: 80px !important; white-space: nowrap !important;">Replace</button>
+      <button id="sapienwrite-copy" style="flex: 1 !important; padding: 8px !important; background: #2563EB !important; color: #fff !important; border: none !important; border-radius: 8px !important; font-size: 12px !important; font-weight: 600 !important; cursor: pointer !important; min-width: 80px !important; white-space: nowrap !important;">Copy</button>
+      <button id="sapienwrite-close-result" style="flex: 1 !important; padding: 8px !important; background: #374151 !important; color: #E5E7EB !important; border: none !important; border-radius: 8px !important; font-size: 12px !important; font-weight: 600 !important; cursor: pointer !important; min-width: 80px !important; white-space: nowrap !important;">Close</button>
     </div>
   `;
   
@@ -850,8 +853,8 @@ function showResult(originalText, humanizedText) {
       dialog.innerHTML = `
         <div style="color: #10B981; font-weight: 600; font-size: 13px;">✓ Text replaced!</div>
         <div style="display: flex; gap: 6px; margin-top: 6px;">
-          <button id="sapienwrite-restore" style="flex: 1; padding: 8px; background: #F59E0B; color: #fff; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer;">↶ Restore</button>
-          <button id="sapienwrite-close-final" style="flex: 1; padding: 8px; background: #374151; color: #E5E7EB; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer;">Close</button>
+          <button id="sapienwrite-restore" style="flex: 1 !important; padding: 8px !important; background: #F59E0B !important; color: #fff !important; border: none !important; border-radius: 8px !important; font-size: 12px !important; font-weight: 600 !important; cursor: pointer !important; min-width: 80px !important; white-space: nowrap !important;">↶ Restore</button>
+          <button id="sapienwrite-close-final" style="flex: 1 !important; padding: 8px !important; background: #374151 !important; color: #E5E7EB !important; border: none !important; border-radius: 8px !important; font-size: 12px !important; font-weight: 600 !important; cursor: pointer !important; min-width: 80px !important; white-space: nowrap !important;">Close</button>
         </div>
       `;
       document.getElementById('sapienwrite-restore').onclick = () => { restoreOriginalText(); closeDialog(); };
@@ -878,27 +881,28 @@ function showError(errorMessage) {
   const dialog = document.createElement('div');
   dialog.id = 'sapienwrite-dialog';
   dialog.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 2147483647;
-    background: #111827;
-    color: #F9FAFB;
-    padding: 14px;
-    border-radius: 10px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    font-size: 13px;
-    max-width: 350px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+    all: initial;
+    position: fixed !important;
+    top: 20px !important;
+    right: 20px !important;
+    z-index: 2147483647 !important;
+    background: #111827 !important;
+    color: #F9FAFB !important;
+    padding: 14px !important;
+    border-radius: 10px !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3) !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    font-size: 13px !important;
+    max-width: 350px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
   `;
   
   dialog.innerHTML = `
     <div style="color: #EF4444; font-weight: 600;">⚠ Error</div>
     <div style="line-height: 1.5;">${errorMessage}</div>
-    <button id="sapienwrite-close-error" style="padding: 8px; background: #374151; color: #E5E7EB; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer;">Close</button>
+    <button id="sapienwrite-close-error" style="padding: 8px !important; background: #374151 !important; color: #E5E7EB !important; border: none !important; border-radius: 8px !important; font-size: 12px !important; font-weight: 600 !important; cursor: pointer !important; min-width: 80px !important; white-space: nowrap !important;">Close</button>
   `;
   
   safeAppendToBody(dialog);
@@ -914,21 +918,22 @@ function showUpgradeRequiredDialog(currentPlan) {
   const dialog = document.createElement('div');
   dialog.id = 'sapienwrite-dialog';
   dialog.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 2147483647;
-    background: #111827;
-    color: #F9FAFB;
-    padding: 16px;
-    border-radius: 10px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    font-size: 13px;
-    max-width: 360px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+    all: initial;
+    position: fixed !important;
+    top: 20px !important;
+    right: 20px !important;
+    z-index: 2147483647 !important;
+    background: #111827 !important;
+    color: #F9FAFB !important;
+    padding: 16px !important;
+    border-radius: 10px !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3) !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    font-size: 13px !important;
+    max-width: 360px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
   `;
   
   const planNames = { free: 'Free', pro: 'Pro', wordsmith: 'Pro' };
@@ -943,8 +948,8 @@ function showUpgradeRequiredDialog(currentPlan) {
       </div>
     </div>
     <div style="display: flex; gap: 6px;">
-      <button id="sapienwrite-view-upgrade" style="flex: 1; padding: 10px; background: #7C3AED; color: #fff; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer;">Upgrade</button>
-      <button id="sapienwrite-cancel-upgrade" style="flex: 1; padding: 10px; background: #374151; color: #E5E7EB; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer;">Cancel</button>
+      <button id="sapienwrite-view-upgrade" style="flex: 1 !important; padding: 10px !important; background: #7C3AED !important; color: #fff !important; border: none !important; border-radius: 8px !important; font-size: 12px !important; font-weight: 600 !important; cursor: pointer !important; min-width: 80px !important; white-space: nowrap !important;">Upgrade</button>
+      <button id="sapienwrite-cancel-upgrade" style="flex: 1 !important; padding: 10px !important; background: #374151 !important; color: #E5E7EB !important; border: none !important; border-radius: 8px !important; font-size: 12px !important; font-weight: 600 !important; cursor: pointer !important; min-width: 80px !important; white-space: nowrap !important;">Cancel</button>
     </div>
   `;
   

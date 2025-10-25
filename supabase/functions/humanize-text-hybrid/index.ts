@@ -1441,6 +1441,9 @@ async function finalizeResponse(
     ? Math.max(0, planLimit - (currentUsage + wordCount)) + newExtraWordsBalance
     : Math.max(0, planLimit - (currentUsage + wordCount)) + (!isExtensionRequest ? newExtraWordsBalance : 0);
 
+  // FINAL SANITIZATION: Remove ALL paragraph markers before sending to client
+  humanizedText = removeAllParagraphMarkers(humanizedText);
+
   return new Response(JSON.stringify({
     humanized_text: humanizedText,
     word_count: wordCount,
