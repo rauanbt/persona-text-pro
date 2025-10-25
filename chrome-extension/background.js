@@ -199,9 +199,40 @@ async function injectOverlay(tabId, type, payload = {}) {
               </button>
             `;
             root.appendChild(dialog);
-            document.getElementById('sapienwrite-reconnect-btn').onclick = () => {
+            const reconnectBtn = document.getElementById('sapienwrite-reconnect-btn');
+            reconnectBtn.onclick = () => {
+              // Show "Connecting..." state
+              reconnectBtn.textContent = 'Connecting...';
+              reconnectBtn.disabled = true;
+              reconnectBtn.style.background = '#9CA3AF';
+              reconnectBtn.style.cursor = 'not-allowed';
+              
+              // Open auth page
               window.open('https://sapienwrite.com/extension-auth', '_blank');
-              root.remove();
+              
+              // Signal to background that we're waiting for reconnect
+              try {
+                chrome.runtime.sendMessage({ action: 'waitingForReconnect' });
+              } catch (e) {}
+              
+              // Wait 30 seconds for session sync, then auto-dismiss if successful
+              setTimeout(() => {
+                try {
+                  chrome.runtime.sendMessage({ action: 'checkReconnectStatus' }, (response) => {
+                    if (response?.success) {
+                      root.remove();
+                    } else {
+                      // Restore button state if failed
+                      reconnectBtn.textContent = 'Reconnect Now';
+                      reconnectBtn.disabled = false;
+                      reconnectBtn.style.background = '#7C3AED';
+                      reconnectBtn.style.cursor = 'pointer';
+                    }
+                  });
+                } catch (e) {
+                  root.remove(); // Cleanup on error
+                }
+              }, 30000);
             };
             document.getElementById('sapienwrite-dismiss-btn').onclick = () => {
               root.remove();
@@ -421,7 +452,7 @@ async function ensureFreshSession() {
 }
 
 // Helper to request session from web app
-async function requestSessionFromWebApp(timeoutMs = 2000) {
+async function requestSessionFromWebApp(timeoutMs = 2000, isReconnectFlow = false) {
   return new Promise((resolve) => {
     chrome.tabs.query({}, async (tabs) => {
       const sapienWriteTabs = tabs.filter(tab => 
@@ -432,9 +463,27 @@ async function requestSessionFromWebApp(timeoutMs = 2000) {
         )
       );
       
-      if (sapienWriteTabs.length === 0) {
+      if (sapienWriteTabs.length === 0 && !isReconnectFlow) {
+        // If reconnecting, don't fail immediately - user might be opening the auth page
         resolve({ success: false, reason: 'no_tabs' });
         return;
+      }
+      
+      // If reconnecting, keep checking for new tabs every 2 seconds
+      let checkInterval;
+      if (isReconnectFlow) {
+        checkInterval = setInterval(() => {
+          chrome.tabs.query({}, (tabs) => {
+            const authTabs = tabs.filter(tab => 
+              tab.url && tab.url.includes('sapienwrite.com/extension-auth')
+            );
+            authTabs.forEach(tab => {
+              chrome.tabs.sendMessage(tab.id, {
+                type: 'SAPIENWRITE_REQUEST_SESSION'
+              }).catch(() => {});
+            });
+          });
+        }, 2000);
       }
       
       // Request session from all matching tabs
@@ -448,6 +497,7 @@ async function requestSessionFromWebApp(timeoutMs = 2000) {
       const sessionListener = (message) => {
         if (message.action === 'sessionStored') {
           chrome.runtime.onMessage.removeListener(sessionListener);
+          if (checkInterval) clearInterval(checkInterval);
           clearTimeout(timeout);
           resolve({ success: true });
         }
@@ -457,6 +507,7 @@ async function requestSessionFromWebApp(timeoutMs = 2000) {
       
       const timeout = setTimeout(() => {
         chrome.runtime.onMessage.removeListener(sessionListener);
+        if (checkInterval) clearInterval(checkInterval);
         resolve({ success: false, reason: 'timeout' });
       }, timeoutMs);
     });
@@ -593,15 +644,15 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (!sessionHealthy) {
     console.log('[Background] Session unhealthy, attempting auto-reconnect');
     
-    // Try to get session from open SapienWrite tabs
-    const reconnected = await requestSessionFromWebApp(3000);
+    // Try to get session from open SapienWrite tabs (quick attempt)
+    const reconnected = await requestSessionFromWebApp(2000);
     
     if (!reconnected.success) {
-      // Show reconnect dialog
+      // Show reconnect dialog (with extended 30-second wait built-in)
       await injectOverlay(tab.id, 'reconnect', {
         message: 'Your session expired. Click "Reconnect" to sign in again.'
       });
-      return;
+      return; // Stop here - user needs to reconnect
     }
     
     console.log('[Background] Auto-reconnect successful, continuing...');
@@ -739,6 +790,42 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     ensureFreshSession()
       .then(result => sendResponse(result))
       .catch(error => sendResponse({ success: false, error: error.message }));
+    return true;
+  }
+  
+  if (message.action === 'waitingForReconnect') {
+    console.log('[Background] User clicked Reconnect, starting extended wait...');
+    // Store flag that we're waiting for reconnect
+    chrome.storage.local.set({ reconnecting: true, reconnect_started_at: Date.now() });
+    sendResponse({ acknowledged: true });
+    return true;
+  }
+  
+  if (message.action === 'checkReconnectStatus') {
+    chrome.storage.local.get(['reconnecting', 'reconnect_started_at'], async (data) => {
+      if (!data.reconnecting) {
+        sendResponse({ success: false, reason: 'not_reconnecting' });
+        return;
+      }
+      
+      // Check if session is now available
+      const session = await getSession();
+      if (session) {
+        console.log('[Background] Reconnect successful!');
+        await chrome.storage.local.remove(['reconnecting', 'reconnect_started_at']);
+        sendResponse({ success: true });
+      } else {
+        // Still waiting or failed
+        const elapsed = Date.now() - (data.reconnect_started_at || 0);
+        if (elapsed > 30000) {
+          // Timeout after 30 seconds
+          await chrome.storage.local.remove(['reconnecting', 'reconnect_started_at']);
+          sendResponse({ success: false, reason: 'timeout' });
+        } else {
+          sendResponse({ success: false, reason: 'still_waiting' });
+        }
+      }
+    });
     return true;
   }
   

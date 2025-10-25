@@ -153,11 +153,15 @@ async function refreshSession() {
         const errText = await res.text();
         console.error('[Auth] Refresh failed:', errText);
         
-        // If refresh token is invalid/expired, clear session
+        // If refresh token is invalid/expired, clear session and mark for reconnect
         if (errText.includes('refresh_token_already_used') || 
-            errText.includes('Invalid Refresh Token')) {
-          console.log('[Auth] Refresh token invalid - clearing session');
-          await clearSession();
+            errText.includes('Invalid Refresh Token') ||
+            errText.includes('refresh_token_not_found')) {
+          console.log('[Auth] Refresh token invalid - marking for reconnect');
+          const data = await storageGet(['user_email']);
+          await clearSession(); // This will set needs_reconnect flag
+          // Don't spam notifications
+          return null;
         }
         return null;
       }
