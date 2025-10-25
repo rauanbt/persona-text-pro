@@ -92,6 +92,75 @@ function jaccardSimilarity(a: string, b: string): number {
   }
 }
 
+// Bulletproof paragraph marker removal - catches ALL variations
+function removeAllParagraphMarkers(text: string): string {
+  // Comprehensive regex to catch: [PARAGRAPH_1], [PARAGRAPH1], [PARAGRAPH 1], [ PARAGRAPH_1 ], PARAGRAPH_1, etc.
+  return text
+    .replace(/\[?\s*PARAGRAPH[_\s-]?\d+\s*\]?/gi, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+// Per-paragraph humanization fallback (guaranteed structure preservation)
+async function humanizePerParagraph(
+  paragraphs: string[],
+  tone: string,
+  systemPrompt: string,
+  langRule: string,
+  apiKey: string | undefined
+): Promise<string> {
+  if (!apiKey) {
+    console.error('[FALLBACK] No API key available');
+    return paragraphs.join('\n\n');
+  }
+  
+  console.log(`[FALLBACK] Processing ${paragraphs.length} paragraphs individually`);
+  
+  const humanizedParagraphs: string[] = [];
+  
+  for (let i = 0; i < paragraphs.length; i++) {
+    const para = paragraphs[i].trim();
+    if (!para) {
+      humanizedParagraphs.push('');
+      continue;
+    }
+    
+    try {
+      const wordCount = para.split(/\s+/).length;
+      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash',
+          messages: [
+            { role: 'system', content: `${systemPrompt}\n\nHumanize this single paragraph. Output ONLY the humanized text, no markers, no extra commentary.` },
+            { role: 'user', content: `${langRule}\n\nWORD COUNT TARGET: ${Math.floor(wordCount * 0.9)}-${Math.ceil(wordCount * 1.15)} words\n\n${para}` }
+          ],
+        }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const humanized = data.choices[0].message.content.trim();
+        humanizedParagraphs.push(humanized);
+        console.log(`[FALLBACK] Paragraph ${i + 1}/${paragraphs.length} done`);
+      } else {
+        // On error, keep original paragraph
+        humanizedParagraphs.push(para);
+        console.error(`[FALLBACK] Paragraph ${i + 1} failed, using original`);
+      }
+    } catch (error) {
+      humanizedParagraphs.push(para);
+      console.error(`[FALLBACK] Paragraph ${i + 1} error:`, error);
+    }
+  }
+  
+  return humanizedParagraphs.join('\n\n');
+}
+
 // STRICTER thresholds and higher change targets for FORCE mode
 const INTENSITY_THRESHOLDS: Record<string, number> = {
   light: 0.80,
@@ -299,36 +368,37 @@ HUMAN WRITING RULES:
 7. Vary punctuation - not every sentence needs perfect grammar
 8. Add conversational touches when natural: "basically," "honestly," "you know what"
 
-STRUCTURE PRESERVATION (ABSOLUTELY NON-NEGOTIABLE):
-- Input has [PARAGRAPH_X] markers separating paragraphs
-- Each [PARAGRAPH_X] marker must remain on its own line in your output
-- NEVER EVER merge multiple [PARAGRAPH_X] sections into one paragraph
-- NEVER reorder [PARAGRAPH_X] sections
-- Example input:
-  [PARAGRAPH_1]
-  Hi Alice, thanks for your email!
-  
-  [PARAGRAPH_2]
-  I wanted to follow up on the project.
-  
-  [PARAGRAPH_3]
-  Let me know if you have questions.
+⚠️ CRITICAL STRUCTURE RULE - VIOLATION = COMPLETE FAILURE ⚠️
 
-- Example correct output:
-  [PARAGRAPH_1]
-  Hey Alice, appreciate your message!
-  
-  [PARAGRAPH_2]
-  Following up about the project here.
-  
-  [PARAGRAPH_3]
-  Feel free to reach out with any questions.
+Your input contains [PARAGRAPH_X] markers that MUST be preserved EXACTLY:
 
-- WRONG (DO NOT DO THIS): Merging all into one block
-- Each paragraph MUST stay separate with its marker
-- Preserve ALL line breaks between [PARAGRAPH_X] sections
-- Plain text only, no markdown
-- Output in exact same language as input (${inputLangName} [${inputLangCode}])
+✅ CORRECT OUTPUT FORMAT (keep markers, humanize content):
+[PARAGRAPH_1]
+Humanized first paragraph content here.
+
+[PARAGRAPH_2]
+Humanized second paragraph content here.
+
+[PARAGRAPH_3]
+Humanized third paragraph content here.
+
+❌ WRONG - NEVER DO THIS (merging paragraphs):
+[PARAGRAPH_1]
+All paragraphs merged into one giant block...
+
+❌ WRONG - NEVER DO THIS (removing markers):
+First paragraph without marker.
+Second paragraph without marker.
+
+MANDATORY RULES:
+1. Keep EVERY [PARAGRAPH_X] marker on its own line
+2. NEVER merge multiple [PARAGRAPH_X] sections together
+3. NEVER reorder [PARAGRAPH_X] sections
+4. Humanize the CONTENT of each paragraph, preserve the STRUCTURE
+5. Maintain ALL line breaks between [PARAGRAPH_X] sections
+6. If you merge paragraphs, the ENTIRE response will be rejected
+7. Plain text only, no markdown
+8. Output in exact same language as input (${inputLangName} [${inputLangCode}])
 
 Rewrite naturally as if a real human typed this casually.`,
 
@@ -363,36 +433,27 @@ FORMAL ENHANCEMENTS TO APPLY:
 - Casual closings → Professional sign-offs
 - Informal word choice → Formal equivalents (same length)
 
-STRUCTURE PRESERVATION (ABSOLUTELY NON-NEGOTIABLE):
-- Input has [PARAGRAPH_X] markers separating paragraphs
-- Each [PARAGRAPH_X] marker must remain on its own line in your output
-- NEVER EVER merge multiple [PARAGRAPH_X] sections into one paragraph
-- NEVER reorder [PARAGRAPH_X] sections
-- Example input:
-  [PARAGRAPH_1]
-  Dear Mr. Smith, thank you for your inquiry.
-  
-  [PARAGRAPH_2]
-  I would like to address your concerns.
-  
-  [PARAGRAPH_3]
-  Please feel free to contact me.
+⚠️ CRITICAL STRUCTURE RULE - VIOLATION = COMPLETE FAILURE ⚠️
 
-- Example correct output:
-  [PARAGRAPH_1]
-  Dear Mr. Smith, I appreciate your inquiry.
-  
-  [PARAGRAPH_2]
-  I am pleased to address your concerns.
-  
-  [PARAGRAPH_3]
-  Please do not hesitate to contact me.
+Your input contains [PARAGRAPH_X] markers that MUST be preserved EXACTLY:
 
-- WRONG (DO NOT DO THIS): Merging all into one block
-- Each paragraph MUST stay separate with its marker
-- Preserve ALL line breaks between [PARAGRAPH_X] sections
-- Plain text only, no markdown
-- Output in exact same language as input (${inputLangName} [${inputLangCode}])
+✅ CORRECT OUTPUT FORMAT:
+[PARAGRAPH_1]
+Humanized formal content here.
+
+[PARAGRAPH_2]
+Another humanized paragraph.
+
+❌ WRONG (merging paragraphs):
+[PARAGRAPH_1]
+All content merged together...
+
+MANDATORY RULES:
+1. Keep EVERY [PARAGRAPH_X] marker on its own line
+2. NEVER merge [PARAGRAPH_X] sections
+3. Humanize content, preserve structure
+4. Plain text only, no markdown
+5. Output in exact same language as input (${inputLangName} [${inputLangCode}])
 
 Make it sound like a professional human wrote this formally, not an AI.`,
 
@@ -414,36 +475,22 @@ PERSUASIVE HUMAN WRITING:
 5. Add emotion and urgency naturally
 6. NO perfect parallelism - humans don't write that way
 
-STRUCTURE PRESERVATION (ABSOLUTELY NON-NEGOTIABLE):
-- Input has [PARAGRAPH_X] markers separating paragraphs
-- Each [PARAGRAPH_X] marker must remain on its own line in your output
-- NEVER EVER merge multiple [PARAGRAPH_X] sections into one paragraph
-- NEVER reorder [PARAGRAPH_X] sections
-- Example input:
-  [PARAGRAPH_1]
-  This product will save you time.
-  
-  [PARAGRAPH_2]
-  You'll see results fast.
-  
-  [PARAGRAPH_3]
-  Don't wait - order now.
+⚠️ CRITICAL STRUCTURE RULE - VIOLATION = COMPLETE FAILURE ⚠️
 
-- Example correct output:
-  [PARAGRAPH_1]
-  This product saves you hours every week.
-  
-  [PARAGRAPH_2]
-  You'll see results within days.
-  
-  [PARAGRAPH_3]
-  Don't miss out - order today.
+Your input contains [PARAGRAPH_X] markers that MUST be preserved EXACTLY:
 
-- WRONG (DO NOT DO THIS): Merging all into one block
-- Each paragraph MUST stay separate with its marker
-- Preserve ALL line breaks between [PARAGRAPH_X] sections
-- Plain text only, no markdown
-- Output in exact same language as input (${inputLangName} [${inputLangCode}])
+✅ CORRECT OUTPUT FORMAT:
+[PARAGRAPH_1]
+Persuasive content here.
+
+[PARAGRAPH_2]
+More persuasive content.
+
+❌ WRONG (merging paragraphs):
+[PARAGRAPH_1]
+All merged together...
+
+MANDATORY: Keep EVERY [PARAGRAPH_X] marker on its own line. Never merge sections.
 
 Make it compelling like a human sales pitch, not an AI essay.`,
 
@@ -465,36 +512,19 @@ EMPATHETIC HUMAN WRITING:
 5. Break up text with empathetic pauses (shorter paragraphs)
 6. NO clinical language - write like you're talking to a friend
 
-STRUCTURE PRESERVATION (ABSOLUTELY NON-NEGOTIABLE):
-- Input has [PARAGRAPH_X] markers separating paragraphs
-- Each [PARAGRAPH_X] marker must remain on its own line in your output
-- NEVER EVER merge multiple [PARAGRAPH_X] sections into one paragraph
-- NEVER reorder [PARAGRAPH_X] sections
-- Example input:
-  [PARAGRAPH_1]
-  I understand how you're feeling.
-  
-  [PARAGRAPH_2]
-  We're here to help you through this.
-  
-  [PARAGRAPH_3]
-  You're not alone in this.
+⚠️ CRITICAL STRUCTURE RULE - VIOLATION = COMPLETE FAILURE ⚠️
 
-- Example correct output:
-  [PARAGRAPH_1]
-  I hear you, and I understand how you feel.
-  
-  [PARAGRAPH_2]
-  We're here to support you every step of the way.
-  
-  [PARAGRAPH_3]
-  Remember, you're not alone.
+Your input contains [PARAGRAPH_X] markers that MUST be preserved EXACTLY:
 
-- WRONG (DO NOT DO THIS): Merging all into one block
-- Each paragraph MUST stay separate with its marker
-- Preserve ALL line breaks between [PARAGRAPH_X] sections
-- Plain text only, no markdown
-- Output in exact same language as input (${inputLangName} [${inputLangCode}])
+✅ CORRECT: Keep markers on separate lines
+[PARAGRAPH_1]
+Empathetic content.
+
+[PARAGRAPH_2]
+More empathetic content.
+
+❌ WRONG: Merging paragraphs
+MANDATORY: Preserve EVERY [PARAGRAPH_X] marker on its own line.
 
 Write with genuine warmth like a caring human, not a counseling AI.`,
 
@@ -517,36 +547,16 @@ SARCASTIC HUMAN WRITING:
 5. Break grammar rules for effect - fragment sentences on purpose
 6. Casual tone always - sarcasm doesn't work formally
 
-STRUCTURE PRESERVATION (ABSOLUTELY NON-NEGOTIABLE):
-- Input has [PARAGRAPH_X] markers separating paragraphs
-- Each [PARAGRAPH_X] marker must remain on its own line in your output
-- NEVER EVER merge multiple [PARAGRAPH_X] sections into one paragraph
-- NEVER reorder [PARAGRAPH_X] sections
-- Example input:
-  [PARAGRAPH_1]
-  Thanks for your help.
-  
-  [PARAGRAPH_2]
-  This is really useful.
-  
-  [PARAGRAPH_3]
-  I appreciate it.
+⚠️ CRITICAL STRUCTURE RULE - VIOLATION = COMPLETE FAILURE ⚠️
 
-- Example correct output:
-  [PARAGRAPH_1]
-  Oh, thanks so much. Really needed that.
-  
-  [PARAGRAPH_2]
-  This is super useful. Obviously.
-  
-  [PARAGRAPH_3]
-  I definitely appreciate it.
+Your input contains [PARAGRAPH_X] markers that MUST be preserved EXACTLY:
 
-- WRONG (DO NOT DO THIS): Merging all into one block
-- Each paragraph MUST stay separate with its marker
-- Preserve ALL line breaks between [PARAGRAPH_X] sections
-- Plain text only, no markdown
-- Output in exact same language as input (${inputLangName} [${inputLangCode}])
+✅ CORRECT: Each marker on its own line
+[PARAGRAPH_1]
+Sarcastic content.
+
+❌ WRONG: Merging paragraphs
+MANDATORY: Keep EVERY [PARAGRAPH_X] marker separate.
 
 Write with human wit and dry humor, not AI-generated "sarcasm."`,
 
@@ -578,37 +588,16 @@ WHAT NOT TO CHANGE:
 ❌ Don't change tone or style
 ❌ Don't make it "sound better" - just fix errors
 
-STRUCTURE PRESERVATION (ABSOLUTELY NON-NEGOTIABLE):
-- Input has [PARAGRAPH_X] markers separating paragraphs
-- Each [PARAGRAPH_X] marker must remain on its own line in your output
-- NEVER EVER merge multiple [PARAGRAPH_X] sections into one paragraph
-- NEVER reorder [PARAGRAPH_X] sections
-- Example input:
-  [PARAGRAPH_1]
-  I go to store yesterday.
-  
-  [PARAGRAPH_2]
-  She have three cars.
-  
-  [PARAGRAPH_3]
-  They was happy.
+⚠️ CRITICAL STRUCTURE RULE - VIOLATION = COMPLETE FAILURE ⚠️
 
-- Example correct output:
-  [PARAGRAPH_1]
-  I went to the store yesterday.
-  
-  [PARAGRAPH_2]
-  She has three cars.
-  
-  [PARAGRAPH_3]
-  They were happy.
+Your input contains [PARAGRAPH_X] markers that MUST be preserved EXACTLY:
 
-- WRONG (DO NOT DO THIS): Merging all into one block
-- Each paragraph MUST stay separate with its marker
-- Preserve ALL line breaks between [PARAGRAPH_X] sections
-- If a sentence is grammatically correct, DON'T touch it
-- Plain text only, no markdown
-- Output in exact same language as input (${inputLangName} [${inputLangCode}])
+✅ CORRECT: Keep markers separate
+[PARAGRAPH_1]
+Fixed grammar content.
+
+❌ WRONG: Merging paragraphs
+MANDATORY: Preserve EVERY [PARAGRAPH_X] marker.
 
 Fix ONLY what's grammatically wrong. If input is already correct, return it almost unchanged.`
     };
@@ -673,23 +662,38 @@ ${markedText}` }
         }
 
         const geminiData = await geminiResponse.json();
-        finalText = geminiData.choices[0].message.content;
+        const rawOutput = geminiData.choices[0].message.content;
         
-        // POST-PROCESS: Remove ALL paragraph markers (aggressive regex)
-        finalText = finalText.replace(/\[PARAGRAPH_?\d+\]\s*/gi, '');
-        finalText = finalText.replace(/\[PARAGRAPH\d+\]\s*/gi, '');
-        finalText = finalText.replace(/PARAGRAPH\d+/gi, '');
-        finalText = finalText.replace(/\n{3,}/g, '\n\n');
+        console.log('[DEBUG] Raw AI output (first 200 chars):', rawOutput.substring(0, 200));
+        
+        // Verify paragraph markers are present in output
+        const inputMarkerCount = (markedText.match(/\[PARAGRAPH_\d+\]/g) || []).length;
+        const outputMarkerCount = (rawOutput.match(/\[PARAGRAPH[_\s-]?\d+\]/gi) || []).length;
+        
+        console.log(`[STRUCTURE-CHECK] Markers: input=${inputMarkerCount}, output=${outputMarkerCount}`);
+        
+        // If AI ignored markers, use per-paragraph fallback
+        if (outputMarkerCount === 0 && inputMarkerCount > 1) {
+          console.error('[STRUCTURE-VIOLATION] AI ignored paragraph markers! Using fallback...');
+          finalText = await humanizePerParagraph(paragraphs, tone, systemPrompt, langRule, lovableApiKey);
+          passesCompleted = 1;
+          enginesUsed = 'gemini-fallback';
+        } else {
+          // Normal path: remove markers
+          finalText = removeAllParagraphMarkers(rawOutput);
+          passesCompleted = 1;
+          enginesUsed = 'gemini';
+        }
+        
+        console.log('[DEBUG] After marker removal (first 200 chars):', finalText.substring(0, 200));
         
         if (finalText && finalText.trim().length > 0) { bestSoFar = finalText; }
-        passesCompleted = 1;
-        enginesUsed = 'gemini';
         
         // Verify structure preservation
         const outputParagraphCount = (finalText.match(/\n\n+/g) || []).length + 1;
         console.log(`[STRUCTURE] Paragraph preservation: input=${inputParagraphCount}, output=${outputParagraphCount}`);
         if (Math.abs(inputParagraphCount - outputParagraphCount) > 2) {
-          console.warn('[STRUCTURE] Significant paragraph count mismatch');
+          console.warn('[STRUCTURE] Significant paragraph count mismatch - may need fallback');
         }
       } catch (error) {
         console.error('[HYBRID-HUMANIZE] Free plan error:', error);
@@ -774,17 +778,29 @@ ${pass1Result}` }
           }
 
           const pass2Data = await pass2Response.json();
-          finalText = pass2Data.choices[0].message.content;
+          const rawOutput = pass2Data.choices[0].message.content;
           
-          // POST-PROCESS: Remove ALL paragraph markers (aggressive regex)
-          finalText = finalText.replace(/\[PARAGRAPH_?\d+\]\s*/gi, '');
-          finalText = finalText.replace(/\[PARAGRAPH\d+\]\s*/gi, '');
-          finalText = finalText.replace(/PARAGRAPH\d+/gi, '');
-          finalText = finalText.replace(/\n{3,}/g, '\n\n');
+          console.log('[DEBUG] Pass 2 raw output (first 200 chars):', rawOutput.substring(0, 200));
+          
+          // Verify paragraph markers
+          const inputMarkerCount = (pass1Result.match(/\[PARAGRAPH[_\s-]?\d+\]/gi) || []).length;
+          const outputMarkerCount = (rawOutput.match(/\[PARAGRAPH[_\s-]?\d+\]/gi) || []).length;
+          
+          console.log(`[STRUCTURE-CHECK] Pass 2 markers: input=${inputMarkerCount}, output=${outputMarkerCount}`);
+          
+          // If Pass 2 destroyed structure, use per-paragraph fallback
+          if (outputMarkerCount === 0 && inputMarkerCount > 1) {
+            console.error('[STRUCTURE-VIOLATION] Pass 2 destroyed structure! Using fallback...');
+            finalText = await humanizePerParagraph(paragraphs, tone, systemPrompt, langRule, lovableApiKey);
+            passesCompleted = 2;
+            enginesUsed = 'gemini-openai-fallback';
+          } else {
+            finalText = removeAllParagraphMarkers(rawOutput);
+            passesCompleted = 2;
+            enginesUsed = 'gemini-openai';
+          }
           
           if (finalText && finalText.trim().length > 0) { bestSoFar = finalText; }
-          passesCompleted = 2;
-          enginesUsed = 'gemini-openai';
           
           // Verify structure preservation
           const outputParagraphCount = (finalText.match(/\n\n+/g) || []).length + 1;
@@ -792,12 +808,7 @@ ${pass1Result}` }
         } catch (pass2Error) {
           // Use Pass 1 result if Pass 2 fails or times out
           console.log('[HYBRID-HUMANIZE] Pass 2 failed/timed out, using Pass 1 result');
-          finalText = pass1Result;
-          // POST-PROCESS Pass 1 result - Remove ALL paragraph markers
-          finalText = finalText.replace(/\[PARAGRAPH_?\d+\]\s*/gi, '');
-          finalText = finalText.replace(/\[PARAGRAPH\d+\]\s*/gi, '');
-          finalText = finalText.replace(/PARAGRAPH\d+/gi, '');
-          finalText = finalText.replace(/\n{3,}/g, '\n\n');
+          finalText = removeAllParagraphMarkers(pass1Result);
           passesCompleted = 1;
           enginesUsed = 'gemini';
         }
@@ -896,14 +907,24 @@ ${pass1Result}` }
 
           // FORK: Extension stops here, Web continues
           if (isExtensionRequest) {
-            finalText = pass2Result;
-            // POST-PROCESS: Remove ALL paragraph markers for extension
-            finalText = finalText.replace(/\[PARAGRAPH_?\d+\]\s*/gi, '');
-            finalText = finalText.replace(/\[PARAGRAPH\d+\]\s*/gi, '');
-            finalText = finalText.replace(/PARAGRAPH\d+/gi, '');
-            finalText = finalText.replace(/\n{3,}/g, '\n\n');
+            console.log('[DEBUG] Extension Pass 2 raw output (first 200 chars):', pass2Result.substring(0, 200));
+            
+            // Verify structure
+            const inputMarkerCount = (pass1Result.match(/\[PARAGRAPH[_\s-]?\d+\]/gi) || []).length;
+            const outputMarkerCount = (pass2Result.match(/\[PARAGRAPH[_\s-]?\d+\]/gi) || []).length;
+            
+            console.log(`[STRUCTURE-CHECK] Extension Pass 2 markers: input=${inputMarkerCount}, output=${outputMarkerCount}`);
+            
+            if (outputMarkerCount === 0 && inputMarkerCount > 1) {
+              console.error('[STRUCTURE-VIOLATION] Extension Pass 2 destroyed structure! Using fallback...');
+              finalText = await humanizePerParagraph(paragraphs, tone, systemPrompt, langRule, lovableApiKey);
+              enginesUsed = 'gemini-openai-fallback';
+            } else {
+              finalText = removeAllParagraphMarkers(pass2Result);
+              enginesUsed = 'gemini-openai';
+            }
+            
             passesCompleted = 2;
-            enginesUsed = 'gemini-openai';
             console.log('[HYBRID-HUMANIZE] Extension fast track complete - 2 passes');
           } else {
             // Pass 3: Claude (web only)
@@ -936,17 +957,27 @@ ${pass2Result}` }
               }
 
               const pass3Data = await pass3Response.json();
-              finalText = pass3Data.choices[0].message.content;
+              const rawOutput = pass3Data.choices[0].message.content;
               
-              // POST-PROCESS: Remove ALL paragraph markers and normalize line breaks
-              finalText = finalText.replace(/\[PARAGRAPH_?\d+\]\s*/gi, '');
-              finalText = finalText.replace(/\[PARAGRAPH\d+\]\s*/gi, '');
-              finalText = finalText.replace(/PARAGRAPH\d+/gi, '');
-              finalText = finalText.replace(/\n{3,}/g, '\n\n');
+              console.log('[DEBUG] Pass 3 raw output (first 200 chars):', rawOutput.substring(0, 200));
+              
+              // Verify structure
+              const inputMarkerCount = (pass2Result.match(/\[PARAGRAPH[_\s-]?\d+\]/gi) || []).length;
+              const outputMarkerCount = (rawOutput.match(/\[PARAGRAPH[_\s-]?\d+\]/gi) || []).length;
+              
+              console.log(`[STRUCTURE-CHECK] Pass 3 markers: input=${inputMarkerCount}, output=${outputMarkerCount}`);
+              
+              if (outputMarkerCount === 0 && inputMarkerCount > 1) {
+                console.error('[STRUCTURE-VIOLATION] Pass 3 destroyed structure! Using fallback...');
+                finalText = await humanizePerParagraph(paragraphs, tone, systemPrompt, langRule, lovableApiKey);
+                enginesUsed = 'gemini-openai-claude-fallback';
+              } else {
+                finalText = removeAllParagraphMarkers(rawOutput);
+                enginesUsed = 'gemini-openai-claude';
+              }
               
               if (finalText && finalText.trim().length > 0) { bestSoFar = finalText; }
               passesCompleted = 3;
-              enginesUsed = 'gemini-openai-claude';
               
               const outputParagraphCount = (finalText.match(/\n\n+/g) || []).length + 1;
               console.log(`[STRUCTURE] Pass 3 (Claude) complete - Paragraphs: ${outputParagraphCount}`);
@@ -954,22 +985,14 @@ ${pass2Result}` }
               console.log('[HYBRID-HUMANIZE] Humanization complete - 3 passes (max 4 for Ultra) using', enginesUsed);
             } catch (pass3Error) {
               console.log('[HYBRID-HUMANIZE] Pass 3 failed, using Pass 2 result');
-              finalText = pass2Result;
-              // POST-PROCESS Pass 2 result - Remove ALL paragraph markers
-              finalText = finalText.replace(/\[PARAGRAPH_?\d+\]\s*/gi, '');
-              finalText = finalText.replace(/\[PARAGRAPH\d+\]\s*/gi, '');
-              finalText = finalText.replace(/PARAGRAPH\d+/gi, '');
-              finalText = finalText.replace(/\n{3,}/g, '\n\n');
+              finalText = removeAllParagraphMarkers(pass2Result);
               passesCompleted = 2;
               enginesUsed = 'gemini-openai';
             }
           }
         } catch (pass2Error) {
           console.log('[HYBRID-HUMANIZE] Pass 2 failed/timed out, using Pass 1 result');
-          finalText = pass1Result;
-          // POST-PROCESS Pass 1 result
-          finalText = finalText.replace(/\[PARAGRAPH_\d+\]\s*/g, '');
-          finalText = finalText.replace(/\n{3,}/g, '\n\n');
+          finalText = removeAllParagraphMarkers(pass1Result);
           passesCompleted = 1;
           enginesUsed = 'gemini';
         }
