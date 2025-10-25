@@ -367,6 +367,8 @@ function replaceSelectedText(originalText, humanizedText) {
   }
   
   console.log('[Content] Attempting replacement', {
+    url: window.location.href,
+    domain: window.location.hostname,
     hasInputSelection: !!lastInputSelection?.element,
     inputElement: lastInputSelection?.element?.tagName,
     hasLastSelection: !!lastSelection,
@@ -374,6 +376,7 @@ function replaceSelectedText(originalText, humanizedText) {
     hasRange: !!lastSelection?.range,
     lastSelectionText: lastSelection?.text?.substring(0, 50),
     activeElement: document.activeElement?.tagName,
+    activeElementType: document.activeElement?.getAttribute('contenteditable'),
     originalTextLength: originalText?.length,
     humanizedTextLength: humanizedText?.length
   });
@@ -592,6 +595,61 @@ function replaceSelectedText(originalText, humanizedText) {
         
       } catch (e) {
         console.log('[Content] ContentEditable replacement failed:', e.message);
+      }
+    }
+    
+    // TIER 2.5: Shadow DOM support
+    if (document.activeElement?.shadowRoot) {
+      try {
+        const shadowRoot = document.activeElement.shadowRoot;
+        console.log('[Content] Checking Shadow DOM');
+        
+        // Search for contenteditable or input elements in shadow DOM
+        const shadowEditables = shadowRoot.querySelectorAll('[contenteditable="true"], textarea, input');
+        for (const el of shadowEditables) {
+          const elText = el.value || el.textContent || el.innerText || '';
+          if (elText.includes(originalText)) {
+            console.log('[Content] Found text in Shadow DOM element:', el.tagName);
+            
+            // Try to replace
+            if (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT') {
+              const index = el.value.indexOf(originalText);
+              if (index !== -1) {
+                el.focus();
+                el.value = el.value.substring(0, index) + humanizedText + el.value.substring(index + originalText.length);
+                el.dispatchEvent(new Event('input', { bubbles: true }));
+                el.dispatchEvent(new Event('change', { bubbles: true }));
+                
+                showNotification('Text replaced in Shadow DOM!', 'success');
+                lastReplacement = { originalText, humanizedText };
+                return true;
+              }
+            } else {
+              // ContentEditable in shadow DOM
+              const sel = shadowRoot.getSelection ? shadowRoot.getSelection() : window.getSelection();
+              if (sel) {
+                const range = document.createRange();
+                const textNode = [...el.childNodes].find(n => n.nodeType === Node.TEXT_NODE && n.textContent.includes(originalText));
+                if (textNode) {
+                  const index = textNode.textContent.indexOf(originalText);
+                  range.setStart(textNode, index);
+                  range.setEnd(textNode, index + originalText.length);
+                  sel.removeAllRanges();
+                  sel.addRange(range);
+                  
+                  const success = document.execCommand('insertText', false, humanizedText);
+                  if (success) {
+                    showNotification('Text replaced in Shadow DOM!', 'success');
+                    lastReplacement = { originalText, humanizedText };
+                    return true;
+                  }
+                }
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.log('[Content] Shadow DOM replacement failed:', e.message);
       }
     }
     

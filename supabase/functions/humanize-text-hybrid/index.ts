@@ -101,6 +101,75 @@ function removeAllParagraphMarkers(text: string): string {
     .trim();
 }
 
+// Grammar error detection function
+async function detectGrammarErrors(text: string, lovableApiKey: string): Promise<{ hasErrors: boolean; errorCount: number; errors: string[] }> {
+  try {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${lovableApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a grammar checker. Analyze text and respond with ONLY a JSON object.
+
+Format:
+{
+  "hasErrors": boolean,
+  "errorCount": number,
+  "errors": ["error description 1", "error description 2"]
+}
+
+Count these as errors:
+- Subject-verb disagreement (he walk → he walks)
+- Wrong verb tense (I go yesterday → I went yesterday)
+- Missing/wrong articles (I have idea → I have an idea)
+- Wrong prepositions (different with → different from)
+- Plural/singular mismatch (one cars → one car)
+- Basic spelling errors
+- Em-dashes/en-dashes (should be hyphens)
+
+DO NOT count these as errors:
+- Contractions (it's, don't, won't) - these are correct
+- Sentence fragments used intentionally
+- Casual tone or informal language
+- Lack of Oxford comma
+- Starting sentences with And/But/So
+
+If text is grammatically perfect, return: {"hasErrors": false, "errorCount": 0, "errors": []}`
+          },
+          {
+            role: 'user',
+            content: `Analyze this text:\n\n${text}`
+          }
+        ],
+      }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const content = data.choices?.[0]?.message?.content?.trim();
+      
+      // Try to extract JSON from response
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const result = JSON.parse(jsonMatch[0]);
+        console.log(`[GRAMMAR-CHECK] Has errors: ${result.hasErrors}, Count: ${result.errorCount}`);
+        return result;
+      }
+    }
+  } catch (error) {
+    console.error('[GRAMMAR-CHECK] Detection failed:', error);
+  }
+  
+  // Fallback: assume errors exist so we don't block fixing real issues
+  return { hasErrors: true, errorCount: 1, errors: ['Detection failed, proceeding with check'] };
+}
+
 // Per-paragraph humanization fallback (guaranteed structure preservation)
 async function humanizePerParagraph(
   paragraphs: string[],
@@ -173,7 +242,7 @@ const CHANGE_TARGET: Record<string, number> = {
   light: 0.10,   // 10% word change minimum
   medium: 0.15,  // 15% word change minimum
   strong: 0.20,  // 20% word change MAXIMUM (strict limit)
-  grammar: 0.05, // Grammar mode only 5% change (fix errors only)
+  grammar: 0.00, // Grammar mode 0% change allowed - return unchanged if no errors
 };
 
 serve(async (req) => {
@@ -575,14 +644,22 @@ MANDATORY: Keep EVERY [PARAGRAPH_X] marker separate.
 
 Write with human wit and dry humor, not AI-generated "sarcasm."`,
 
-      grammar: `CRITICAL LENGTH RULES (MUST ENFORCE):
-- Output must be ±5% of input word count (VERY STRICT)
-- Only fix errors - don't rewrite anything
-- Grammar fix should barely change length
+      grammar: `CRITICAL: If input has NO grammar errors, return it EXACTLY UNCHANGED (100% identical).
 
 GRAMMAR FIX MODE - MINIMAL CHANGES ONLY:
 
-PRIMARY GOAL: Fix grammar mistakes while changing as little as possible.
+PRIMARY GOAL: Fix grammar mistakes ONLY. If no mistakes exist, return input exactly as is.
+
+EXAMPLES OF PERFECT GRAMMAR (return unchanged):
+✅ "I went to the store yesterday and bought some milk."
+✅ "The app is doing $235k ARR."
+✅ "Met this kid for breakfast. His idea is brilliant." (fragment is intentional, keep it)
+✅ "It's working great and we're excited." (contractions are correct)
+
+EXAMPLES REQUIRING FIXES:
+❌ "I go to store yesterday" → ✅ "I went to the store yesterday"
+❌ "He walk to school" → ✅ "He walks to school"
+❌ "I have idea" → ✅ "I have an idea"
 
 WHAT TO FIX:
 1. Subject-verb agreement (he walk → he walks)
@@ -596,25 +673,22 @@ WHAT TO FIX:
 9. Basic spelling errors
 
 WHAT NOT TO CHANGE:
-❌ Don't rewrite sentences for "better" wording
+❌ Don't rewrite sentences for "better" wording - leave them as is
 ❌ Don't change word choice unless grammatically wrong
 ❌ Don't add or remove sentences
 ❌ Don't reorder sentences
 ❌ Don't change tone or style
-❌ Don't make it "sound better" - just fix errors
+❌ Don't "improve" the writing - ONLY fix grammatical errors
+❌ Don't touch contractions (they're grammatically correct)
+❌ Don't fix intentional fragments or casual style
 
-⚠️ CRITICAL STRUCTURE RULE - VIOLATION = COMPLETE FAILURE ⚠️
+CRITICAL: If you cannot find ANY grammatical errors, return the input TEXT EXACTLY AS IT IS, CHARACTER FOR CHARACTER.
 
-Your input contains [PARAGRAPH_X] markers that MUST be preserved EXACTLY:
+Output must be ±5% of input word count (VERY STRICT) - fix errors only, don't rewrite.
 
-✅ CORRECT: Keep markers separate
-[PARAGRAPH_1]
-Fixed grammar content.
+⚠️ CRITICAL STRUCTURE RULE: Preserve [PARAGRAPH_X] markers exactly.
 
-❌ WRONG: Merging paragraphs
-MANDATORY: Preserve EVERY [PARAGRAPH_X] marker.
-
-Fix ONLY what's grammatically wrong. If input is already correct, return it almost unchanged.`
+Fix ONLY what's grammatically wrong. Perfect grammar = return unchanged.`
     };
 
     const systemPrompt = tonePrompts[tone as keyof typeof tonePrompts] || tonePrompts.regular;
@@ -631,6 +705,41 @@ Fix ONLY what's grammatically wrong. If input is already correct, return it almo
       .join('\n\n');
     const inputParagraphCount = paragraphs.length;
     console.log(`[STRUCTURE] Input paragraphs: ${inputParagraphCount}`);
+
+    // GRAMMAR PRE-CHECK: Return original text if no errors detected
+    if (tone === 'grammar' && lovableApiKey) {
+      console.log('[GRAMMAR] Checking for errors first...');
+      const grammarCheck = await detectGrammarErrors(text, lovableApiKey);
+      
+      if (!grammarCheck.hasErrors) {
+        console.log('[GRAMMAR] No errors detected - returning original text unchanged');
+        
+        // Calculate remaining words for response
+        const { data: usageData } = await supabase
+          .from('user_usage')
+          .select('word_balance, extra_words_balance')
+          .eq('user_id', userData.user.id)
+          .single();
+        
+        const currentWordBalance = usageData?.word_balance || 0;
+        const currentExtraWordsBalance = usageData?.extra_words_balance || 0;
+        const totalBalance = currentWordBalance + currentExtraWordsBalance;
+        
+        return new Response(
+          JSON.stringify({
+            humanizedText: text, // Return EXACT original
+            wordBalance: totalBalance,
+            originalWordCount: wordCount,
+            humanizedWordCount: wordCount,
+            message: 'No grammar errors detected - text returned unchanged'
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      console.log(`[GRAMMAR] Found ${grammarCheck.errorCount} error(s):`, grammarCheck.errors);
+      // Continue with grammar fix...
+    }
 
     // Determine engine configuration based on user plan
     if (userPlan === 'free') {
