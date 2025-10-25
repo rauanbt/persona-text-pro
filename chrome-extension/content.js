@@ -162,6 +162,73 @@ let lastInputSelection = null; // { element, start, end, valueSnapshot }
 let selectedTone = 'regular'; // Track currently selected tone for display
 let selectedToneIntensity = 'strong'; // Track selected tone intensity
 
+// DOM-based structured text extraction (preserves paragraphs)
+function extractStructuredText() {
+  const selection = window.getSelection();
+  if (!selection.rangeCount) return null;
+  
+  const range = selection.getRangeAt(0);
+  const container = document.createElement('div');
+  container.appendChild(range.cloneContents());
+  
+  const paragraphs = [];
+  let currentParagraph = '';
+  
+  // Recursive DOM walker
+  function walk(node) {
+    // Text node - append text
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = node.textContent.trim();
+      if (text) currentParagraph += (currentParagraph ? ' ' : '') + text;
+      return;
+    }
+    
+    // Element node
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      const tagName = node.tagName.toUpperCase();
+      
+      // Block-level elements = paragraph boundary
+      const isBlock = ['P', 'DIV', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'LI', 'BLOCKQUOTE', 'PRE', 'TR', 'TD', 'ARTICLE', 'SECTION'].includes(tagName);
+      
+      // BR tags = soft break (2+ = paragraph break)
+      if (tagName === 'BR') {
+        if (currentParagraph) {
+          paragraphs.push(currentParagraph);
+          currentParagraph = '';
+        }
+        return;
+      }
+      
+      // Process children first
+      for (const child of node.childNodes) {
+        walk(child);
+      }
+      
+      // After processing children, if this is a block element, flush paragraph
+      if (isBlock && currentParagraph) {
+        paragraphs.push(currentParagraph);
+        currentParagraph = '';
+      }
+    }
+  }
+  
+  walk(container);
+  
+  // Flush any remaining text
+  if (currentParagraph) {
+    paragraphs.push(currentParagraph);
+  }
+  
+  // Join with double newlines
+  const structured = paragraphs.filter(p => p.trim()).join('\n\n');
+  
+  console.log('[Content] Extracted structured text:');
+  console.log('  - Paragraphs found:', paragraphs.length);
+  console.log('  - First 100 chars:', structured.substring(0, 100));
+  
+  return structured || selection.toString(); // Fallback to plain text
+}
+
 // Track selections in contenteditable
 document.addEventListener('mouseup', () => {
   const selection = window.getSelection();
@@ -926,6 +993,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   
   // Return last selection for fallback
   if (message.action === 'getLastSelection') {
+    // Try structured extraction first
+    const structuredText = extractStructuredText();
+    if (structuredText) {
+      console.log('[Content] Returning structured text:', structuredText.substring(0, 50));
+      sendResponse({ text: structuredText });
+      return;
+    }
+    
+    // Fallback to stored selection
     let text = '';
     if (lastInputSelection?.element) {
       const val = lastInputSelection.valueSnapshot ?? lastInputSelection.element.value ?? '';
@@ -934,7 +1010,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (e > s) text = val.substring(s, e);
     }
     if (!text && lastSelection?.text) text = lastSelection.text;
-    console.log('[Content] Returning last selection:', text.substring(0, 50));
+    if (!text) {
+      const sel = window.getSelection();
+      text = sel?.toString() || '';
+    }
+    console.log('[Content] Returning fallback selection:', text.substring(0, 50));
     sendResponse({ text });
     return;
   }

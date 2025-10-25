@@ -658,20 +658,25 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     console.log('[Background] Auto-reconnect successful, continuing...');
   }
   
-  // STEP 1: Get selected text
-  let selectedText = info.selectionText;
+  // STEP 1: Get selected text (ALWAYS try structured extraction first)
+  let selectedText = null;
   
-  if (!selectedText || !selectedText.trim()) {
-    console.log('[Background] No selectionText, requesting from content...');
-    try {
-      const response = await chrome.tabs.sendMessage(tab.id, { action: 'getLastSelection' });
-      if (response?.text) {
-        selectedText = response.text;
-        console.log('[Background] Got text from content:', selectedText.substring(0, 50));
-      }
-    } catch (e) {
-      console.warn('[Background] getLastSelection failed:', e.message);
+  // Try to get structured text from content script first
+  console.log('[Background] Requesting structured text from content...');
+  try {
+    const response = await chrome.tabs.sendMessage(tab.id, { action: 'getLastSelection' });
+    if (response?.text) {
+      selectedText = response.text;
+      console.log('[Background] Got structured text from content:', selectedText.substring(0, 100));
     }
+  } catch (e) {
+    console.warn('[Background] Content script not ready, falling back to info.selectionText');
+  }
+  
+  // Fallback to Chrome's plain API
+  if (!selectedText || !selectedText.trim()) {
+    selectedText = info.selectionText;
+    console.log('[Background] Using info.selectionText fallback');
   }
   
   if (!selectedText || !selectedText.trim()) {
