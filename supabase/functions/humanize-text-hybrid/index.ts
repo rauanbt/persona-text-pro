@@ -299,13 +299,19 @@ HUMAN WRITING RULES:
 7. Vary punctuation - not every sentence needs perfect grammar
 8. Add conversational touches when natural: "basically," "honestly," "you know what"
 
-STRUCTURE PRESERVATION (CRITICAL):
-- Output in exact same language as input (${inputLangName} [${inputLangCode}])
-- Keep EVERY line break exactly where it appears
-- Keep EVERY sentence in its original order
-- Maintain exact paragraph structure
-- Preserve list formatting (1. 2. 3. or - bullets)
+STRUCTURE PRESERVATION (ABSOLUTELY NON-NEGOTIABLE):
+- Input has [PARAGRAPH_X] markers - you MUST preserve them
+- Each [PARAGRAPH_X] marker must remain on its own line
+- Never merge multiple [PARAGRAPH_X] sections into one
+- Output format example:
+  [PARAGRAPH_1]
+  {humanized text for paragraph 1}
+  
+  [PARAGRAPH_2]
+  {humanized text for paragraph 2}
+- Preserve ALL line breaks between paragraphs
 - Plain text only, no markdown
+- Output in exact same language as input (${inputLangName} [${inputLangCode}])
 
 Rewrite naturally as if a real human typed this casually.`,
 
@@ -340,13 +346,19 @@ FORMAL ENHANCEMENTS TO APPLY:
 - Casual closings → Professional sign-offs
 - Informal word choice → Formal equivalents (same length)
 
-STRUCTURE PRESERVATION (CRITICAL):
-- Output in exact same language as input (${inputLangName} [${inputLangCode}])
-- Keep EVERY line break exactly where it appears
-- Keep EVERY sentence in its original order
-- Maintain exact paragraph structure
-- Preserve list formatting (1. 2. 3. or bullets)
+STRUCTURE PRESERVATION (ABSOLUTELY NON-NEGOTIABLE):
+- Input has [PARAGRAPH_X] markers - you MUST preserve them
+- Each [PARAGRAPH_X] marker must remain on its own line
+- Never merge multiple [PARAGRAPH_X] sections into one
+- Output format example:
+  [PARAGRAPH_1]
+  {humanized text for paragraph 1}
+  
+  [PARAGRAPH_2]
+  {humanized text for paragraph 2}
+- Preserve ALL line breaks between paragraphs
 - Plain text only, no markdown
+- Output in exact same language as input (${inputLangName} [${inputLangCode}])
 
 Make it sound like a professional human wrote this formally, not an AI.`,
 
@@ -368,13 +380,19 @@ PERSUASIVE HUMAN WRITING:
 5. Add emotion and urgency naturally
 6. NO perfect parallelism - humans don't write that way
 
-STRUCTURE PRESERVATION (CRITICAL):
-- Output in exact same language as input (${inputLangName} [${inputLangCode}])
-- Keep EVERY line break exactly where it appears
-- Keep EVERY sentence in its original order
-- Maintain exact paragraph structure
-- Preserve list formatting exactly
+STRUCTURE PRESERVATION (ABSOLUTELY NON-NEGOTIABLE):
+- Input has [PARAGRAPH_X] markers - you MUST preserve them
+- Each [PARAGRAPH_X] marker must remain on its own line
+- Never merge multiple [PARAGRAPH_X] sections into one
+- Output format example:
+  [PARAGRAPH_1]
+  {humanized text for paragraph 1}
+  
+  [PARAGRAPH_2]
+  {humanized text for paragraph 2}
+- Preserve ALL line breaks between paragraphs
 - Plain text only, no markdown
+- Output in exact same language as input (${inputLangName} [${inputLangCode}])
 
 Make it compelling like a human sales pitch, not an AI essay.`,
 
@@ -396,13 +414,19 @@ EMPATHETIC HUMAN WRITING:
 5. Break up text with empathetic pauses (shorter paragraphs)
 6. NO clinical language - write like you're talking to a friend
 
-STRUCTURE PRESERVATION (CRITICAL):
-- Output in exact same language as input (${inputLangName} [${inputLangCode}])
-- Keep EVERY line break exactly where it appears
-- Keep EVERY sentence in its original order
-- Maintain exact paragraph structure
-- Preserve list formatting exactly
+STRUCTURE PRESERVATION (ABSOLUTELY NON-NEGOTIABLE):
+- Input has [PARAGRAPH_X] markers - you MUST preserve them
+- Each [PARAGRAPH_X] marker must remain on its own line
+- Never merge multiple [PARAGRAPH_X] sections into one
+- Output format example:
+  [PARAGRAPH_1]
+  {humanized text for paragraph 1}
+  
+  [PARAGRAPH_2]
+  {humanized text for paragraph 2}
+- Preserve ALL line breaks between paragraphs
 - Plain text only, no markdown
+- Output in exact same language as input (${inputLangName} [${inputLangCode}])
 
 Write with genuine warmth like a caring human, not a counseling AI.`,
 
@@ -425,13 +449,19 @@ SARCASTIC HUMAN WRITING:
 5. Break grammar rules for effect - fragment sentences on purpose
 6. Casual tone always - sarcasm doesn't work formally
 
-STRUCTURE PRESERVATION (CRITICAL):
-- Output in exact same language as input (${inputLangName} [${inputLangCode}])
-- Keep EVERY line break exactly where it appears
-- Keep EVERY sentence in its original order
-- Maintain exact paragraph structure
-- Preserve list formatting exactly
+STRUCTURE PRESERVATION (ABSOLUTELY NON-NEGOTIABLE):
+- Input has [PARAGRAPH_X] markers - you MUST preserve them
+- Each [PARAGRAPH_X] marker must remain on its own line
+- Never merge multiple [PARAGRAPH_X] sections into one
+- Output format example:
+  [PARAGRAPH_1]
+  {humanized text for paragraph 1}
+  
+  [PARAGRAPH_2]
+  {humanized text for paragraph 2}
+- Preserve ALL line breaks between paragraphs
 - Plain text only, no markdown
+- Output in exact same language as input (${inputLangName} [${inputLangCode}])
 
 Write with human wit and dry humor, not AI-generated "sarcasm."`,
 
@@ -463,13 +493,20 @@ WHAT NOT TO CHANGE:
 ❌ Don't change tone or style
 ❌ Don't make it "sound better" - just fix errors
 
-STRUCTURE PRESERVATION (CRITICAL):
-- Output in exact same language as input (${inputLangName} [${inputLangCode}])
-- Keep EVERY line break exactly where it appears
-- Keep EVERY sentence in its original order
-- Keep EVERY paragraph structure unchanged
+STRUCTURE PRESERVATION (ABSOLUTELY NON-NEGOTIABLE):
+- Input has [PARAGRAPH_X] markers - you MUST preserve them
+- Each [PARAGRAPH_X] marker must remain on its own line
+- Never merge multiple [PARAGRAPH_X] sections into one
+- Output format example:
+  [PARAGRAPH_1]
+  {text with grammar fixes for paragraph 1}
+  
+  [PARAGRAPH_2]
+  {text with grammar fixes for paragraph 2}
+- Preserve ALL line breaks between paragraphs
 - If a sentence is grammatically correct, DON'T touch it
 - Plain text only, no markdown
+- Output in exact same language as input (${inputLangName} [${inputLangCode}])
 
 Fix ONLY what's grammatically wrong. If input is already correct, return it almost unchanged.`
     };
@@ -480,6 +517,14 @@ Fix ONLY what's grammatically wrong. If input is already correct, return it almo
     let bestSoFar = text;
     let passesCompleted = 0;
     let enginesUsed = '';
+
+    // PRE-PROCESS: Add paragraph markers for structure preservation
+    const paragraphs = text.split(/\n\n+/);
+    const markedText = paragraphs
+      .map((p, i) => `[PARAGRAPH_${i + 1}]\n${p.trim()}`)
+      .join('\n\n');
+    const inputParagraphCount = paragraphs.length;
+    console.log(`[STRUCTURE] Input paragraphs: ${inputParagraphCount}`);
 
     // Determine engine configuration based on user plan
     if (userPlan === 'free') {
@@ -497,7 +542,26 @@ Fix ONLY what's grammatically wrong. If input is already correct, return it almo
             model: 'google/gemini-2.5-flash',
             messages: [
               { role: 'system', content: systemPrompt },
-              { role: 'user', content: `${langRule}\n\nINPUT WORD COUNT: ${wordCount} words\nOUTPUT TARGET: ${Math.floor(wordCount * 0.9)}-${Math.ceil(wordCount * 1.15)} words (±15% max)\n\nABSOLUTELY CRITICAL:\n- Keep EVERY line break exactly where it appears\n- If there are numbered lists (1. 2. 3.), preserve that exact format\n- FORBIDDEN to merge separate lines into paragraphs\n- DON'T add extra sentences or expand unnecessarily\n\nInput text:\n${text}` }
+              { role: 'user', content: `${langRule}
+
+INPUT WORD COUNT: ${wordCount} words
+OUTPUT TARGET: ${Math.floor(wordCount * 0.9)}-${Math.ceil(wordCount * 1.15)} words (±15% max)
+
+CRITICAL FORMATTING RULES:
+- Input has [PARAGRAPH_X] markers
+- You MUST keep each [PARAGRAPH_X] marker on its own line
+- NEVER merge [PARAGRAPH_X] sections together
+- Each paragraph should be humanized separately but maintain its [PARAGRAPH_X] marker
+
+Example correct output:
+[PARAGRAPH_1]
+First paragraph humanized text here.
+
+[PARAGRAPH_2]
+Second paragraph humanized text here.
+
+Input text:
+${markedText}` }
             ],
           }),
         }, 15000);
@@ -508,14 +572,21 @@ Fix ONLY what's grammatically wrong. If input is already correct, return it almo
 
         const geminiData = await geminiResponse.json();
         finalText = geminiData.choices[0].message.content;
+        
+        // POST-PROCESS: Remove paragraph markers and normalize line breaks
+        finalText = finalText.replace(/\[PARAGRAPH_\d+\]\s*/g, '');
+        finalText = finalText.replace(/\n{3,}/g, '\n\n');
+        
         if (finalText && finalText.trim().length > 0) { bestSoFar = finalText; }
         passesCompleted = 1;
         enginesUsed = 'gemini';
         
         // Verify structure preservation
-        const inputLineBreaks = (text.match(/\n/g) || []).length;
-        const outputLineBreaks = (finalText.match(/\n/g) || []).length;
-        console.log(`[HYBRID-HUMANIZE] Free plan complete - Line breaks: input=${inputLineBreaks}, output=${outputLineBreaks}`);
+        const outputParagraphCount = (finalText.match(/\n\n+/g) || []).length + 1;
+        console.log(`[STRUCTURE] Paragraph preservation: input=${inputParagraphCount}, output=${outputParagraphCount}`);
+        if (Math.abs(inputParagraphCount - outputParagraphCount) > 2) {
+          console.warn('[STRUCTURE] Significant paragraph count mismatch');
+        }
       } catch (error) {
         console.error('[HYBRID-HUMANIZE] Free plan error:', error);
         // Return original text on complete failure
@@ -541,7 +612,19 @@ Fix ONLY what's grammatically wrong. If input is already correct, return it almo
             model: 'google/gemini-2.5-flash',
             messages: [
               { role: 'system', content: systemPrompt },
-              { role: 'user', content: `${langRule}\n\nINPUT WORD COUNT: ${wordCount} words\nOUTPUT TARGET: ${Math.floor(wordCount * 0.9)}-${Math.ceil(wordCount * 1.15)} words (±15% max)\n\nABSOLUTELY CRITICAL:\n- Keep EVERY line break exactly where it appears\n- If there are numbered lists (1. 2. 3.), preserve that exact format\n- FORBIDDEN to merge separate lines into paragraphs\n- DON'T add extra sentences or expand unnecessarily\n\nInput text:\n${text}` }
+              { role: 'user', content: `${langRule}
+
+INPUT WORD COUNT: ${wordCount} words
+OUTPUT TARGET: ${Math.floor(wordCount * 0.9)}-${Math.ceil(wordCount * 1.15)} words (±15% max)
+
+CRITICAL FORMATTING RULES:
+- Input has [PARAGRAPH_X] markers
+- You MUST keep each [PARAGRAPH_X] marker on its own line
+- NEVER merge [PARAGRAPH_X] sections together
+- Each paragraph should be humanized separately but maintain its [PARAGRAPH_X] marker
+
+Input text:
+${markedText}` }
             ],
           }),
         }, 15000);
@@ -554,10 +637,7 @@ Fix ONLY what's grammatically wrong. If input is already correct, return it almo
         const pass1Result = pass1Data.choices[0].message.content;
         if (pass1Result && pass1Result.trim().length > 0) { bestSoFar = pass1Result; }
         
-        // Verify structure preservation after Pass 1
-        const inputLineBreaks = (text.match(/\n/g) || []).length;
-        const pass1LineBreaks = (pass1Result.match(/\n/g) || []).length;
-        console.log(`[HYBRID-HUMANIZE] Pass 1 (Gemini) complete - Line breaks: input=${inputLineBreaks}, output=${pass1LineBreaks}`);
+        console.log(`[HYBRID-HUMANIZE] Pass 1 (Gemini) complete`);
 
         // Pass 2: OpenAI for structural refinement
         try {
@@ -571,7 +651,15 @@ Fix ONLY what's grammatically wrong. If input is already correct, return it almo
               model: 'gpt-5-nano',
               messages: [
                 { role: 'system', content: `${systemPrompt}\n\nRefine for accuracy and natural flow.` },
-                { role: 'user', content: `${langRule}\n\nINPUT WORD COUNT: ${wordCount} words\nOUTPUT TARGET: ${Math.floor(wordCount * 0.9)}-${Math.ceil(wordCount * 1.15)} words (±15% max)\n\nABSOLUTELY CRITICAL:\n- Keep EVERY line break exactly where it appears\n- If there are numbered lists, preserve that exact format\n- FORBIDDEN to merge separate lines into paragraphs\n- DON'T add extra sentences or expand unnecessarily\n\nInput text:\n${pass1Result}` }
+                { role: 'user', content: `${langRule}
+
+INPUT WORD COUNT: ${wordCount} words
+OUTPUT TARGET: ${Math.floor(wordCount * 0.9)}-${Math.ceil(wordCount * 1.15)} words (±15% max)
+
+CRITICAL: Keep [PARAGRAPH_X] markers on their own lines. Never merge paragraphs.
+
+Input text:
+${pass1Result}` }
               ],
               max_completion_tokens: Math.min(Math.ceil(wordCount * 2), 4000),
             }),
@@ -583,17 +671,25 @@ Fix ONLY what's grammatically wrong. If input is already correct, return it almo
 
           const pass2Data = await pass2Response.json();
           finalText = pass2Data.choices[0].message.content;
+          
+          // POST-PROCESS: Remove paragraph markers and normalize line breaks
+          finalText = finalText.replace(/\[PARAGRAPH_\d+\]\s*/g, '');
+          finalText = finalText.replace(/\n{3,}/g, '\n\n');
+          
           if (finalText && finalText.trim().length > 0) { bestSoFar = finalText; }
           passesCompleted = 2;
           enginesUsed = 'gemini-openai';
           
-          // Verify structure preservation after Pass 2
-          const pass2LineBreaks = (finalText.match(/\n/g) || []).length;
-          console.log(`[HYBRID-HUMANIZE] Pass 2 (OpenAI) complete - Line breaks: output=${pass2LineBreaks}`);
+          // Verify structure preservation
+          const outputParagraphCount = (finalText.match(/\n\n+/g) || []).length + 1;
+          console.log(`[STRUCTURE] Pass 2 (OpenAI) complete - Paragraphs: ${outputParagraphCount}`);
         } catch (pass2Error) {
           // Use Pass 1 result if Pass 2 fails or times out
           console.log('[HYBRID-HUMANIZE] Pass 2 failed/timed out, using Pass 1 result');
           finalText = pass1Result;
+          // POST-PROCESS Pass 1 result
+          finalText = finalText.replace(/\[PARAGRAPH_\d+\]\s*/g, '');
+          finalText = finalText.replace(/\n{3,}/g, '\n\n');
           passesCompleted = 1;
           enginesUsed = 'gemini';
         }
@@ -628,7 +724,18 @@ Fix ONLY what's grammatically wrong. If input is already correct, return it almo
             model: 'google/gemini-2.5-flash',
             messages: [
               { role: 'system', content: systemPrompt },
-              { role: 'user', content: `${langRule}\n\nINPUT WORD COUNT: ${wordCount} words\nOUTPUT TARGET: ${Math.floor(wordCount * 0.9)}-${Math.ceil(wordCount * 1.15)} words (±15% max)\n\nABSOLUTELY CRITICAL:\n- Keep EVERY line break exactly where it appears\n- If there are numbered lists (1. 2. 3.), preserve that exact format\n- FORBIDDEN to merge separate lines into paragraphs\n- DON'T add extra sentences or expand unnecessarily\n\nInput text:\n${text}` }
+              { role: 'user', content: `${langRule}
+
+INPUT WORD COUNT: ${wordCount} words
+OUTPUT TARGET: ${Math.floor(wordCount * 0.9)}-${Math.ceil(wordCount * 1.15)} words (±15% max)
+
+CRITICAL FORMATTING RULES:
+- Input has [PARAGRAPH_X] markers
+- You MUST keep each [PARAGRAPH_X] marker on its own line
+- NEVER merge [PARAGRAPH_X] sections together
+
+Input text:
+${markedText}` }
             ],
           }),
         }, 15000);
@@ -641,9 +748,7 @@ Fix ONLY what's grammatically wrong. If input is already correct, return it almo
         const pass1Result = pass1Data.choices[0].message.content;
         if (pass1Result && pass1Result.trim().length > 0) { bestSoFar = pass1Result; }
         
-        const inputLineBreaks = (text.match(/\n/g) || []).length;
-        const pass1LineBreaks = (pass1Result.match(/\n/g) || []).length;
-        console.log(`[HYBRID-HUMANIZE] Pass 1 (Gemini) complete - Line breaks: input=${inputLineBreaks}, output=${pass1LineBreaks}`);
+        console.log(`[HYBRID-HUMANIZE] Pass 1 (Gemini) complete`);
 
         // Pass 2: OpenAI
         try {
@@ -657,7 +762,15 @@ Fix ONLY what's grammatically wrong. If input is already correct, return it almo
               model: 'gpt-5-nano',
               messages: [
                 { role: 'system', content: `${systemPrompt}\n\nRefine for accuracy and clarity.` },
-                { role: 'user', content: `${langRule}\n\nINPUT WORD COUNT: ${wordCount} words\nOUTPUT TARGET: ${Math.floor(wordCount * 0.9)}-${Math.ceil(wordCount * 1.15)} words (±15% max)\n\nABSOLUTELY CRITICAL:\n- Keep EVERY line break exactly where it appears\n- If there are numbered lists, preserve that exact format\n- FORBIDDEN to merge separate lines into paragraphs\n- DON'T add extra sentences or expand unnecessarily\n\nInput text:\n${pass1Result}` }
+                { role: 'user', content: `${langRule}
+
+INPUT WORD COUNT: ${wordCount} words
+OUTPUT TARGET: ${Math.floor(wordCount * 0.9)}-${Math.ceil(wordCount * 1.15)} words (±15% max)
+
+CRITICAL: Keep [PARAGRAPH_X] markers on their own lines. Never merge paragraphs.
+
+Input text:
+${pass1Result}` }
               ],
               max_completion_tokens: Math.min(Math.ceil(wordCount * 2), 4000),
             }),
@@ -671,12 +784,14 @@ Fix ONLY what's grammatically wrong. If input is already correct, return it almo
           const pass2Result = pass2Data.choices[0].message.content;
           if (pass2Result && pass2Result.trim().length > 0) { bestSoFar = pass2Result; }
           
-          const pass2LineBreaks = (pass2Result.match(/\n/g) || []).length;
-          console.log(`[HYBRID-HUMANIZE] Pass 2 (OpenAI) complete - Line breaks: output=${pass2LineBreaks}`);
+          console.log(`[HYBRID-HUMANIZE] Pass 2 (OpenAI) complete`);
 
           // FORK: Extension stops here, Web continues
           if (isExtensionRequest) {
             finalText = pass2Result;
+            // POST-PROCESS: Remove paragraph markers for extension
+            finalText = finalText.replace(/\[PARAGRAPH_\d+\]\s*/g, '');
+            finalText = finalText.replace(/\n{3,}/g, '\n\n');
             passesCompleted = 2;
             enginesUsed = 'gemini-openai';
             console.log('[HYBRID-HUMANIZE] Extension fast track complete - 2 passes');
@@ -693,7 +808,15 @@ Fix ONLY what's grammatically wrong. If input is already correct, return it almo
                   model: 'anthropic/claude-sonnet-4-20250514',
                   messages: [
                     { role: 'system', content: `${systemPrompt}\n\nYou are the final polishing layer. Perfect the tone, add nuanced personality, and ensure authentic human voice.` },
-                    { role: 'user', content: `${langRule}\n\nINPUT WORD COUNT: ${wordCount} words\nOUTPUT TARGET: ${Math.floor(wordCount * 0.9)}-${Math.ceil(wordCount * 1.15)} words (±15% max)\n\nABSOLUTELY CRITICAL:\n- Keep EVERY line break exactly where it appears\n- If there are numbered lists, preserve that exact format\n- FORBIDDEN to merge separate lines into paragraphs\n- DON'T add extra sentences or expand unnecessarily\n\nInput text:\n${pass2Result}` }
+                    { role: 'user', content: `${langRule}
+
+INPUT WORD COUNT: ${wordCount} words
+OUTPUT TARGET: ${Math.floor(wordCount * 0.9)}-${Math.ceil(wordCount * 1.15)} words (±15% max)
+
+CRITICAL: Keep [PARAGRAPH_X] markers on their own lines. Never merge paragraphs.
+
+Input text:
+${pass2Result}` }
                   ],
                 }),
               }, 15000);
@@ -704,17 +827,25 @@ Fix ONLY what's grammatically wrong. If input is already correct, return it almo
 
               const pass3Data = await pass3Response.json();
               finalText = pass3Data.choices[0].message.content;
+              
+              // POST-PROCESS: Remove paragraph markers and normalize line breaks
+              finalText = finalText.replace(/\[PARAGRAPH_\d+\]\s*/g, '');
+              finalText = finalText.replace(/\n{3,}/g, '\n\n');
+              
               if (finalText && finalText.trim().length > 0) { bestSoFar = finalText; }
               passesCompleted = 3;
               enginesUsed = 'gemini-openai-claude';
               
-              const pass3LineBreaks = (finalText.match(/\n/g) || []).length;
-              console.log(`[HYBRID-HUMANIZE] Pass 3 (Claude) complete - Line breaks: output=${pass3LineBreaks}`);
+              const outputParagraphCount = (finalText.match(/\n\n+/g) || []).length + 1;
+              console.log(`[STRUCTURE] Pass 3 (Claude) complete - Paragraphs: ${outputParagraphCount}`);
               
               console.log('[HYBRID-HUMANIZE] Humanization complete - 3 passes (max 4 for Ultra) using', enginesUsed);
             } catch (pass3Error) {
               console.log('[HYBRID-HUMANIZE] Pass 3 failed, using Pass 2 result');
               finalText = pass2Result;
+              // POST-PROCESS Pass 2 result
+              finalText = finalText.replace(/\[PARAGRAPH_\d+\]\s*/g, '');
+              finalText = finalText.replace(/\n{3,}/g, '\n\n');
               passesCompleted = 2;
               enginesUsed = 'gemini-openai';
             }
@@ -722,6 +853,9 @@ Fix ONLY what's grammatically wrong. If input is already correct, return it almo
         } catch (pass2Error) {
           console.log('[HYBRID-HUMANIZE] Pass 2 failed/timed out, using Pass 1 result');
           finalText = pass1Result;
+          // POST-PROCESS Pass 1 result
+          finalText = finalText.replace(/\[PARAGRAPH_\d+\]\s*/g, '');
+          finalText = finalText.replace(/\n{3,}/g, '\n\n');
           passesCompleted = 1;
           enginesUsed = 'gemini';
         }
