@@ -221,7 +221,7 @@ async function injectOverlay(tabId, type, payload = {}) {
             wrap.appendChild(el);
             root.appendChild(wrap);
           } else if (type === 'result') {
-            const { humanizedText } = payload || {};
+            const { originalText, humanizedText } = payload || {};
             const el = document.createElement('div');
             el.style.background = '#111827';
             el.style.color = '#F9FAFB';
@@ -238,6 +238,59 @@ async function injectOverlay(tabId, type, payload = {}) {
             const actions = document.createElement('div');
             actions.style.display = 'flex';
             actions.style.gap = '8px';
+            
+            const replace = document.createElement('button');
+            replace.textContent = 'Replace';
+            replace.style.background = '#7C3AED';
+            replace.style.color = '#fff';
+            replace.style.border = '0';
+            replace.style.padding = '8px 10px';
+            replace.style.borderRadius = '8px';
+            replace.style.cursor = 'pointer';
+            replace.style.fontWeight = '500';
+            replace.addEventListener('click', () => {
+              let replaced = false;
+              const activeEl = document.activeElement;
+              if (activeEl && (activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'INPUT')) {
+                try {
+                  const start = activeEl.selectionStart;
+                  const end = activeEl.selectionEnd;
+                  if (start !== null && end !== null) {
+                    const currentValue = activeEl.value;
+                    activeEl.value = currentValue.substring(0, start) + humanizedText + currentValue.substring(end);
+                    activeEl.selectionStart = activeEl.selectionEnd = start + humanizedText.length;
+                    activeEl.dispatchEvent(new Event('input', { bubbles: true }));
+                    activeEl.dispatchEvent(new Event('change', { bubbles: true }));
+                    replaced = true;
+                    replace.textContent = '✓ Replaced!';
+                    replace.style.background = '#10B981';
+                    setTimeout(() => { clear(); root.remove(); }, 800);
+                  }
+                } catch (e) {}
+              }
+              if (!replaced) {
+                try {
+                  const success = document.execCommand('insertText', false, humanizedText);
+                  if (success) {
+                    replaced = true;
+                    replace.textContent = '✓ Replaced!';
+                    replace.style.background = '#10B981';
+                    setTimeout(() => { clear(); root.remove(); }, 800);
+                  }
+                } catch (e) {}
+              }
+              if (!replaced) {
+                navigator.clipboard.writeText(humanizedText || '').then(() => {
+                  replace.textContent = '✓ Copied!';
+                  replace.style.background = '#10B981';
+                  setTimeout(() => { clear(); root.remove(); }, 1500);
+                }).catch(() => {
+                  replace.textContent = '✗ Failed';
+                  replace.style.background = '#EF4444';
+                });
+              }
+            });
+            
             const copy = document.createElement('button');
             copy.textContent = 'Copy';
             copy.style.background = '#2563EB';
@@ -258,6 +311,7 @@ async function injectOverlay(tabId, type, payload = {}) {
             close.style.borderRadius = '8px';
             close.style.cursor = 'pointer';
             close.addEventListener('click', () => { clear(); root.remove(); });
+            actions.appendChild(replace);
             actions.appendChild(copy);
             actions.appendChild(close);
             el.appendChild(pre);
@@ -862,7 +916,7 @@ async function handleHumanizeRequest(text, tone, toneIntensity, forceRewrite, ta
     console.log('[Background] Sending message:', resultMessage);
     const delivered = await safeSendMessage(tabId, resultMessage, Number.isInteger(frameId) ? { frameId } : {});
     if (!delivered) {
-      await injectOverlay(tabId, 'result', { humanizedText: humanizedText });
+      await injectOverlay(tabId, 'result', { originalText: text, humanizedText: humanizedText });
     }
     console.log('[Background] Message sent successfully');
     
