@@ -475,21 +475,22 @@ async function replaceSelectedText(originalText, humanizedText) {
           
           const range = lastSelection.range;
           
-          // Gmail-specific: Re-focus composer before attempting replacement
-          const isGmail = window.location.hostname.includes('mail.google.com');
-          if (isGmail) {
-            // Gmail uses complex editor structure - try to focus the actual contenteditable
-            const gmailEditable = container.querySelector('[contenteditable="true"]') || container;
-            if (gmailEditable.focus) {
-              try {
-                gmailEditable.focus({ preventScroll: true });
-                // Small delay to let Gmail's editor settle
-                await new Promise(resolve => setTimeout(resolve, 50));
-              } catch (e) {
-                gmailEditable.focus();
-              }
-            }
-          }
+    // Gmail-specific: Re-focus composer before attempting replacement
+    const isGmail = window.location.hostname.includes('mail.google.com');
+    if (isGmail) {
+      // Gmail uses complex editor structure - try to focus the actual contenteditable
+      const gmailEditable = container.querySelector('[contenteditable="true"]') || container;
+      if (gmailEditable.focus) {
+        try {
+          gmailEditable.focus({ preventScroll: true });
+          // Let Gmail's editor fully stabilize before attempting replacement
+          await new Promise(resolve => setTimeout(resolve, 100));
+        } catch (e) {
+          gmailEditable.focus();
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+    }
           
           // Focus the contenteditable container
           if (container.focus) {
@@ -571,56 +572,87 @@ async function replaceSelectedText(originalText, humanizedText) {
           }
         }
         
-        // At this point we have a valid activeRange and selection
-        // Try execCommand first
-        const execSuccess = document.execCommand('insertText', false, humanizedText);
+// At this point we have a valid activeRange and selection
+// Gmail-specific: Try insertHTML first (more reliable)
+if (isGmail) {
+  const htmlSuccess = document.execCommand('insertHTML', false, humanizedText);
+  if (htmlSuccess) {
+    console.log('[Content] Gmail insertHTML succeeded');
+    showNotification('Text replaced!', 'success');
+    
+    lastReplacement = {
+      originalText: originalText,
+      humanizedText: humanizedText,
+      container: container,
+      range: activeRange
+    };
+    
+    return true;
+  }
+}
+
+// Try execCommand insertText
+const execSuccess = document.execCommand('insertText', false, humanizedText);
         
-        if (execSuccess) {
-          console.log('[Content] execCommand succeeded');
-          showNotification('Text replaced!', 'success');
-          
-          lastReplacement = {
-            originalText: originalText,
-            humanizedText: humanizedText
-          };
-          
-          return true;
-        }
+  if (execSuccess) {
+    console.log('[Content] execCommand succeeded');
+    showNotification('Text replaced!', 'success');
+    
+    lastReplacement = {
+      originalText: originalText,
+      humanizedText: humanizedText,
+      container: container,
+      range: activeRange
+    };
+    
+    return true;
+  }
         
         // If execCommand failed, manually replace
         console.log('[Content] execCommand failed, trying manual replacement');
         
-        if (sel.rangeCount > 0) {
-          const currentRange = sel.getRangeAt(0);
-          currentRange.deleteContents();
+if (sel.rangeCount > 0) {
+  const currentRange = sel.getRangeAt(0);
+  currentRange.deleteContents();
+  
+  // Gmail: Insert raw text node to avoid red color issue
+  // Other sites: Wrap in span for color inheritance
+  if (isGmail) {
+    const textNode = document.createTextNode(humanizedText);
+    currentRange.insertNode(textNode);
+  } else {
+    const span = document.createElement('span');
+    span.style.cssText = 'color: inherit !important; font-family: inherit !important;';
+    const textNode = document.createTextNode(humanizedText);
+    span.appendChild(textNode);
+    currentRange.insertNode(span);
+  }
           
-          // Wrap text in span to force black color (fixes Gmail red text bug)
-          const span = document.createElement('span');
-          span.style.cssText = 'color: inherit !important; font-family: inherit !important;';
-          const textNode = document.createTextNode(humanizedText);
-          span.appendChild(textNode);
-          currentRange.insertNode(span);
-          
-          // Move caret to end of inserted text
-          currentRange.setStartAfter(span);
-          currentRange.setEndAfter(span);
-          sel.removeAllRanges();
-          sel.addRange(currentRange);
+  // Move caret to end of inserted text
+  const insertedNode = isGmail ? currentRange.endContainer : currentRange.endContainer.lastChild;
+  if (insertedNode) {
+    currentRange.setStartAfter(insertedNode);
+    currentRange.setEndAfter(insertedNode);
+    sel.removeAllRanges();
+    sel.addRange(currentRange);
+  }
           
           // Dispatch input events
           container.dispatchEvent(new Event('input', { bubbles: true }));
           container.dispatchEvent(new Event('change', { bubbles: true }));
           container.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
           
-          console.log('[Content] Manual replacement succeeded');
-          showNotification('Text replaced!', 'success');
-          
-          lastReplacement = {
-            originalText: originalText,
-            humanizedText: humanizedText
-          };
-          
-          return true;
+  console.log('[Content] Manual replacement succeeded');
+  showNotification('Text replaced!', 'success');
+  
+  lastReplacement = {
+    originalText: originalText,
+    humanizedText: humanizedText,
+    container: container,
+    range: activeRange
+  };
+  
+  return true;
         } else {
           console.warn('[Content] No valid range after execCommand failed');
           throw new Error('No valid range for manual replacement');
@@ -768,32 +800,97 @@ async function replaceSelectedText(originalText, humanizedText) {
 }
 
 // Restore original text after replacement
-function restoreOriginalText() {
+async function restoreOriginalText() {
   if (!lastReplacement) {
     showNotification('No text to restore', 'error');
-    return;
+    return false;
   }
   
   try {
-    const { originalText, humanizedText, element, startIndex, endIndex } = lastReplacement;
+    const { originalText, humanizedText, element, startIndex, endIndex, container, range } = lastReplacement;
     
+    // TIER 1: INPUT/TEXTAREA restoration
     if (element?.tagName === 'TEXTAREA' || element?.tagName === 'INPUT') {
       if (typeof startIndex === 'number' && typeof endIndex === 'number') {
         const value = element.value;
         element.value = value.substring(0, startIndex) + originalText + value.substring(endIndex);
         element.selectionStart = element.selectionEnd = startIndex + originalText.length;
         element.dispatchEvent(new Event('input', { bubbles: true }));
-        showNotification('Original text restored!', 'success');
+        showNotification('✓ Original text restored!', 'success');
         lastReplacement = null;
-        return;
+        return true;
       }
     }
     
-    showNotification('Undo not available for this editor', 'info');
+    // TIER 2: ContentEditable restoration (Gmail, Facebook, LinkedIn)
+    if (container && document.body.contains(container)) {
+      const containerText = container.textContent || container.innerText;
+      const humanizedIndex = containerText.indexOf(humanizedText);
+      
+      if (humanizedIndex !== -1) {
+        // Found the humanized text - replace it back with original
+        const restoreRange = document.createRange();
+        let charCount = 0;
+        let foundStart = false;
+        let foundEnd = false;
+        
+        function walkTextNodes(node) {
+          if (foundEnd) return;
+          
+          if (node.nodeType === Node.TEXT_NODE) {
+            const nodeLength = node.textContent.length;
+            
+            if (!foundStart && charCount + nodeLength > humanizedIndex) {
+              restoreRange.setStart(node, humanizedIndex - charCount);
+              foundStart = true;
+            }
+            
+            if (foundStart && !foundEnd && charCount + nodeLength >= humanizedIndex + humanizedText.length) {
+              restoreRange.setEnd(node, humanizedIndex + humanizedText.length - charCount);
+              foundEnd = true;
+            }
+            
+            charCount += nodeLength;
+          } else {
+            for (const child of node.childNodes) {
+              walkTextNodes(child);
+            }
+          }
+        }
+        
+        walkTextNodes(container);
+        
+        if (foundStart && foundEnd) {
+          const sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(restoreRange);
+          
+          // Try execCommand first
+          const success = document.execCommand('insertText', false, originalText);
+          
+          if (!success) {
+            // Manual replacement
+            restoreRange.deleteContents();
+            const textNode = document.createTextNode(originalText);
+            restoreRange.insertNode(textNode);
+            
+            container.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+          
+          showNotification('✓ Original text restored!', 'success');
+          lastReplacement = null;
+          return true;
+        }
+      }
+    }
+    
+    showNotification('Cannot restore - text may have been edited', 'info');
     lastReplacement = null;
+    return false;
   } catch (error) {
     console.error('[Content] Error restoring text:', error);
     showNotification('Failed to restore text', 'error');
+    return false;
   }
 }
 
@@ -1043,7 +1140,7 @@ function showResult(originalText, humanizedText) {
       currentDialog.innerHTML = `
         <div style="color: #10B981; font-weight: 600; font-size: 13px;">✓ Text replaced!</div>
         <div style="display: flex; gap: 6px; margin-top: 6px;">
-          <button id="sapienwrite-restore" style="flex: 1 !important; padding: 8px !important; background: #F59E0B !important; color: #fff !important; border: none !important; border-radius: 8px !important; font-size: 12px !important; font-weight: 600 !important; cursor: pointer !important; min-width: 80px !important; white-space: nowrap !important;">↶ Restore</button>
+          <button id="sapienwrite-restore" style="flex: 1 !important; padding: 8px !important; background: #F59E0B !important; color: #fff !important; border: none !important; border-radius: 8px !important; font-size: 12px !important; font-weight: 600 !important; cursor: pointer !important; min-width: 80px !important; white-space: nowrap !important;">↶ Restore (15s)</button>
           <button id="sapienwrite-close-final" style="flex: 1 !important; padding: 8px !important; background: #374151 !important; color: #E5E7EB !important; border: none !important; border-radius: 8px !important; font-size: 12px !important; font-weight: 600 !important; cursor: pointer !important; min-width: 80px !important; white-space: nowrap !important;">Close</button>
         </div>
       `;
@@ -1052,10 +1149,29 @@ function showResult(originalText, humanizedText) {
       const restoreBtn = document.getElementById('sapienwrite-restore');
       const closeBtn = document.getElementById('sapienwrite-close-final');
       
-      if (restoreBtn) restoreBtn.onclick = () => { restoreOriginalText(); closeDialog(); };
+      if (restoreBtn) restoreBtn.onclick = async () => { await restoreOriginalText(); closeDialog(); };
       if (closeBtn) closeBtn.onclick = closeDialog;
       
-      setTimeout(closeDialog, 8000);
+      // Countdown timer
+      let remainingSeconds = 15;
+      const countdownInterval = setInterval(() => {
+        remainingSeconds--;
+        const restoreBtn = document.getElementById('sapienwrite-restore');
+        if (restoreBtn && remainingSeconds > 0) {
+          restoreBtn.textContent = `↶ Restore (${remainingSeconds}s)`;
+        } else {
+          clearInterval(countdownInterval);
+          if (remainingSeconds <= 0) closeDialog();
+        }
+      }, 1000);
+      
+      // Store interval ID for cleanup
+      if (closeBtn) {
+        closeBtn.onclick = () => {
+          clearInterval(countdownInterval);
+          closeDialog();
+        };
+      }
     } else {
       closeDialog();
     }
