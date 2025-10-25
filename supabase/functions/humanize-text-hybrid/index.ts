@@ -300,16 +300,33 @@ HUMAN WRITING RULES:
 8. Add conversational touches when natural: "basically," "honestly," "you know what"
 
 STRUCTURE PRESERVATION (ABSOLUTELY NON-NEGOTIABLE):
-- Input has [PARAGRAPH_X] markers - you MUST preserve them
-- Each [PARAGRAPH_X] marker must remain on its own line
-- Never merge multiple [PARAGRAPH_X] sections into one
-- Output format example:
+- Input has [PARAGRAPH_X] markers separating paragraphs
+- Each [PARAGRAPH_X] marker must remain on its own line in your output
+- NEVER EVER merge multiple [PARAGRAPH_X] sections into one paragraph
+- NEVER reorder [PARAGRAPH_X] sections
+- Example input:
   [PARAGRAPH_1]
-  {humanized text for paragraph 1}
+  Hi Alice, thanks for your email!
   
   [PARAGRAPH_2]
-  {humanized text for paragraph 2}
-- Preserve ALL line breaks between paragraphs
+  I wanted to follow up on the project.
+  
+  [PARAGRAPH_3]
+  Let me know if you have questions.
+
+- Example correct output:
+  [PARAGRAPH_1]
+  Hey Alice, appreciate your message!
+  
+  [PARAGRAPH_2]
+  Following up about the project here.
+  
+  [PARAGRAPH_3]
+  Feel free to reach out with any questions.
+
+- WRONG (DO NOT DO THIS): Merging all into one block
+- Each paragraph MUST stay separate with its marker
+- Preserve ALL line breaks between [PARAGRAPH_X] sections
 - Plain text only, no markdown
 - Output in exact same language as input (${inputLangName} [${inputLangCode}])
 
@@ -347,16 +364,33 @@ FORMAL ENHANCEMENTS TO APPLY:
 - Informal word choice → Formal equivalents (same length)
 
 STRUCTURE PRESERVATION (ABSOLUTELY NON-NEGOTIABLE):
-- Input has [PARAGRAPH_X] markers - you MUST preserve them
-- Each [PARAGRAPH_X] marker must remain on its own line
-- Never merge multiple [PARAGRAPH_X] sections into one
-- Output format example:
+- Input has [PARAGRAPH_X] markers separating paragraphs
+- Each [PARAGRAPH_X] marker must remain on its own line in your output
+- NEVER EVER merge multiple [PARAGRAPH_X] sections into one paragraph
+- NEVER reorder [PARAGRAPH_X] sections
+- Example input:
   [PARAGRAPH_1]
-  {humanized text for paragraph 1}
+  Dear Mr. Smith, thank you for your inquiry.
   
   [PARAGRAPH_2]
-  {humanized text for paragraph 2}
-- Preserve ALL line breaks between paragraphs
+  I would like to address your concerns.
+  
+  [PARAGRAPH_3]
+  Please feel free to contact me.
+
+- Example correct output:
+  [PARAGRAPH_1]
+  Dear Mr. Smith, I appreciate your inquiry.
+  
+  [PARAGRAPH_2]
+  I am pleased to address your concerns.
+  
+  [PARAGRAPH_3]
+  Please do not hesitate to contact me.
+
+- WRONG (DO NOT DO THIS): Merging all into one block
+- Each paragraph MUST stay separate with its marker
+- Preserve ALL line breaks between [PARAGRAPH_X] sections
 - Plain text only, no markdown
 - Output in exact same language as input (${inputLangName} [${inputLangCode}])
 
@@ -381,16 +415,33 @@ PERSUASIVE HUMAN WRITING:
 6. NO perfect parallelism - humans don't write that way
 
 STRUCTURE PRESERVATION (ABSOLUTELY NON-NEGOTIABLE):
-- Input has [PARAGRAPH_X] markers - you MUST preserve them
-- Each [PARAGRAPH_X] marker must remain on its own line
-- Never merge multiple [PARAGRAPH_X] sections into one
-- Output format example:
+- Input has [PARAGRAPH_X] markers separating paragraphs
+- Each [PARAGRAPH_X] marker must remain on its own line in your output
+- NEVER EVER merge multiple [PARAGRAPH_X] sections into one paragraph
+- NEVER reorder [PARAGRAPH_X] sections
+- Example input:
   [PARAGRAPH_1]
-  {humanized text for paragraph 1}
+  This product will save you time.
   
   [PARAGRAPH_2]
-  {humanized text for paragraph 2}
-- Preserve ALL line breaks between paragraphs
+  You'll see results fast.
+  
+  [PARAGRAPH_3]
+  Don't wait - order now.
+
+- Example correct output:
+  [PARAGRAPH_1]
+  This product saves you hours every week.
+  
+  [PARAGRAPH_2]
+  You'll see results within days.
+  
+  [PARAGRAPH_3]
+  Don't miss out - order today.
+
+- WRONG (DO NOT DO THIS): Merging all into one block
+- Each paragraph MUST stay separate with its marker
+- Preserve ALL line breaks between [PARAGRAPH_X] sections
 - Plain text only, no markdown
 - Output in exact same language as input (${inputLangName} [${inputLangCode}])
 
@@ -415,16 +466,33 @@ EMPATHETIC HUMAN WRITING:
 6. NO clinical language - write like you're talking to a friend
 
 STRUCTURE PRESERVATION (ABSOLUTELY NON-NEGOTIABLE):
-- Input has [PARAGRAPH_X] markers - you MUST preserve them
-- Each [PARAGRAPH_X] marker must remain on its own line
-- Never merge multiple [PARAGRAPH_X] sections into one
-- Output format example:
+- Input has [PARAGRAPH_X] markers separating paragraphs
+- Each [PARAGRAPH_X] marker must remain on its own line in your output
+- NEVER EVER merge multiple [PARAGRAPH_X] sections into one paragraph
+- NEVER reorder [PARAGRAPH_X] sections
+- Example input:
   [PARAGRAPH_1]
-  {humanized text for paragraph 1}
+  I understand how you're feeling.
   
   [PARAGRAPH_2]
-  {humanized text for paragraph 2}
-- Preserve ALL line breaks between paragraphs
+  We're here to help you through this.
+  
+  [PARAGRAPH_3]
+  You're not alone in this.
+
+- Example correct output:
+  [PARAGRAPH_1]
+  I hear you, and I understand how you feel.
+  
+  [PARAGRAPH_2]
+  We're here to support you every step of the way.
+  
+  [PARAGRAPH_3]
+  Remember, you're not alone.
+
+- WRONG (DO NOT DO THIS): Merging all into one block
+- Each paragraph MUST stay separate with its marker
+- Preserve ALL line breaks between [PARAGRAPH_X] sections
 - Plain text only, no markdown
 - Output in exact same language as input (${inputLangName} [${inputLangCode}])
 
@@ -450,16 +518,33 @@ SARCASTIC HUMAN WRITING:
 6. Casual tone always - sarcasm doesn't work formally
 
 STRUCTURE PRESERVATION (ABSOLUTELY NON-NEGOTIABLE):
-- Input has [PARAGRAPH_X] markers - you MUST preserve them
-- Each [PARAGRAPH_X] marker must remain on its own line
-- Never merge multiple [PARAGRAPH_X] sections into one
-- Output format example:
+- Input has [PARAGRAPH_X] markers separating paragraphs
+- Each [PARAGRAPH_X] marker must remain on its own line in your output
+- NEVER EVER merge multiple [PARAGRAPH_X] sections into one paragraph
+- NEVER reorder [PARAGRAPH_X] sections
+- Example input:
   [PARAGRAPH_1]
-  {humanized text for paragraph 1}
+  Thanks for your help.
   
   [PARAGRAPH_2]
-  {humanized text for paragraph 2}
-- Preserve ALL line breaks between paragraphs
+  This is really useful.
+  
+  [PARAGRAPH_3]
+  I appreciate it.
+
+- Example correct output:
+  [PARAGRAPH_1]
+  Oh, thanks so much. Really needed that.
+  
+  [PARAGRAPH_2]
+  This is super useful. Obviously.
+  
+  [PARAGRAPH_3]
+  I definitely appreciate it.
+
+- WRONG (DO NOT DO THIS): Merging all into one block
+- Each paragraph MUST stay separate with its marker
+- Preserve ALL line breaks between [PARAGRAPH_X] sections
 - Plain text only, no markdown
 - Output in exact same language as input (${inputLangName} [${inputLangCode}])
 
@@ -494,16 +579,33 @@ WHAT NOT TO CHANGE:
 ❌ Don't make it "sound better" - just fix errors
 
 STRUCTURE PRESERVATION (ABSOLUTELY NON-NEGOTIABLE):
-- Input has [PARAGRAPH_X] markers - you MUST preserve them
-- Each [PARAGRAPH_X] marker must remain on its own line
-- Never merge multiple [PARAGRAPH_X] sections into one
-- Output format example:
+- Input has [PARAGRAPH_X] markers separating paragraphs
+- Each [PARAGRAPH_X] marker must remain on its own line in your output
+- NEVER EVER merge multiple [PARAGRAPH_X] sections into one paragraph
+- NEVER reorder [PARAGRAPH_X] sections
+- Example input:
   [PARAGRAPH_1]
-  {text with grammar fixes for paragraph 1}
+  I go to store yesterday.
   
   [PARAGRAPH_2]
-  {text with grammar fixes for paragraph 2}
-- Preserve ALL line breaks between paragraphs
+  She have three cars.
+  
+  [PARAGRAPH_3]
+  They was happy.
+
+- Example correct output:
+  [PARAGRAPH_1]
+  I went to the store yesterday.
+  
+  [PARAGRAPH_2]
+  She has three cars.
+  
+  [PARAGRAPH_3]
+  They were happy.
+
+- WRONG (DO NOT DO THIS): Merging all into one block
+- Each paragraph MUST stay separate with its marker
+- Preserve ALL line breaks between [PARAGRAPH_X] sections
 - If a sentence is grammatically correct, DON'T touch it
 - Plain text only, no markdown
 - Output in exact same language as input (${inputLangName} [${inputLangCode}])
@@ -573,8 +675,10 @@ ${markedText}` }
         const geminiData = await geminiResponse.json();
         finalText = geminiData.choices[0].message.content;
         
-        // POST-PROCESS: Remove paragraph markers and normalize line breaks
-        finalText = finalText.replace(/\[PARAGRAPH_\d+\]\s*/g, '');
+        // POST-PROCESS: Remove ALL paragraph markers (aggressive regex)
+        finalText = finalText.replace(/\[PARAGRAPH_?\d+\]\s*/gi, '');
+        finalText = finalText.replace(/\[PARAGRAPH\d+\]\s*/gi, '');
+        finalText = finalText.replace(/PARAGRAPH\d+/gi, '');
         finalText = finalText.replace(/\n{3,}/g, '\n\n');
         
         if (finalText && finalText.trim().length > 0) { bestSoFar = finalText; }
@@ -672,8 +776,10 @@ ${pass1Result}` }
           const pass2Data = await pass2Response.json();
           finalText = pass2Data.choices[0].message.content;
           
-          // POST-PROCESS: Remove paragraph markers and normalize line breaks
-          finalText = finalText.replace(/\[PARAGRAPH_\d+\]\s*/g, '');
+          // POST-PROCESS: Remove ALL paragraph markers (aggressive regex)
+          finalText = finalText.replace(/\[PARAGRAPH_?\d+\]\s*/gi, '');
+          finalText = finalText.replace(/\[PARAGRAPH\d+\]\s*/gi, '');
+          finalText = finalText.replace(/PARAGRAPH\d+/gi, '');
           finalText = finalText.replace(/\n{3,}/g, '\n\n');
           
           if (finalText && finalText.trim().length > 0) { bestSoFar = finalText; }
@@ -687,8 +793,10 @@ ${pass1Result}` }
           // Use Pass 1 result if Pass 2 fails or times out
           console.log('[HYBRID-HUMANIZE] Pass 2 failed/timed out, using Pass 1 result');
           finalText = pass1Result;
-          // POST-PROCESS Pass 1 result
-          finalText = finalText.replace(/\[PARAGRAPH_\d+\]\s*/g, '');
+          // POST-PROCESS Pass 1 result - Remove ALL paragraph markers
+          finalText = finalText.replace(/\[PARAGRAPH_?\d+\]\s*/gi, '');
+          finalText = finalText.replace(/\[PARAGRAPH\d+\]\s*/gi, '');
+          finalText = finalText.replace(/PARAGRAPH\d+/gi, '');
           finalText = finalText.replace(/\n{3,}/g, '\n\n');
           passesCompleted = 1;
           enginesUsed = 'gemini';
@@ -789,8 +897,10 @@ ${pass1Result}` }
           // FORK: Extension stops here, Web continues
           if (isExtensionRequest) {
             finalText = pass2Result;
-            // POST-PROCESS: Remove paragraph markers for extension
-            finalText = finalText.replace(/\[PARAGRAPH_\d+\]\s*/g, '');
+            // POST-PROCESS: Remove ALL paragraph markers for extension
+            finalText = finalText.replace(/\[PARAGRAPH_?\d+\]\s*/gi, '');
+            finalText = finalText.replace(/\[PARAGRAPH\d+\]\s*/gi, '');
+            finalText = finalText.replace(/PARAGRAPH\d+/gi, '');
             finalText = finalText.replace(/\n{3,}/g, '\n\n');
             passesCompleted = 2;
             enginesUsed = 'gemini-openai';
@@ -828,8 +938,10 @@ ${pass2Result}` }
               const pass3Data = await pass3Response.json();
               finalText = pass3Data.choices[0].message.content;
               
-              // POST-PROCESS: Remove paragraph markers and normalize line breaks
-              finalText = finalText.replace(/\[PARAGRAPH_\d+\]\s*/g, '');
+              // POST-PROCESS: Remove ALL paragraph markers and normalize line breaks
+              finalText = finalText.replace(/\[PARAGRAPH_?\d+\]\s*/gi, '');
+              finalText = finalText.replace(/\[PARAGRAPH\d+\]\s*/gi, '');
+              finalText = finalText.replace(/PARAGRAPH\d+/gi, '');
               finalText = finalText.replace(/\n{3,}/g, '\n\n');
               
               if (finalText && finalText.trim().length > 0) { bestSoFar = finalText; }
@@ -843,8 +955,10 @@ ${pass2Result}` }
             } catch (pass3Error) {
               console.log('[HYBRID-HUMANIZE] Pass 3 failed, using Pass 2 result');
               finalText = pass2Result;
-              // POST-PROCESS Pass 2 result
-              finalText = finalText.replace(/\[PARAGRAPH_\d+\]\s*/g, '');
+              // POST-PROCESS Pass 2 result - Remove ALL paragraph markers
+              finalText = finalText.replace(/\[PARAGRAPH_?\d+\]\s*/gi, '');
+              finalText = finalText.replace(/\[PARAGRAPH\d+\]\s*/gi, '');
+              finalText = finalText.replace(/PARAGRAPH\d+/gi, '');
               finalText = finalText.replace(/\n{3,}/g, '\n\n');
               passesCompleted = 2;
               enginesUsed = 'gemini-openai';

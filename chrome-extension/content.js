@@ -708,10 +708,12 @@ function showProcessing() {
       top: 20px;
       right: 20px;
       z-index: 2147483647 !important;
-      background: white;
-      border-radius: 16px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.25);
-      padding: 24px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-radius: 12px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05);
+      padding: 20px;
       max-width: 420px;
       width: 420px;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -728,7 +730,7 @@ function showProcessing() {
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0,0,0,0.05);
+      background: rgba(0,0,0,0.02);
       z-index: 2147483646 !important;
       pointer-events: none;
     `;
@@ -822,10 +824,12 @@ function showResult(originalText, humanizedText) {
       top: 20px;
       right: 20px;
       z-index: 2147483647;
-      background: white;
-      border-radius: 16px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.25);
-      padding: 24px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-radius: 12px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05);
+      padding: 20px;
       max-width: 420px;
       width: 420px;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -847,7 +851,7 @@ function showResult(originalText, humanizedText) {
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0,0,0,0.05);
+      background: rgba(0,0,0,0.02);
       z-index: 2147483646;
       pointer-events: none;
     `;
@@ -887,16 +891,11 @@ function showResult(originalText, humanizedText) {
   
   content.innerHTML = `
     <div style="margin-bottom: 16px;">
-      <div style="background: #dbeafe; border-left: 4px solid #2563eb; padding: 8px 12px; border-radius: 6px; margin-bottom: 8px;">
+      <div style="background: #dbeafe; border-left: 4px solid #2563eb; padding: 8px 12px; border-radius: 6px; margin-bottom: 12px;">
         <p style="margin: 0; font-size: 12px; color: #1e40af; font-weight: 600;">✓ Humanized with ${toneDisplay} tone — ${intensityDisplay}</p>
       </div>
-      <div style="background: #f0fdf4; border-left: 4px solid #22c55e; padding: 8px 12px; border-radius: 6px; margin-bottom: 12px;">
-        <p style="margin: 0; font-size: 12px; color: #166534;">
-          📊 Changes: ~${diff.changePct}% of words changed (${diff.removed} removed, ${diff.added} added)
-        </p>
-      </div>
-      <div style="background: #f0fdf4; border-left: 4px solid #22c55e; padding: 12px; border-radius: 8px; margin-bottom: 12px;">
-        <p style="margin: 0; font-size: 13px; color: #166534; line-height: 1.5; max-height: 200px; overflow-y: auto;">${humanizedText}</p>
+      <div style="background: #f0fdf4; border-left: 4px solid #22c55e; padding: 12px; border-radius: 8px; margin-bottom: 12px; max-height: 300px; overflow-y: auto;">
+        <p style="margin: 0; font-size: 13px; color: #166534; line-height: 1.6; white-space: pre-wrap;">${humanizedText}</p>
       </div>
     </div>
     <div style="display: flex; gap: 8px;">
@@ -969,10 +968,12 @@ function showError(errorMessage) {
       top: 20px;
       right: 20px;
       z-index: 2147483647;
-      background: white;
-      border-radius: 16px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.25);
-      padding: 24px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-radius: 12px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05);
+      padding: 20px;
       max-width: 420px;
       width: 420px;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -994,7 +995,7 @@ function showError(errorMessage) {
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0,0,0,0.05);
+      background: rgba(0,0,0,0.02);
       z-index: 2147483646;
       pointer-events: none;
     `;
