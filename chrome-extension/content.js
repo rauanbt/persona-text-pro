@@ -247,7 +247,8 @@ document.addEventListener('mouseup', () => {
           // Store element identifiers for verification
           elementId: currentNode.id || null,
           elementClass: currentNode.className || null,
-          elementTagName: currentNode.tagName || null
+          elementTagName: currentNode.tagName || null,
+          textLength: selection.toString().length  // NEW: for validation
         };
         console.log('[Content] Selection stored:', {
           text: lastSelection.text.substring(0, 50),
@@ -371,7 +372,10 @@ function replaceSelectedText(originalText, humanizedText) {
     hasLastSelection: !!lastSelection,
     hasContainer: !!lastSelection?.container,
     hasRange: !!lastSelection?.range,
-    activeElement: document.activeElement?.tagName
+    lastSelectionText: lastSelection?.text?.substring(0, 50),
+    activeElement: document.activeElement?.tagName,
+    originalTextLength: originalText?.length,
+    humanizedTextLength: humanizedText?.length
   });
   
   // Helper function for similarity check
@@ -480,7 +484,60 @@ function replaceSelectedText(originalText, humanizedText) {
         // Restore selection
         const sel = window.getSelection();
         sel.removeAllRanges();
-        sel.addRange(range);
+        
+        // Try to add the stored range
+        try {
+          sel.addRange(range);
+        } catch (e) {
+          console.log('[Content] Stored range invalid, searching for text instead');
+          
+          // FALLBACK: Search for original text in container
+          const containerText = container.textContent || container.innerText;
+          const originalText = lastSelection.text;
+          const startIndex = containerText.indexOf(originalText);
+          
+          if (startIndex === -1) {
+            console.warn('[Content] Original text not found in container');
+            // Continue to next tier
+          } else {
+            // Create new range by walking the DOM and finding the text position
+            const newRange = document.createRange();
+            let charCount = 0;
+            let foundStart = false;
+            let foundEnd = false;
+            
+            function walkTextNodes(node) {
+              if (foundEnd) return;
+              
+              if (node.nodeType === Node.TEXT_NODE) {
+                const nodeLength = node.textContent.length;
+                
+                if (!foundStart && charCount + nodeLength > startIndex) {
+                  newRange.setStart(node, startIndex - charCount);
+                  foundStart = true;
+                }
+                
+                if (foundStart && !foundEnd && charCount + nodeLength >= startIndex + originalText.length) {
+                  newRange.setEnd(node, startIndex + originalText.length - charCount);
+                  foundEnd = true;
+                }
+                
+                charCount += nodeLength;
+              } else {
+                for (const child of node.childNodes) {
+                  walkTextNodes(child);
+                }
+              }
+            }
+            
+            walkTextNodes(container);
+            
+            if (foundStart && foundEnd) {
+              sel.addRange(newRange);
+              console.log('[Content] Successfully created new range from text search');
+            }
+          }
+        }
         
         // Try execCommand first
         const success = document.execCommand('insertText', false, humanizedText);
@@ -498,34 +555,39 @@ function replaceSelectedText(originalText, humanizedText) {
         
         // If execCommand failed, manually replace with color inheritance
         console.log('[Content] execCommand failed, trying manual replacement');
-        range.deleteContents();
         
-        // Wrap text in span to force black color (fixes Gmail red text bug)
-        const span = document.createElement('span');
-        span.style.cssText = 'color: inherit !important; font-family: inherit !important;';
-        const textNode = document.createTextNode(humanizedText);
-        span.appendChild(textNode);
-        range.insertNode(span);
-        
-        // Move caret to end of inserted text
-        range.setStartAfter(span);
-        range.setEndAfter(span);
-        sel.removeAllRanges();
-        sel.addRange(range);
-        
-        // Dispatch input events
-        container.dispatchEvent(new Event('input', { bubbles: true }));
-        container.dispatchEvent(new Event('change', { bubbles: true }));
-        container.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
-        
-        showNotification('Text replaced!', 'success');
-        
-        lastReplacement = {
-          originalText: originalText,
-          humanizedText: humanizedText
-        };
-        
-        return true;
+        // Get current selection (might be the new one we created)
+        if (sel.rangeCount > 0) {
+          const currentRange = sel.getRangeAt(0);
+          currentRange.deleteContents();
+          
+          // Wrap text in span to force black color (fixes Gmail red text bug)
+          const span = document.createElement('span');
+          span.style.cssText = 'color: inherit !important; font-family: inherit !important;';
+          const textNode = document.createTextNode(humanizedText);
+          span.appendChild(textNode);
+          currentRange.insertNode(span);
+          
+          // Move caret to end of inserted text
+          currentRange.setStartAfter(span);
+          currentRange.setEndAfter(span);
+          sel.removeAllRanges();
+          sel.addRange(currentRange);
+          
+          // Dispatch input events
+          container.dispatchEvent(new Event('input', { bubbles: true }));
+          container.dispatchEvent(new Event('change', { bubbles: true }));
+          container.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+          
+          showNotification('Text replaced!', 'success');
+          
+          lastReplacement = {
+            originalText: originalText,
+            humanizedText: humanizedText
+          };
+          
+          return true;
+        }
         }
         
       } catch (e) {
