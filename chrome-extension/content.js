@@ -360,8 +360,6 @@ document.addEventListener('keyup', () => {
 
 // Simplified text replacement with 3-tier fallback
 function replaceSelectedText(originalText, humanizedText) {
-  closeDialog();
-  
   if (!humanizedText?.trim()) {
     showNotification('Empty result, cannot replace', 'error');
     return false;
@@ -572,6 +570,7 @@ function replaceSelectedText(originalText, humanizedText) {
     
     // TIER 4: Clipboard fallback (final resort)
     console.log('[Content] Auto-replace blocked, using clipboard');
+    closeDialog(); // Close the result dialog before showing clipboard toast
     navigator.clipboard.writeText(humanizedText).catch(() => {});
     
     // Show dark toast notification (matching result dialog style)
@@ -886,16 +885,30 @@ function showResult(originalText, humanizedText) {
   
   document.getElementById('sapienwrite-replace').onclick = () => {
     const replaced = replaceSelectedText(originalText, humanizedText);
+    
+    // Check if dialog still exists before updating
+    const currentDialog = document.getElementById('sapienwrite-dialog');
+    if (!currentDialog) {
+      console.warn('[Content] Dialog was removed, cannot show success UI');
+      return;
+    }
+    
     if (replaced) {
-      dialog.innerHTML = `
+      currentDialog.innerHTML = `
         <div style="color: #10B981; font-weight: 600; font-size: 13px;">✓ Text replaced!</div>
         <div style="display: flex; gap: 6px; margin-top: 6px;">
           <button id="sapienwrite-restore" style="flex: 1 !important; padding: 8px !important; background: #F59E0B !important; color: #fff !important; border: none !important; border-radius: 8px !important; font-size: 12px !important; font-weight: 600 !important; cursor: pointer !important; min-width: 80px !important; white-space: nowrap !important;">↶ Restore</button>
           <button id="sapienwrite-close-final" style="flex: 1 !important; padding: 8px !important; background: #374151 !important; color: #E5E7EB !important; border: none !important; border-radius: 8px !important; font-size: 12px !important; font-weight: 600 !important; cursor: pointer !important; min-width: 80px !important; white-space: nowrap !important;">Close</button>
         </div>
       `;
-      document.getElementById('sapienwrite-restore').onclick = () => { restoreOriginalText(); closeDialog(); };
-      document.getElementById('sapienwrite-close-final').onclick = closeDialog;
+      
+      // Verify buttons exist before attaching listeners
+      const restoreBtn = document.getElementById('sapienwrite-restore');
+      const closeBtn = document.getElementById('sapienwrite-close-final');
+      
+      if (restoreBtn) restoreBtn.onclick = () => { restoreOriginalText(); closeDialog(); };
+      if (closeBtn) closeBtn.onclick = closeDialog;
+      
       setTimeout(closeDialog, 8000);
     } else {
       closeDialog();
