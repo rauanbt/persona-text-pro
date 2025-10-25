@@ -991,10 +991,14 @@ async function handleHumanizeRequest(text, tone, toneIntensity, forceRewrite, ta
     console.log('[Background] originalText length:', text.length);
     console.log('[Background] humanizedText length:', humanizedText.length);
     
+    // SANITIZE humanizedText before sending (belt-and-suspenders)
+    const cleanText = humanizedText.replace(/\[?\s*PARAGRAPH[_\s-]?\d+\s*\]?/gi, '').replace(/\n{3,}/g, '\n\n').trim();
+    console.log('[Background] Sanitized text length:', cleanText.length);
+    
     const resultMessage = {
       action: 'showResult',
       originalText: text,
-      humanizedText: humanizedText,
+      humanizedText: cleanText,
       tone: tone,
       toneIntensity: toneIntensity,
       warning: warning

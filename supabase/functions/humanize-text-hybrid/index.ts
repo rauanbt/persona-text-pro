@@ -671,10 +671,11 @@ ${markedText}` }
         const outputMarkerCount = (rawOutput.match(/\[PARAGRAPH[_\s-]?\d+\]/gi) || []).length;
         
         console.log(`[STRUCTURE-CHECK] Markers: input=${inputMarkerCount}, output=${outputMarkerCount}`);
+        console.log('[DEBUG] Raw AI output (first 200 chars):', rawOutput.substring(0, 200));
         
-        // If AI ignored markers, use per-paragraph fallback
-        if (outputMarkerCount === 0 && inputMarkerCount > 1) {
-          console.error('[STRUCTURE-VIOLATION] AI ignored paragraph markers! Using fallback...');
+        // STRICT CHECK: If AI lost ANY markers, use per-paragraph fallback
+        if (outputMarkerCount < inputMarkerCount && inputMarkerCount > 1) {
+          console.error(`[STRUCTURE-VIOLATION] AI lost markers! Expected ${inputMarkerCount}, got ${outputMarkerCount}. Using fallback...`);
           finalText = await humanizePerParagraph(paragraphs, tone, systemPrompt, langRule, lovableApiKey);
           passesCompleted = 1;
           enginesUsed = 'gemini-fallback';
@@ -689,11 +690,14 @@ ${markedText}` }
         
         if (finalText && finalText.trim().length > 0) { bestSoFar = finalText; }
         
-        // Verify structure preservation
-        const outputParagraphCount = (finalText.match(/\n\n+/g) || []).length + 1;
-        console.log(`[STRUCTURE] Paragraph preservation: input=${inputParagraphCount}, output=${outputParagraphCount}`);
-        if (Math.abs(inputParagraphCount - outputParagraphCount) > 2) {
-          console.warn('[STRUCTURE] Significant paragraph count mismatch - may need fallback');
+        // SECOND SAFETY NET: Check paragraph counts after marker removal
+        const finalParaCount = finalText.split(/\n\n+/).filter(p => p.trim()).length;
+        console.log(`[STRUCTURE] Paragraph count: input=${inputParagraphCount}, output=${finalParaCount}`);
+        
+        if (finalParaCount < inputParagraphCount - 1 && inputParagraphCount > 2) {
+          console.error(`[STRUCTURE] Paragraphs merged! Expected ~${inputParagraphCount}, got ${finalParaCount}. Re-processing...`);
+          finalText = await humanizePerParagraph(paragraphs, tone, systemPrompt, langRule, lovableApiKey);
+          enginesUsed = 'gemini-fallback';
         }
       } catch (error) {
         console.error('[HYBRID-HUMANIZE] Free plan error:', error);
@@ -782,15 +786,16 @@ ${pass1Result}` }
           
           console.log('[DEBUG] Pass 2 raw output (first 200 chars):', rawOutput.substring(0, 200));
           
-          // Verify paragraph markers
+          // Verify paragraph markers - STRICT CHECK
           const inputMarkerCount = (pass1Result.match(/\[PARAGRAPH[_\s-]?\d+\]/gi) || []).length;
           const outputMarkerCount = (rawOutput.match(/\[PARAGRAPH[_\s-]?\d+\]/gi) || []).length;
           
           console.log(`[STRUCTURE-CHECK] Pass 2 markers: input=${inputMarkerCount}, output=${outputMarkerCount}`);
+          console.log('[DEBUG] Pass 2 raw output (first 200 chars):', rawOutput.substring(0, 200));
           
-          // If Pass 2 destroyed structure, use per-paragraph fallback
-          if (outputMarkerCount === 0 && inputMarkerCount > 1) {
-            console.error('[STRUCTURE-VIOLATION] Pass 2 destroyed structure! Using fallback...');
+          // STRICT CHECK: If Pass 2 lost ANY markers, use per-paragraph fallback
+          if (outputMarkerCount < inputMarkerCount && inputMarkerCount > 1) {
+            console.error(`[STRUCTURE-VIOLATION] Pass 2 lost markers! Expected ${inputMarkerCount}, got ${outputMarkerCount}. Using fallback...`);
             finalText = await humanizePerParagraph(paragraphs, tone, systemPrompt, langRule, lovableApiKey);
             passesCompleted = 2;
             enginesUsed = 'gemini-openai-fallback';
@@ -802,9 +807,15 @@ ${pass1Result}` }
           
           if (finalText && finalText.trim().length > 0) { bestSoFar = finalText; }
           
-          // Verify structure preservation
-          const outputParagraphCount = (finalText.match(/\n\n+/g) || []).length + 1;
-          console.log(`[STRUCTURE] Pass 2 (OpenAI) complete - Paragraphs: ${outputParagraphCount}`);
+          // SECOND SAFETY NET: Check paragraph counts
+          const finalParaCount = finalText.split(/\n\n+/).filter(p => p.trim()).length;
+          console.log(`[STRUCTURE] Pass 2 paragraph count: input=${inputParagraphCount}, output=${finalParaCount}`);
+          
+          if (finalParaCount < inputParagraphCount - 1 && inputParagraphCount > 2) {
+            console.error(`[STRUCTURE] Pass 2 merged paragraphs! Re-processing...`);
+            finalText = await humanizePerParagraph(paragraphs, tone, systemPrompt, langRule, lovableApiKey);
+            enginesUsed = 'gemini-openai-fallback';
+          }
         } catch (pass2Error) {
           // Use Pass 1 result if Pass 2 fails or times out
           console.log('[HYBRID-HUMANIZE] Pass 2 failed/timed out, using Pass 1 result');
@@ -909,14 +920,14 @@ ${pass1Result}` }
           if (isExtensionRequest) {
             console.log('[DEBUG] Extension Pass 2 raw output (first 200 chars):', pass2Result.substring(0, 200));
             
-            // Verify structure
+            // Verify structure - STRICT CHECK
             const inputMarkerCount = (pass1Result.match(/\[PARAGRAPH[_\s-]?\d+\]/gi) || []).length;
             const outputMarkerCount = (pass2Result.match(/\[PARAGRAPH[_\s-]?\d+\]/gi) || []).length;
             
             console.log(`[STRUCTURE-CHECK] Extension Pass 2 markers: input=${inputMarkerCount}, output=${outputMarkerCount}`);
             
-            if (outputMarkerCount === 0 && inputMarkerCount > 1) {
-              console.error('[STRUCTURE-VIOLATION] Extension Pass 2 destroyed structure! Using fallback...');
+            if (outputMarkerCount < inputMarkerCount && inputMarkerCount > 1) {
+              console.error(`[STRUCTURE-VIOLATION] Extension Pass 2 lost markers! Expected ${inputMarkerCount}, got ${outputMarkerCount}. Using fallback...`);
               finalText = await humanizePerParagraph(paragraphs, tone, systemPrompt, langRule, lovableApiKey);
               enginesUsed = 'gemini-openai-fallback';
             } else {
@@ -925,6 +936,17 @@ ${pass1Result}` }
             }
             
             passesCompleted = 2;
+            
+            // SECOND SAFETY NET: Check paragraph counts
+            const finalParaCount = finalText.split(/\n\n+/).filter(p => p.trim()).length;
+            console.log(`[STRUCTURE] Extension Pass 2 paragraph count: input=${inputParagraphCount}, output=${finalParaCount}`);
+            
+            if (finalParaCount < inputParagraphCount - 1 && inputParagraphCount > 2) {
+              console.error(`[STRUCTURE] Extension Pass 2 merged paragraphs! Re-processing...`);
+              finalText = await humanizePerParagraph(paragraphs, tone, systemPrompt, langRule, lovableApiKey);
+              enginesUsed = 'gemini-openai-fallback';
+            }
+            
             console.log('[HYBRID-HUMANIZE] Extension fast track complete - 2 passes');
           } else {
             // Pass 3: Claude (web only)
@@ -961,19 +983,31 @@ ${pass2Result}` }
               
               console.log('[DEBUG] Pass 3 raw output (first 200 chars):', rawOutput.substring(0, 200));
               
-              // Verify structure
+              // Verify structure - STRICT CHECK
               const inputMarkerCount = (pass2Result.match(/\[PARAGRAPH[_\s-]?\d+\]/gi) || []).length;
               const outputMarkerCount = (rawOutput.match(/\[PARAGRAPH[_\s-]?\d+\]/gi) || []).length;
               
               console.log(`[STRUCTURE-CHECK] Pass 3 markers: input=${inputMarkerCount}, output=${outputMarkerCount}`);
               
-              if (outputMarkerCount === 0 && inputMarkerCount > 1) {
-                console.error('[STRUCTURE-VIOLATION] Pass 3 destroyed structure! Using fallback...');
+              if (outputMarkerCount < inputMarkerCount && inputMarkerCount > 1) {
+                console.error(`[STRUCTURE-VIOLATION] Pass 3 lost markers! Expected ${inputMarkerCount}, got ${outputMarkerCount}. Using fallback...`);
                 finalText = await humanizePerParagraph(paragraphs, tone, systemPrompt, langRule, lovableApiKey);
                 enginesUsed = 'gemini-openai-claude-fallback';
               } else {
                 finalText = removeAllParagraphMarkers(rawOutput);
                 enginesUsed = 'gemini-openai-claude';
+              }
+              
+              passesCompleted = 3;
+              
+              // SECOND SAFETY NET: Check paragraph counts
+              const finalParaCount = finalText.split(/\n\n+/).filter(p => p.trim()).length;
+              console.log(`[STRUCTURE] Pass 3 paragraph count: input=${inputParagraphCount}, output=${finalParaCount}`);
+              
+              if (finalParaCount < inputParagraphCount - 1 && inputParagraphCount > 2) {
+                console.error(`[STRUCTURE] Pass 3 merged paragraphs! Re-processing...`);
+                finalText = await humanizePerParagraph(paragraphs, tone, systemPrompt, langRule, lovableApiKey);
+                enginesUsed = 'gemini-openai-claude-fallback';
               }
               
               if (finalText && finalText.trim().length > 0) { bestSoFar = finalText; }
