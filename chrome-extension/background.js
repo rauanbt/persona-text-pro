@@ -584,18 +584,21 @@ function setupContextMenu() {
   });
 }
 
-// Periodic session health check (every 5 minutes)
-setInterval(async () => {
-  const healthy = await isSessionHealthy();
-  if (!healthy) {
-    console.log('[Background] Periodic check: session unhealthy');
-    const data = await chrome.storage.local.get(['refresh_token']);
-    if (data.refresh_token) {
-      console.log('[Background] Attempting proactive refresh...');
-      await refreshSession();
+// Periodic session health check - refresh tokens before they expire
+// Runs every 15 minutes to keep sessions alive
+chrome.alarms.create('session-health-check', { periodInMinutes: 15 });
+
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name === 'session-health-check') {
+    console.log('[Background] Periodic session health check...');
+    const result = await ensureValidSession();
+    if (result.success) {
+      console.log('[Background] ✅ Session healthy');
+    } else {
+      console.log('[Background] ⚠️ Session needs reconnect:', result.reason);
     }
   }
-}, 5 * 60 * 1000);
+});
 
 // Try to sync session on startup
 (async () => {
@@ -639,24 +642,40 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   console.log(`[Background] ========= TONE CLICKED: ${tone} =========`);
   console.log('[Background] Tab:', tab.id, 'Frame:', info.frameId);
   
-  // STEP 0: CHECK SESSION HEALTH FIRST - before showing any UI
-  const sessionHealthy = await isSessionHealthy();
-  if (!sessionHealthy) {
-    console.log('[Background] Session unhealthy, attempting auto-reconnect');
+  // STEP 0: ENSURE VALID SESSION (with auto-refresh)
+  console.log('[Background] Ensuring valid session...');
+  const sessionResult = await ensureValidSession();
+
+  if (!sessionResult.success) {
+    console.log('[Background] Session validation failed:', sessionResult.reason);
     
-    // Try to get session from open SapienWrite tabs (quick attempt)
-    const reconnected = await requestSessionFromWebApp(2000);
-    
-    if (!reconnected.success) {
-      // Show reconnect dialog (with extended 30-second wait built-in)
+    // If we have a refresh_token but refresh failed, try web app sync first
+    if (sessionResult.reason === 'refresh_failed') {
+      console.log('[Background] Attempting web app session sync...');
+      const webAppSync = await requestSessionFromWebApp(3000); // Give it 3 seconds
+      
+      if (webAppSync.success) {
+        console.log('[Background] ✅ Web app sync successful, continuing...');
+        // Proceed to humanize
+      } else {
+        // Both refresh AND web app failed - show dialog
+        console.log('[Background] All auto-recovery attempts failed - showing reconnect dialog');
+        await injectOverlay(tab.id, 'reconnect', {
+          message: 'Your session expired. Click "Reconnect" to sign in again.'
+        });
+        return; // Stop here
+      }
+    } else {
+      // No refresh_token at all - show dialog immediately
+      console.log('[Background] No credentials stored - showing reconnect dialog');
       await injectOverlay(tab.id, 'reconnect', {
-        message: 'Your session expired. Click "Reconnect" to sign in again.'
+        message: 'Please sign in to use SapienWrite.'
       });
-      return; // Stop here - user needs to reconnect
+      return;
     }
-    
-    console.log('[Background] Auto-reconnect successful, continuing...');
   }
+
+  console.log('[Background] ✅ Session validated, continuing with humanize...');
   
   // STEP 1: Get selected text (ALWAYS try structured extraction first)
   let selectedText = null;

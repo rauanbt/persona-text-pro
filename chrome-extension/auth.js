@@ -310,6 +310,48 @@ async function isSessionHealthy() {
   return true;
 }
 
+// Smart session validator with auto-refresh
+async function ensureValidSession() {
+  console.log('[Auth] Ensuring valid session...');
+  
+  // Step 1: Check if we have any session data
+  const data = await storageGet([
+    'access_token',
+    'refresh_token',
+    'expires_at'
+  ]);
+  
+  if (!data.refresh_token) {
+    console.log('[Auth] No refresh_token - user needs to authenticate');
+    return { success: false, reason: 'no_refresh_token' };
+  }
+  
+  // Step 2: Check if current token is still valid (not near expiry)
+  const now = Math.floor(Date.now() / 1000);
+  const buffer = 300; // 5 minutes buffer for safety
+  
+  if (data.access_token && data.expires_at && now < (data.expires_at - buffer)) {
+    console.log('[Auth] Current token is still valid');
+    return { 
+      success: true, 
+      session: await getSession() 
+    };
+  }
+  
+  // Step 3: Token expired or near expiry - try silent refresh
+  console.log('[Auth] Token expired/near-expiry, attempting silent refresh...');
+  const refreshed = await refreshSession();
+  
+  if (refreshed) {
+    console.log('[Auth] ✅ Silent refresh successful!');
+    return { success: true, session: refreshed };
+  }
+  
+  // Step 4: Refresh failed - user needs to reconnect
+  console.log('[Auth] ❌ Silent refresh failed - reconnect required');
+  return { success: false, reason: 'refresh_failed' };
+}
+
 // Check if user is authenticated
 async function isAuthenticated() {
   const session = await getSession();
