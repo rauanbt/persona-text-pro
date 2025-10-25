@@ -469,6 +469,7 @@ function replaceSelectedText(originalText, humanizedText) {
         };
         
         return true;
+        }
         
       } catch (e) {
         console.log('[Content] ContentEditable replacement failed:', e.message);
