@@ -360,7 +360,7 @@ document.addEventListener('keyup', () => {
 }, true);
 
 // Simplified text replacement with 3-tier fallback
-function replaceSelectedText(originalText, humanizedText) {
+async function replaceSelectedText(originalText, humanizedText) {
   if (!humanizedText?.trim()) {
     showNotification('Empty result, cannot replace', 'error');
     return false;
@@ -475,6 +475,22 @@ function replaceSelectedText(originalText, humanizedText) {
           
           const range = lastSelection.range;
           
+          // Gmail-specific: Re-focus composer before attempting replacement
+          const isGmail = window.location.hostname.includes('mail.google.com');
+          if (isGmail) {
+            // Gmail uses complex editor structure - try to focus the actual contenteditable
+            const gmailEditable = container.querySelector('[contenteditable="true"]') || container;
+            if (gmailEditable.focus) {
+              try {
+                gmailEditable.focus({ preventScroll: true });
+                // Small delay to let Gmail's editor settle
+                await new Promise(resolve => setTimeout(resolve, 50));
+              } catch (e) {
+                gmailEditable.focus();
+              }
+            }
+          }
+          
           // Focus the contenteditable container
           if (container.focus) {
             try {
@@ -488,64 +504,79 @@ function replaceSelectedText(originalText, humanizedText) {
         const sel = window.getSelection();
         sel.removeAllRanges();
         
-        // Try to add the stored range
+        let activeRange = null;
+        
+        // Try to add the stored range first
         try {
           sel.addRange(range);
+          activeRange = range;
+          console.log('[Content] Using stored range');
         } catch (e) {
           console.log('[Content] Stored range invalid, searching for text instead');
           
-          // FALLBACK: Search for original text in container
+          // FALLBACK: Search for original text in container and create new range
           const containerText = container.textContent || container.innerText;
-          const originalText = lastSelection.text;
-          const startIndex = containerText.indexOf(originalText);
+          const startIndex = containerText.indexOf(lastSelection.text);
           
           if (startIndex === -1) {
-            console.warn('[Content] Original text not found in container');
-            // Continue to next tier
-          } else {
-            // Create new range by walking the DOM and finding the text position
-            const newRange = document.createRange();
-            let charCount = 0;
-            let foundStart = false;
-            let foundEnd = false;
+            console.warn('[Content] Original text not found in container - text may have changed');
+            // Don't continue to execCommand - go straight to next tier
+            throw new Error('Text not found in container');
+          }
+          
+          // Create new range by walking the DOM
+          const newRange = document.createRange();
+          let charCount = 0;
+          let foundStart = false;
+          let foundEnd = false;
+          
+          function walkTextNodes(node) {
+            if (foundEnd) return;
             
-            function walkTextNodes(node) {
-              if (foundEnd) return;
+            if (node.nodeType === Node.TEXT_NODE) {
+              const nodeLength = node.textContent.length;
               
-              if (node.nodeType === Node.TEXT_NODE) {
-                const nodeLength = node.textContent.length;
-                
-                if (!foundStart && charCount + nodeLength > startIndex) {
-                  newRange.setStart(node, startIndex - charCount);
-                  foundStart = true;
-                }
-                
-                if (foundStart && !foundEnd && charCount + nodeLength >= startIndex + originalText.length) {
-                  newRange.setEnd(node, startIndex + originalText.length - charCount);
-                  foundEnd = true;
-                }
-                
-                charCount += nodeLength;
-              } else {
-                for (const child of node.childNodes) {
-                  walkTextNodes(child);
-                }
+              if (!foundStart && charCount + nodeLength > startIndex) {
+                newRange.setStart(node, startIndex - charCount);
+                foundStart = true;
+              }
+              
+              if (foundStart && !foundEnd && charCount + nodeLength >= startIndex + lastSelection.text.length) {
+                newRange.setEnd(node, startIndex + lastSelection.text.length - charCount);
+                foundEnd = true;
+              }
+              
+              charCount += nodeLength;
+            } else {
+              for (const child of node.childNodes) {
+                walkTextNodes(child);
               }
             }
-            
-            walkTextNodes(container);
-            
-            if (foundStart && foundEnd) {
+          }
+          
+          walkTextNodes(container);
+          
+          if (foundStart && foundEnd) {
+            try {
               sel.addRange(newRange);
-              console.log('[Content] Successfully created new range from text search');
+              activeRange = newRange;
+              console.log('[Content] Successfully created and added new range from text search');
+            } catch (rangeError) {
+              console.warn('[Content] Failed to add new range:', rangeError);
+              throw new Error('Could not create valid range');
             }
+          } else {
+            console.warn('[Content] Could not find text boundaries in DOM');
+            throw new Error('Could not find text boundaries');
           }
         }
         
+        // At this point we have a valid activeRange and selection
         // Try execCommand first
-        const success = document.execCommand('insertText', false, humanizedText);
+        const execSuccess = document.execCommand('insertText', false, humanizedText);
         
-        if (success) {
+        if (execSuccess) {
+          console.log('[Content] execCommand succeeded');
           showNotification('Text replaced!', 'success');
           
           lastReplacement = {
@@ -556,10 +587,9 @@ function replaceSelectedText(originalText, humanizedText) {
           return true;
         }
         
-        // If execCommand failed, manually replace with color inheritance
+        // If execCommand failed, manually replace
         console.log('[Content] execCommand failed, trying manual replacement');
         
-        // Get current selection (might be the new one we created)
         if (sel.rangeCount > 0) {
           const currentRange = sel.getRangeAt(0);
           currentRange.deleteContents();
@@ -582,6 +612,7 @@ function replaceSelectedText(originalText, humanizedText) {
           container.dispatchEvent(new Event('change', { bubbles: true }));
           container.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
           
+          console.log('[Content] Manual replacement succeeded');
           showNotification('Text replaced!', 'success');
           
           lastReplacement = {
@@ -590,6 +621,9 @@ function replaceSelectedText(originalText, humanizedText) {
           };
           
           return true;
+        } else {
+          console.warn('[Content] No valid range after execCommand failed');
+          throw new Error('No valid range for manual replacement');
         }
         }
         
@@ -995,8 +1029,8 @@ function showResult(originalText, humanizedText) {
   safeAppendToBody(dialog);
   console.log('[Content] Result dialog rendered');
   
-  document.getElementById('sapienwrite-replace').onclick = () => {
-    const replaced = replaceSelectedText(originalText, humanizedText);
+  document.getElementById('sapienwrite-replace').onclick = async () => {
+    const replaced = await replaceSelectedText(originalText, humanizedText);
     
     // Check if dialog still exists before updating
     const currentDialog = document.getElementById('sapienwrite-dialog');
@@ -1183,7 +1217,7 @@ window.addEventListener('message', (event) => {
   }
 });
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
   console.log('[Content] Message received:', message);
   
   // Relay session request from background to web page
@@ -1288,7 +1322,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   
   if (message.action === 'replaceText') {
-    const replaced = replaceSelectedText(message.originalText, message.humanizedText);
+    const replaced = await replaceSelectedText(message.originalText, message.humanizedText);
     if (!replaced) {
       // If replacement failed, show result dialog with copy option
       console.log('[Content] Replacement blocked, showing result dialog');
