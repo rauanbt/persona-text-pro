@@ -417,19 +417,6 @@ function replaceSelectedText(originalText, humanizedText) {
         const end = lastInputSelection?.end ?? inputEl.selectionEnd;
         
         if (typeof start === 'number' && typeof end === 'number') {
-          // Verify the original text is still at this location
-          const currentText = inputEl.value.substring(start, end);
-          const similarity = quickSimilarityCheck(originalText, currentText);
-          
-          if (similarity < 0.7) {
-            console.warn('[Content] Original text not found at expected location', {
-              expected: originalText.substring(0, 50),
-              found: currentText.substring(0, 50)
-            });
-            showNotification('⚠️ Text has changed. Please select again and retry.', 'info');
-            return false;
-          }
-          
           // Focus the element first
           try {
             inputEl.focus({ preventScroll: true });
@@ -509,15 +496,20 @@ function replaceSelectedText(originalText, humanizedText) {
           return true;
         }
         
-        // If execCommand failed, manually replace
+        // If execCommand failed, manually replace with color inheritance
         console.log('[Content] execCommand failed, trying manual replacement');
         range.deleteContents();
+        
+        // Wrap text in span to force black color (fixes Gmail red text bug)
+        const span = document.createElement('span');
+        span.style.cssText = 'color: inherit !important; font-family: inherit !important;';
         const textNode = document.createTextNode(humanizedText);
-        range.insertNode(textNode);
+        span.appendChild(textNode);
+        range.insertNode(span);
         
         // Move caret to end of inserted text
-        range.setStartAfter(textNode);
-        range.setEndAfter(textNode);
+        range.setStartAfter(span);
+        range.setEndAfter(span);
         sel.removeAllRanges();
         sel.addRange(range);
         

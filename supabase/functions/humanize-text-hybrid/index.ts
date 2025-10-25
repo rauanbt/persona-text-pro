@@ -170,9 +170,9 @@ const INTENSITY_THRESHOLDS: Record<string, number> = {
 };
 
 const CHANGE_TARGET: Record<string, number> = {
-  light: 0.30,   // 30% word change minimum
-  medium: 0.45,  // 45% word change minimum
-  strong: 0.60,  // 60% word change minimum
+  light: 0.10,   // 10% word change minimum
+  medium: 0.15,  // 15% word change minimum
+  strong: 0.20,  // 20% word change MAXIMUM (strict limit)
   grammar: 0.05, // Grammar mode only 5% change (fix errors only)
 };
 
@@ -496,9 +496,23 @@ Make it compelling like a human sales pitch, not an AI essay.`,
 
       empathetic: `CRITICAL LENGTH RULES (MUST ENFORCE):
 - Output must be ±10-15% of input word count (STRICT LIMIT)
+- Maximum 20% word changes - preserve 80% of original wording
 - Don't add extra reassurances or explanations
 - Warmth through tone, not verbosity
 - Keep it genuine and concise
+
+CONTENT PRESERVATION (HIGHEST PRIORITY):
+✅ PRESERVE: Names, numbers, dates, facts, core actions, main content
+❌ ONLY CHANGE: Connecting words, softening phrases, tone markers
+- Keep all factual details EXACTLY the same
+- Only adjust tone/warmth, NOT content or facts
+- DON'T rewrite or reinterpret the message
+- DON'T add extra sentences or commentary
+
+Example:
+Input: "Met this 8-year-old kid for breakfast. His app is doing $235k ARR."
+✅ GOOD: "I met this 8-year-old kid for breakfast. His app is doing $235k ARR."
+❌ BAD: "Wow, I can tell you're trying to light a fire under him. That's a bold way to motivate..."
 
 ANTI-AI-DETECTION RULES (HIGHEST PRIORITY):
 ❌ FORBIDDEN: Moreover, Furthermore, Ultimately - these sound cold
@@ -506,11 +520,12 @@ ANTI-AI-DETECTION RULES (HIGHEST PRIORITY):
 
 EMPATHETIC HUMAN WRITING:
 1. Use contractions (you're, we're, it's, that's) - sounds warmer
-2. Vary sentence flow - some gentle, some reassuring
-3. Use "you," "your," and "we" frequently
-4. Add softening phrases: "I understand," "That makes sense," "I hear you"
-5. Break up text with empathetic pauses (shorter paragraphs)
-6. NO clinical language - write like you're talking to a friend
+2. Add softening phrases ONLY at sentence starts: "I understand," "That makes sense"
+3. Use "you," "your," and "we" naturally
+4. DON'T rewrite facts or change meaning
+5. DON'T add extra sentences or interpretations
+6. Keep factual content 100% identical
+7. NO clinical language - write like you're talking to a friend
 
 ⚠️ CRITICAL STRUCTURE RULE - VIOLATION = COMPLETE FAILURE ⚠️
 
@@ -1130,7 +1145,7 @@ ${pass2Result}` }
       const toneReinforcements: Record<string, string> = {
         formal: 'Use "However," "Additionally," "Therefore" naturally; reduce contractions; executive clarity.',
         persuasive: 'Second-person "you/your"; rhetorical questions; urgency; vary rhythm deliberately.',
-        empathetic: '"I understand," "That makes sense," "Let\'s take it step by step"; soften starts.',
+        empathetic: 'Add softening phrases ONLY at starts: "I understand," "That makes sense"; preserve ALL factual content exactly; maximum 20% word changes.',
         sarcastic: '"Oh great," "Sure," "Obviously"; dry wit; fragments allowed.',
         regular: '',
         grammar: '' // Grammar mode doesn't use booster
@@ -1139,7 +1154,7 @@ ${pass2Result}` }
       const structureRule = 'Keep EVERY line break exactly where it appears. Keep EVERY sentence in its original order. Maintain exact paragraph structure.';
 
       const shortTextPromptAddition = isShortText
-        ? `\n\nCRITICAL (Short text): Change at least ${changePct}% of words; allow re-ordering of clauses; keep meaning exact; same language; concise output.`
+        ? `\n\nCRITICAL (Short text): Change maximum ${changePct}% of words; preserve all facts exactly; keep meaning 100% identical; same language; concise output.`
         : '';
 
       const boosterPromptBase = (extraToneReinforcement: string, engineName: string) => `
