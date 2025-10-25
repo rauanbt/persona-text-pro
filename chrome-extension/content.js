@@ -558,16 +558,15 @@ function createDialog(text, wordCount, wordBalance, selectedTone = null) {
   dialog.id = 'sapienwrite-dialog';
   dialog.style.cssText = `
     position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 999999;
+    top: 20px;
+    right: 20px;
+    z-index: 2147483647;
     background: white;
     border-radius: 16px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.25);
     padding: 24px;
-    max-width: 500px;
-    width: 90%;
+    max-width: 420px;
+    width: 420px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   `;
   
@@ -642,8 +641,9 @@ function createDialog(text, wordCount, wordBalance, selectedTone = null) {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0,0,0,0.5);
-    z-index: 999998;
+    background: rgba(0,0,0,0.05);
+    z-index: 2147483646;
+    pointer-events: none;
   `;
   
   safeAppendToBody(backdrop);
@@ -705,16 +705,15 @@ function showProcessing() {
     dialog.id = 'sapienwrite-dialog';
     dialog.style.cssText = `
       position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
+      top: 20px;
+      right: 20px;
       z-index: 2147483647 !important;
       background: white;
       border-radius: 16px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.25);
       padding: 24px;
-      max-width: 500px;
-      width: 90%;
+      max-width: 420px;
+      width: 420px;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     `;
     
@@ -729,8 +728,9 @@ function showProcessing() {
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0,0,0,0.6);
+      background: rgba(0,0,0,0.05);
       z-index: 2147483646 !important;
+      pointer-events: none;
     `;
     
     console.log('[Content] Appending backdrop and dialog to body...');
@@ -819,16 +819,15 @@ function showResult(originalText, humanizedText) {
     dialog.id = 'sapienwrite-dialog';
     dialog.style.cssText = `
       position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      z-index: 999999;
+      top: 20px;
+      right: 20px;
+      z-index: 2147483647;
       background: white;
       border-radius: 16px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.25);
       padding: 24px;
-      max-width: 500px;
-      width: 90%;
+      max-width: 420px;
+      width: 420px;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     `;
     
@@ -848,8 +847,9 @@ function showResult(originalText, humanizedText) {
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0,0,0,0.5);
-      z-index: 999998;
+      background: rgba(0,0,0,0.05);
+      z-index: 2147483646;
+      pointer-events: none;
     `;
     
     safeAppendToBody(backdrop);
@@ -966,16 +966,15 @@ function showError(errorMessage) {
     dialog.id = 'sapienwrite-dialog';
     dialog.style.cssText = `
       position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      z-index: 999999;
+      top: 20px;
+      right: 20px;
+      z-index: 2147483647;
       background: white;
       border-radius: 16px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.25);
       padding: 24px;
-      max-width: 500px;
-      width: 90%;
+      max-width: 420px;
+      width: 420px;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     `;
     
@@ -995,8 +994,9 @@ function showError(errorMessage) {
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0,0,0,0.5);
-      z-index: 999998;
+      background: rgba(0,0,0,0.05);
+      z-index: 2147483646;
+      pointer-events: none;
     `;
     
     safeAppendToBody(backdrop);
@@ -1032,16 +1032,15 @@ function showUpgradeRequiredDialog(currentPlan) {
   dialog.id = 'sapienwrite-dialog';
   dialog.style.cssText = `
     position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 999999;
+    top: 20px;
+    right: 20px;
+    z-index: 2147483647;
     background: white;
     border-radius: 16px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.25);
     padding: 32px;
-    max-width: 480px;
-    width: 90%;
+    max-width: 420px;
+    width: 420px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     text-align: center;
   `;
@@ -1082,8 +1081,9 @@ function showUpgradeRequiredDialog(currentPlan) {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0,0,0,0.5);
-    z-index: 999998;
+    background: rgba(0,0,0,0.05);
+    z-index: 2147483646;
+    pointer-events: none;
   `;
   
   safeAppendToBody(backdrop);
