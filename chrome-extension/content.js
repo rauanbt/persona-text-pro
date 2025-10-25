@@ -240,21 +240,31 @@ document.addEventListener('mouseup', () => {
     // Find the contenteditable container
     while (currentNode) {
       if (currentNode.isContentEditable) {
+        const containerText = currentNode.textContent || currentNode.innerText || '';
+        const selectionText = selection.toString();
+        const idx = containerText.indexOf(selectionText);
+        const preContext = idx > 0 ? containerText.slice(Math.max(0, idx - 20), idx) : '';
+        const postContext = idx >= 0 ? containerText.slice(idx + selectionText.length, idx + selectionText.length + 20) : '';
+        
         lastSelection = {
-          text: selection.toString(),
+          text: selectionText,
           range: range.cloneRange(),
           container: currentNode,
           // Store element identifiers for verification
           elementId: currentNode.id || null,
           elementClass: currentNode.className || null,
           elementTagName: currentNode.tagName || null,
-          textLength: selection.toString().length  // NEW: for validation
+          textLength: selectionText.length,
+          // Store context for better range recreation
+          preContext: preContext,
+          postContext: postContext
         };
         console.log('[Content] Selection stored:', {
           text: lastSelection.text.substring(0, 50),
           tagName: currentNode.tagName,
           id: currentNode.id,
-          className: currentNode.className
+          className: currentNode.className,
+          hasContext: !!(preContext || postContext)
         });
         return;
       }
@@ -461,36 +471,33 @@ async function replaceSelectedText(originalText, humanizedText) {
         if (!document.body.contains(container)) {
           console.log('[Content] Container no longer in DOM');
         } else {
-          // VERIFY this is the correct container
-          const isCorrectContainer = (
-            (!lastSelection.elementId || container.id === lastSelection.elementId) &&
-            (!lastSelection.elementClass || container.className === lastSelection.elementClass)
-          );
-          
-          if (!isCorrectContainer) {
-            console.warn('[Content] Container mismatch detected!');
-            showNotification('⚠️ Wrong element detected. Please select text again and retry.', 'info');
-            return false;
+          // VERIFY container is valid (relaxed check for Gmail dynamic DOM)
+          let containerLooksValid = document.body.contains(container) && container.isContentEditable;
+          if (!containerLooksValid) {
+            console.warn('[Content] Container invalid or not contenteditable');
+            showNotification('⚠️ Editor changed. Select again if this fails.', 'info');
           }
+          // Do not return; proceed with replacement attempts
+          console.log('[Content] Container validation:', { containerLooksValid, isContentEditable: container.isContentEditable });
           
           const range = lastSelection.range;
           
-    // Gmail-specific: Re-focus composer before attempting replacement
-    const isGmail = window.location.hostname.includes('mail.google.com');
-    if (isGmail) {
-      // Gmail uses complex editor structure - try to focus the actual contenteditable
-      const gmailEditable = container.querySelector('[contenteditable="true"]') || container;
-      if (gmailEditable.focus) {
-        try {
-          gmailEditable.focus({ preventScroll: true });
-          // Let Gmail's editor fully stabilize before attempting replacement
-          await new Promise(resolve => setTimeout(resolve, 100));
-        } catch (e) {
-          gmailEditable.focus();
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
-      }
-    }
+          // Gmail-specific: Re-focus composer and stabilize selection
+          const isGmail = window.location.hostname.includes('mail.google.com');
+          if (isGmail) {
+            // Gmail uses complex editor structure - try to focus the actual contenteditable
+            const gmailEditable = container.querySelector('[contenteditable="true"]') || container;
+            if (gmailEditable.focus) {
+              try {
+                gmailEditable.focus({ preventScroll: true });
+              } catch (e) {
+                gmailEditable.focus();
+              }
+            }
+            // Double rAF for deterministic stabilization instead of fixed timeout
+            await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+            console.log('[Content] Gmail focus stabilized with double rAF');
+          }
           
           // Focus the contenteditable container
           if (container.focus) {
@@ -517,7 +524,27 @@ async function replaceSelectedText(originalText, humanizedText) {
           
           // FALLBACK: Search for original text in container and create new range
           const containerText = container.textContent || container.innerText;
-          const startIndex = containerText.indexOf(lastSelection.text);
+          let startIndex = containerText.indexOf(lastSelection.text);
+          
+          // Use context-based search if simple indexOf fails and context is available
+          if (startIndex === -1 && (lastSelection.preContext || lastSelection.postContext)) {
+            console.log('[Content] Using context-based search for text location');
+            let best = { index: -1, score: -1 };
+            let from = 0, pos;
+            while ((pos = containerText.indexOf(lastSelection.text, from)) !== -1) {
+              from = pos + 1;
+              const pre = containerText.slice(Math.max(0, pos - 20), pos);
+              const post = containerText.slice(pos + lastSelection.text.length, pos + lastSelection.text.length + 20);
+              let score = 0;
+              if (lastSelection.preContext && pre.endsWith(lastSelection.preContext)) score += 1;
+              if (lastSelection.postContext && post.startsWith(lastSelection.postContext)) score += 1;
+              if (score > best.score) best = { index: pos, score };
+            }
+            if (best.index !== -1) {
+              startIndex = best.index;
+              console.log('[Content] Context-based search found text at index', startIndex, 'with score', best.score);
+            }
+          }
           
           if (startIndex === -1) {
             console.warn('[Content] Original text not found in container - text may have changed');
@@ -572,27 +599,10 @@ async function replaceSelectedText(originalText, humanizedText) {
           }
         }
         
-// At this point we have a valid activeRange and selection
-// Gmail-specific: Try insertHTML first (more reliable)
-if (isGmail) {
-  const htmlSuccess = document.execCommand('insertHTML', false, humanizedText);
-  if (htmlSuccess) {
-    console.log('[Content] Gmail insertHTML succeeded');
-    showNotification('Text replaced!', 'success');
-    
-    lastReplacement = {
-      originalText: originalText,
-      humanizedText: humanizedText,
-      container: container,
-      range: activeRange
-    };
-    
-    return true;
-  }
-}
-
-// Try execCommand insertText
-const execSuccess = document.execCommand('insertText', false, humanizedText);
+          // At this point we have a valid activeRange and selection
+          // Try execCommand insertText FIRST (works for most platforms, avoids red text)
+          const execSuccess = document.execCommand('insertText', false, humanizedText);
+          console.log('[Content] execCommand insertText result:', execSuccess);
         
   if (execSuccess) {
     console.log('[Content] execCommand succeeded');
@@ -608,55 +618,69 @@ const execSuccess = document.execCommand('insertText', false, humanizedText);
     return true;
   }
         
-        // If execCommand failed, manually replace
-        console.log('[Content] execCommand failed, trying manual replacement');
-        
-if (sel.rangeCount > 0) {
-  const currentRange = sel.getRangeAt(0);
-  currentRange.deleteContents();
-  
-  // Gmail: Insert raw text node to avoid red color issue
-  // Other sites: Wrap in span for color inheritance
-  if (isGmail) {
-    const textNode = document.createTextNode(humanizedText);
-    currentRange.insertNode(textNode);
-  } else {
-    const span = document.createElement('span');
-    span.style.cssText = 'color: inherit !important; font-family: inherit !important;';
-    const textNode = document.createTextNode(humanizedText);
-    span.appendChild(textNode);
-    currentRange.insertNode(span);
-  }
+          // If execCommand failed, try manual replacement
+          console.log('[Content] execCommand failed, trying manual replacement');
           
-  // Move caret to end of inserted text
-  const insertedNode = isGmail ? currentRange.endContainer : currentRange.endContainer.lastChild;
-  if (insertedNode) {
-    currentRange.setStartAfter(insertedNode);
-    currentRange.setEndAfter(insertedNode);
-    sel.removeAllRanges();
-    sel.addRange(currentRange);
-  }
+          if (sel.rangeCount > 0) {
+            const currentRange = sel.getRangeAt(0);
+            currentRange.deleteContents();
+            
+            // Gmail: Insert raw text node to avoid red color issue
+            // Other sites: Wrap in span for color inheritance
+            let insertedNode;
+            if (isGmail) {
+              insertedNode = document.createTextNode(humanizedText);
+              currentRange.insertNode(insertedNode);
+            } else {
+              const span = document.createElement('span');
+              span.style.cssText = 'color: inherit !important; font-family: inherit !important;';
+              span.appendChild(document.createTextNode(humanizedText));
+              insertedNode = span;
+              currentRange.insertNode(span);
+            }
+            
+            // Robust caret placement: move caret directly after the inserted node
+            currentRange.setStartAfter(insertedNode);
+            currentRange.setEndAfter(insertedNode);
+            sel.removeAllRanges();
+            sel.addRange(currentRange);
+            
+            // Dispatch input events
+            container.dispatchEvent(new Event('input', { bubbles: true }));
+            container.dispatchEvent(new Event('change', { bubbles: true }));
+            container.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+            
+            console.log('[Content] Manual replacement succeeded');
+            showNotification('Text replaced!', 'success');
+            
+            lastReplacement = {
+              originalText: originalText,
+              humanizedText: humanizedText,
+              container: container,
+              range: activeRange
+            };
+            
+            return true;
+          }
           
-          // Dispatch input events
-          container.dispatchEvent(new Event('input', { bubbles: true }));
-          container.dispatchEvent(new Event('change', { bubbles: true }));
-          container.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
-          
-  console.log('[Content] Manual replacement succeeded');
-  showNotification('Text replaced!', 'success');
-  
-  lastReplacement = {
-    originalText: originalText,
-    humanizedText: humanizedText,
-    container: container,
-    range: activeRange
-  };
-  
-  return true;
-        } else {
-          console.warn('[Content] No valid range after execCommand failed');
-          throw new Error('No valid range for manual replacement');
-        }
+          // Last resort: try insertHTML (may cause red text in Gmail)
+          console.log('[Content] Manual replacement failed, trying insertHTML as last resort');
+          const htmlSuccess = document.execCommand('insertHTML', false, humanizedText);
+          if (htmlSuccess) {
+            console.log('[Content] insertHTML succeeded (last resort)');
+            showNotification('Text replaced!', 'success');
+            
+            lastReplacement = {
+              originalText: originalText,
+              humanizedText: humanizedText,
+              container: container,
+              range: activeRange
+            };
+            
+            return true;
+          }
+          console.warn('[Content] All replacement methods failed');
+          throw new Error('All replacement methods failed');
         }
         
       } catch (e) {
@@ -1173,7 +1197,32 @@ function showResult(originalText, humanizedText) {
         };
       }
     } else {
-      closeDialog();
+      // Replacement failed - show helpful message and don't close dialog
+      try { 
+        navigator.clipboard.writeText(humanizedText); 
+        console.log('[Content] Text copied to clipboard after failed replacement');
+      } catch (e) {
+        console.warn('[Content] Failed to copy to clipboard:', e);
+      }
+      
+      currentDialog.innerHTML = `
+        <div style="color: #F59E0B; font-weight: 600; font-size: 13px;">⚠ Couldn't auto-replace</div>
+        <div style="font-size: 12px; color: #D1D5DB; line-height: 1.5; margin-top: 4px;">
+          The text was copied. Click your editor and press <strong>Ctrl/Cmd+V</strong> to paste.
+        </div>
+        <div style="display: flex; gap: 6px; margin-top: 8px;">
+          <button id="sapienwrite-copy-again" style="flex: 1; padding: 8px; background: #2563EB; color: #fff; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer;">Copy again</button>
+          <button id="sapienwrite-close-final" style="flex: 1; padding: 8px; background: #374151; color: #E5E7EB; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer;">Close</button>
+        </div>
+      `;
+      
+      const copyBtn = document.getElementById('sapienwrite-copy-again');
+      const closeBtn = document.getElementById('sapienwrite-close-final');
+      if (copyBtn) copyBtn.onclick = () => {
+        navigator.clipboard.writeText(humanizedText);
+        showNotification('✓ Copied to clipboard', 'success');
+      };
+      if (closeBtn) closeBtn.onclick = closeDialog;
     }
   };
   
