@@ -942,13 +942,12 @@ async function replaceSelectedText(originalText, humanizedText) {
               range: activeRange
             };
             
-            return true;
-          }
-          console.warn('[Content] All replacement methods failed');
-          throw new Error('All replacement methods failed');
+          return true;
         }
-        
-      } catch (e) {
+        console.warn('[Content] All replacement methods failed');
+        throw new Error('All replacement methods failed');
+      
+    } catch (e) {
         console.log('[Content] ContentEditable replacement failed:', e.message);
       }
     }
