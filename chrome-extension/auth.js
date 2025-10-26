@@ -1,9 +1,13 @@
 // Authentication Helper Functions - Simple and Reliable
 // Uses ONLY chrome.storage.local for guaranteed reliability
 
-// Supabase Configuration
-const SUPABASE_URL = "https://nycrxoppbsakpkkeiqzb.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55Y3J4b3BwYnNha3Bra2VpcXpiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg4Nzc2NDMsImV4cCI6MjA3NDQ1MzY0M30.On7TSxxCpJT868Kygk1PgfUACyPodjx78G5lKxejt74";
+// Supabase Configuration (pulled from config.js; fallback only)
+if (typeof SUPABASE_URL === 'undefined') {
+  var SUPABASE_URL = "https://nycrxoppbsakpkkeiqzb.supabase.co";
+}
+if (typeof SUPABASE_ANON_KEY === 'undefined') {
+  var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55Y3J4b3BwYnNha3Bra2VpcXpiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg4Nzc2NDMsImV4cCI6MjA3NDQ1MzY0M30.On7TSxxCpJT868Kygk1PgfUACyPodjx78G5lKxejt74";
+}
 
 // Refresh token locking to prevent concurrent refresh attempts
 let refreshPromise = null;
