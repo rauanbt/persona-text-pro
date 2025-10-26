@@ -607,9 +607,9 @@ async function replaceSelectedText(originalText, humanizedText) {
         });
         
         const range = lastSelection.range;
+        const isGmail = window.location.hostname.includes('mail.google.com');
           
           // Gmail-specific: Re-focus composer and stabilize selection
-          const isGmail = window.location.hostname.includes('mail.google.com');
           if (isGmail) {
             // Gmail uses complex editor structure - try to focus the actual contenteditable
             const gmailEditable = container.querySelector('[contenteditable="true"]') || container;
@@ -623,14 +623,14 @@ async function replaceSelectedText(originalText, humanizedText) {
             // Double rAF for deterministic stabilization instead of fixed timeout
             await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
             console.log('[Content] Gmail focus stabilized with double rAF');
-          }
-          
-          // Focus the contenteditable container
-          if (container.focus) {
-            try {
-              container.focus({ preventScroll: true });
-            } catch (e) {
-              container.focus();
+          } else {
+            // Focus the contenteditable container for non-Gmail
+            if (container.focus) {
+              try {
+                container.focus({ preventScroll: true });
+              } catch (e) {
+                container.focus();
+              }
             }
           }
         
@@ -803,17 +803,17 @@ async function replaceSelectedText(originalText, humanizedText) {
           }
 
           // At this point we have a valid activeRange and selection
-          // Detect Gmail multiline and use HTML path first for multi-paragraph
           const isMultiline = /\n/.test(humanizedText) || /\n/.test(lastSelection?.text || '');
           
-          if (isGmail && isMultiline) {
-            console.log('[Content] Gmail multiline path chosen - using insertHTML');
-            const html = textToGmailHTML(humanizedText);
+          // GMAIL: Always try insertHTML first (works reliably for both single and multi-line)
+          if (isGmail) {
+            console.log('[Content] Gmail path: trying insertHTML', { isMultiline });
+            const html = isMultiline ? textToGmailHTML(humanizedText) : escapeHTML(humanizedText);
             const htmlSuccess = document.execCommand('insertHTML', false, html);
-            console.log('[Content] Gmail multiline insertHTML result:', htmlSuccess);
+            console.log('[Content] Gmail insertHTML result:', htmlSuccess);
             
             if (htmlSuccess) {
-              console.log('[Content] ✓ Success path: Gmail multiline insertHTML');
+              console.log('[Content] ✓ Success: Gmail insertHTML');
               showNotification('Text replaced!', 'success');
               
               lastReplacement = {
@@ -824,10 +824,12 @@ async function replaceSelectedText(originalText, humanizedText) {
               };
               
               return true;
+            } else {
+              console.log('[Content] Gmail insertHTML failed, trying fallback methods');
             }
           }
           
-          // Prefer modern beforeinput path first
+          // Prefer modern beforeinput path for non-Gmail
           let beforeInputHandled = false;
           try {
             const ev = new InputEvent('beforeinput', {
@@ -1379,11 +1381,16 @@ function showResult(originalText, humanizedText) {
   
   safeAppendToBody(dialog);
   console.log('[Content] Result dialog rendered');
+  
+  const isGmail = window.location.hostname.includes('mail.google.com');
+  let replaceTriggered = false; // Prevent double execution
+  
   const replaceBtn = document.getElementById('sapienwrite-replace');
   if (replaceBtn) {
     replaceBtn.onmousedown = (e) => {
       e.preventDefault();
       e.stopPropagation();
+      
       try {
         const sel = window.getSelection();
         if (sel && sel.rangeCount > 0) {
@@ -1394,11 +1401,97 @@ function showResult(originalText, humanizedText) {
             container = container.parentElement;
           }
           lastSelection = { ...(lastSelection || {}), text: sel.toString(), range: r, container };
+          console.log('[Content] Selection captured on mousedown');
         }
-      } catch {}
+      } catch (err) {
+        console.warn('[Content] Failed to capture selection on mousedown:', err);
+      }
+      
+      // For Gmail: trigger replacement immediately on mousedown to preserve selection
+      if (isGmail && !replaceTriggered) {
+        replaceTriggered = true;
+        console.log('[Content] Gmail: triggering replacement on mousedown');
+        requestAnimationFrame(async () => {
+          const replaced = await replaceSelectedText(originalText, humanizedText);
+          
+          // Check if dialog still exists before updating
+          const currentDialog = document.getElementById('sapienwrite-dialog');
+          if (!currentDialog) {
+            console.warn('[Content] Dialog was removed, cannot show success UI');
+            return;
+          }
+          
+          if (replaced) {
+            currentDialog.innerHTML = `
+              <div style="color: #10B981; font-weight: 600; font-size: 13px;">✓ Text replaced!</div>
+              <div style="display: flex; gap: 6px; margin-top: 6px;">
+                <button id="sapienwrite-restore" style="flex: 1 !important; padding: 8px !important; background: #F59E0B !important; color: #fff !important; border: none !important; border-radius: 8px !important; font-size: 12px !important; font-weight: 600 !important; cursor: pointer !important; min-width: 80px !important; white-space: nowrap !important;">↶ Restore (15s)</button>
+                <button id="sapienwrite-close-final" style="flex: 1 !important; padding: 8px !important; background: #374151 !important; color: #E5E7EB !important; border: none !important; border-radius: 8px !important; font-size: 12px !important; font-weight: 600 !important; cursor: pointer !important; min-width: 80px !important; white-space: nowrap !important;">Close</button>
+              </div>
+            `;
+            
+            const restoreBtn = document.getElementById('sapienwrite-restore');
+            const closeBtn = document.getElementById('sapienwrite-close-final');
+            
+            if (restoreBtn) restoreBtn.onclick = async () => { await restoreOriginalText(); closeDialog(); };
+            if (closeBtn) closeBtn.onclick = closeDialog;
+            
+            let remainingSeconds = 15;
+            const countdownInterval = setInterval(() => {
+              remainingSeconds--;
+              const restoreBtn = document.getElementById('sapienwrite-restore');
+              if (restoreBtn && remainingSeconds > 0) {
+                restoreBtn.textContent = `↶ Restore (${remainingSeconds}s)`;
+              } else {
+                clearInterval(countdownInterval);
+                if (remainingSeconds <= 0) closeDialog();
+              }
+            }, 1000);
+            
+            if (closeBtn) {
+              closeBtn.onclick = () => {
+                clearInterval(countdownInterval);
+                closeDialog();
+              };
+            }
+          } else {
+            try { 
+              navigator.clipboard.writeText(humanizedText); 
+              console.log('[Content] Text copied to clipboard after failed replacement');
+            } catch (e) {
+              console.warn('[Content] Failed to copy to clipboard:', e);
+            }
+            
+            currentDialog.innerHTML = `
+              <div style="color: #F59E0B; font-weight: 600; font-size: 13px;">⚠ Couldn't auto-replace</div>
+              <div style="font-size: 12px; color: #D1D5DB; line-height: 1.5; margin-top: 4px;">
+                The text was copied. Click your editor and press <strong>Ctrl/Cmd+V</strong> to paste.
+              </div>
+              <div style="display: flex; gap: 6px; margin-top: 8px;">
+                <button id="sapienwrite-copy-again" style="flex: 1; padding: 8px; background: #2563EB; color: #fff; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer;">Copy again</button>
+                <button id="sapienwrite-close-final" style="flex: 1; padding: 8px; background: #374151; color: #E5E7EB; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer;">Close</button>
+              </div>
+            `;
+            
+            const copyBtn = document.getElementById('sapienwrite-copy-again');
+            const closeBtn = document.getElementById('sapienwrite-close-final');
+            if (copyBtn) copyBtn.onclick = () => {
+              navigator.clipboard.writeText(humanizedText);
+              showNotification('✓ Copied to clipboard', 'success');
+            };
+            if (closeBtn) closeBtn.onclick = closeDialog;
+          }
+        });
+      }
     };
   }
+  
   document.getElementById('sapienwrite-replace').onclick = async () => {
+    // Skip if already triggered on mousedown (Gmail)
+    if (replaceTriggered) {
+      console.log('[Content] Replacement already triggered on mousedown, skipping onclick');
+      return;
+    }
     const replaced = await replaceSelectedText(originalText, humanizedText);
     
     // Check if dialog still exists before updating
