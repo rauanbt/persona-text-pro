@@ -1270,6 +1270,24 @@ function closeDialog(opts = {}) {
 
 let currentMarkerId = null; // Store markerId globally for use across functions
 
+// Helper to check if a token exists in the DOM
+function tokenExists(markerId) {
+  if (!markerId) return false;
+  const tokenText = `⟦SW:${markerId}⟧`;
+  const walker = document.createTreeWalker(
+    document.body,
+    NodeFilter.SHOW_TEXT,
+    null
+  );
+  let node;
+  while (node = walker.nextNode()) {
+    if (node.nodeValue && node.nodeValue.includes(tokenText)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function showProcessing() {
   console.log('[Content] 🎬 showProcessing() CALLED');
   
@@ -1350,14 +1368,20 @@ function getWordDiff(original, humanized) {
 }
 
 function showResult(originalText, humanizedText, receivedMarkerId = null) {
-  // Use currentMarkerId from showProcessing if no markerId was passed
-  const markerId = receivedMarkerId || currentMarkerId;
+  // Build list of candidate marker IDs to try
+  const candidates = Array.from(new Set([receivedMarkerId, currentMarkerId].filter(Boolean)));
+  
+  // Sort so that tokens that exist in DOM are tried first
+  const orderedCandidates = candidates.sort((a, b) => {
+    return Number(tokenExists(b)) - Number(tokenExists(a));
+  });
   
   const isGmail = window.location.hostname.includes('mail.google.com');
   console.log('[Gmail Debug] showResult start', { 
-    markerId, 
     receivedMarkerId,
     currentMarkerId,
+    candidates: orderedCandidates,
+    tokensFound: orderedCandidates.map(id => ({ id, exists: tokenExists(id) })),
     isGmail,
     hasHumanizedText: !!humanizedText,
     textLength: humanizedText?.length 
@@ -1447,15 +1471,18 @@ function showResult(originalText, humanizedText, receivedMarkerId = null) {
         replaceTriggered = true;
         console.log('[Gmail Debug] Gmail path triggered on mousedown');
         requestAnimationFrame(async () => {
-          // Force marker-based replacement for Gmail
+          // Try each candidate token until one succeeds
           let replaced = false;
-          if (markerId) {
-            console.log('[Gmail Debug] Using marker-based replacement exclusively');
-            replaced = await replaceByMarker(markerId, humanizedText);
-            console.log('[Gmail Debug] replaceByMarker returned:', replaced);
+          for (const candidateId of orderedCandidates) {
+            if (candidateId) {
+              console.log('[Gmail Debug] Attempting marker-based replacement with:', candidateId);
+              replaced = await replaceByMarker(candidateId, humanizedText);
+              console.log('[Gmail Debug] Marker replacement result:', replaced);
+              if (replaced) break;
+            }
           }
           
-          // Fallback to regular replacement if marker failed
+          // Fallback to regular replacement if all marker attempts failed
           if (!replaced) {
             console.log('[Gmail Debug] Gmail marker failed, fallback triggered');
             replaced = await replaceSelectedText(originalText, humanizedText);
@@ -1470,10 +1497,13 @@ function showResult(originalText, humanizedText, receivedMarkerId = null) {
           }
           
           if (replaced) {
-            // Clean up token on successful replacement
-            if (markerId) {
-              cleanupToken(markerId);
-            }
+            // Clean up ALL candidate tokens to prevent leftovers
+            orderedCandidates.forEach(id => {
+              if (id) {
+                cleanupToken(id);
+                console.log('[Gmail Debug] Cleaned up token:', id);
+              }
+            });
             
             currentDialog.innerHTML = `
               <div style="color: #10B981; font-weight: 600; font-size: 13px;">✓ Text replaced!</div>
@@ -1546,15 +1576,20 @@ function showResult(originalText, humanizedText, receivedMarkerId = null) {
       return;
     }
     
-    // Try marker-based replacement first
+    // Try each candidate token until one succeeds
     let replaced = false;
-    if (markerId) {
-      replaced = await replaceByMarker(markerId, humanizedText);
-      console.log('[Content] Marker-based replacement:', replaced);
+    for (const candidateId of orderedCandidates) {
+      if (candidateId) {
+        console.log('[Content] Attempting marker-based replacement with:', candidateId);
+        replaced = await replaceByMarker(candidateId, humanizedText);
+        console.log('[Content] Marker replacement result:', replaced);
+        if (replaced) break;
+      }
     }
     
-    // Fallback to regular replacement if marker failed
+    // Fallback to regular replacement if all marker attempts failed
     if (!replaced) {
+      console.log('[Content] Falling back to text replacement');
       replaced = await replaceSelectedText(originalText, humanizedText);
     }
     
@@ -1566,6 +1601,14 @@ function showResult(originalText, humanizedText, receivedMarkerId = null) {
     }
     
     if (replaced) {
+      // Clean up ALL candidate tokens to prevent leftovers
+      orderedCandidates.forEach(id => {
+        if (id) {
+          cleanupToken(id);
+          console.log('[Content] Cleaned up token:', id);
+        }
+      });
+      
       currentDialog.innerHTML = `
         <div style="color: #10B981; font-weight: 600; font-size: 13px;">✓ Text replaced!</div>
         <div style="display: flex; gap: 6px; margin-top: 6px;">
