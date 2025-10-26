@@ -289,11 +289,17 @@ document.addEventListener('selectionchange', () => {
     
     while (currentNode) {
       if (currentNode.isContentEditable) {
+        // Preserve preContext and postContext from mouseup capture
         lastSelection = {
+          ...lastSelection,
           text: sel.toString(),
           range: range.cloneRange(),
           container: currentNode
         };
+        console.log('[Content] selectionchange preserved context:', { 
+          hasPre: !!lastSelection.preContext, 
+          hasPost: !!lastSelection.postContext 
+        });
         break;
       }
       currentNode = currentNode.parentElement;
@@ -599,8 +605,44 @@ async function replaceSelectedText(originalText, humanizedText) {
           }
         }
         
+          // Helper functions for Gmail HTML conversion
+          function escapeHTML(s) {
+            return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+          }
+          function textToGmailHTML(text) {
+            // Preserve empty lines with <div><br></div>
+            return text.split('\n').map(line => {
+              const content = line.trim().length ? escapeHTML(line) : '<br>';
+              return `<div>${content}</div>`;
+            }).join('');
+          }
+
           // At this point we have a valid activeRange and selection
-          // Try execCommand insertText FIRST (works for most platforms, avoids red text)
+          // Detect Gmail multiline and use HTML path first for multi-paragraph
+          const isMultiline = /\n/.test(humanizedText) || /\n/.test(lastSelection?.text || '');
+          
+          if (isGmail && isMultiline) {
+            console.log('[Content] Gmail multiline path chosen');
+            const html = textToGmailHTML(humanizedText);
+            const htmlSuccess = document.execCommand('insertHTML', false, html);
+            console.log('[Content] Gmail multiline insertHTML result:', htmlSuccess);
+            
+            if (htmlSuccess) {
+              console.log('[Content] Gmail multiline HTML succeeded');
+              showNotification('Text replaced!', 'success');
+              
+              lastReplacement = {
+                originalText: originalText,
+                humanizedText: humanizedText,
+                container: container,
+                range: activeRange
+              };
+              
+              return true;
+            }
+          }
+          
+          // For single-line or if HTML failed: Try execCommand insertText FIRST
           const execSuccess = document.execCommand('insertText', false, humanizedText);
           console.log('[Content] execCommand insertText result:', execSuccess);
         
@@ -621,8 +663,14 @@ async function replaceSelectedText(originalText, humanizedText) {
           // If execCommand failed, try manual replacement
           console.log('[Content] execCommand failed, trying manual replacement');
           
+          // Ensure we have a range in the selection
+          if (sel.rangeCount === 0 && activeRange) {
+            sel.addRange(activeRange);
+            console.log('[Content] Re-applied activeRange for manual replacement');
+          }
+          
           if (sel.rangeCount > 0) {
-            const currentRange = sel.getRangeAt(0);
+            const currentRange = activeRange ? activeRange.cloneRange() : sel.getRangeAt(0);
             currentRange.deleteContents();
             
             // Gmail: Insert raw text node to avoid red color issue
