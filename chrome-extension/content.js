@@ -1255,6 +1255,8 @@ function createDialog(text, wordCount, wordBalance, selectedTone = null) {
 function closeDialog() {
   const dialog = document.getElementById('sapienwrite-dialog');
   if (dialog) dialog.remove();
+  // Cleanup any leftover markers
+  cleanupMarkers();
   // No backdrop needed for compact toast style
 }
 
@@ -1326,8 +1328,8 @@ function getWordDiff(original, humanized) {
   return { removed, added, changePct };
 }
 
-function showResult(originalText, humanizedText) {
-  console.log('[Content] showResult() called');
+function showResult(originalText, humanizedText, markerId = null) {
+  console.log('[Content] showResult() called', { markerId });
   closeDialog(); // Remove any existing dialog
   
   // SANITIZE humanizedText one more time before rendering (final safety)
@@ -1412,7 +1414,17 @@ function showResult(originalText, humanizedText) {
         replaceTriggered = true;
         console.log('[Content] Gmail: triggering replacement on mousedown');
         requestAnimationFrame(async () => {
-          const replaced = await replaceSelectedText(originalText, humanizedText);
+          // Try marker-based replacement first
+          let replaced = false;
+          if (markerId) {
+            replaced = await replaceByMarker(markerId, humanizedText);
+            console.log('[Content] Marker-based replacement:', replaced);
+          }
+          
+          // Fallback to regular replacement if marker failed
+          if (!replaced) {
+            replaced = await replaceSelectedText(originalText, humanizedText);
+          }
           
           // Check if dialog still exists before updating
           const currentDialog = document.getElementById('sapienwrite-dialog');
@@ -1492,7 +1504,18 @@ function showResult(originalText, humanizedText) {
       console.log('[Content] Replacement already triggered on mousedown, skipping onclick');
       return;
     }
-    const replaced = await replaceSelectedText(originalText, humanizedText);
+    
+    // Try marker-based replacement first
+    let replaced = false;
+    if (markerId) {
+      replaced = await replaceByMarker(markerId, humanizedText);
+      console.log('[Content] Marker-based replacement:', replaced);
+    }
+    
+    // Fallback to regular replacement if marker failed
+    if (!replaced) {
+      replaced = await replaceSelectedText(originalText, humanizedText);
+    }
     
     // Check if dialog still exists before updating
     const currentDialog = document.getElementById('sapienwrite-dialog');
@@ -1762,6 +1785,13 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
     return;
   }
   
+  // Mark selection with invisible wrapper (for Gmail reliability)
+  if (message.action === 'markSelection') {
+    const result = markSelection();
+    sendResponse(result);
+    return true;
+  }
+  
   if (message.action === 'showNotification') {
     showNotification(message.message, message.type || 'info');
   }
@@ -1815,7 +1845,7 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
       }
       
       console.log('[Content] Calling showResult()...');
-      showResult(message.originalText, message.humanizedText);
+      showResult(message.originalText, message.humanizedText, message.markerId);
       console.log('[Content] showResult() completed');
     } catch (error) {
       console.error('[Content] ERROR in showResult handler:', error);
@@ -1843,5 +1873,164 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
   sendResponse({ received: true });
 });
 
+// Track active markers for cleanup
+let activeMarkers = new Set();
+
+// Generate unique marker ID
+function generateMarkerId() {
+  return `sw-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+}
+
+// Mark selection with invisible wrapper
+function markSelection() {
+  console.log('[Content] markSelection() called');
+  
+  // INPUT/TEXTAREA: Can't wrap, return null (use existing input path)
+  const activeEl = document.activeElement;
+  if (activeEl?.tagName === 'TEXTAREA' || activeEl?.tagName === 'INPUT') {
+    console.log('[Content] INPUT/TEXTAREA active, skipping marker');
+    return { markerId: null };
+  }
+  
+  // CONTENTEDITABLE: Wrap selection
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0 || !sel.toString().trim()) {
+    console.log('[Content] No valid selection to mark');
+    return { markerId: null };
+  }
+  
+  try {
+    const range = sel.getRangeAt(0);
+    const container = range.commonAncestorContainer;
+    const editable = container.nodeType === 3 ? container.parentElement : container;
+    
+    // Check if we're in contenteditable
+    let currentNode = editable;
+    let isContentEditable = false;
+    while (currentNode) {
+      if (currentNode.isContentEditable) {
+        isContentEditable = true;
+        break;
+      }
+      currentNode = currentNode.parentElement;
+    }
+    
+    if (!isContentEditable) {
+      console.log('[Content] Not in contenteditable, skipping marker');
+      return { markerId: null };
+    }
+    
+    const markerId = generateMarkerId();
+    
+    // Create invisible marker span
+    const marker = document.createElement('span');
+    marker.setAttribute('data-sw-marker', markerId);
+    marker.style.cssText = 'all: unset !important; display: inline !important;';
+    
+    // Wrap selection contents
+    try {
+      const contents = range.extractContents();
+      marker.appendChild(contents);
+      range.insertNode(marker);
+      
+      // Restore selection to be inside the marker
+      const newRange = document.createRange();
+      newRange.selectNodeContents(marker);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+      
+      activeMarkers.add(markerId);
+      console.log('[Content] ✓ Selection marked:', markerId);
+      
+      return { markerId };
+    } catch (e) {
+      console.warn('[Content] Failed to wrap selection:', e.message);
+      return { markerId: null };
+    }
+  } catch (e) {
+    console.error('[Content] markSelection error:', e);
+    return { markerId: null };
+  }
+}
+
+// Replace text using marker
+async function replaceByMarker(markerId, humanizedText) {
+  if (!markerId) return false;
+  
+  console.log('[Content] replaceByMarker:', markerId);
+  
+  // Find marker
+  const marker = document.querySelector(`[data-sw-marker="${markerId}"]`);
+  if (!marker) {
+    console.warn('[Content] Marker not found:', markerId);
+    return false;
+  }
+  
+  try {
+    const isGmail = window.location.hostname.includes('mail.google.com');
+    const isMultiline = /\n/.test(humanizedText);
+    
+    // Find contenteditable container
+    let container = marker;
+    while (container && !container.isContentEditable) {
+      container = container.parentElement;
+    }
+    
+    if (!container) {
+      console.warn('[Content] No contenteditable container found');
+      return false;
+    }
+    
+    // Gmail: Use HTML insertion for multiline, textContent for single-line
+    if (isGmail && isMultiline) {
+      const lines = humanizedText.split('\n');
+      const escapeHTML = (s) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const html = lines.map(line => {
+        const content = line.trim().length ? escapeHTML(line) : '<br>';
+        return `<div>${content}</div>`;
+      }).join('');
+      marker.innerHTML = html;
+    } else {
+      marker.textContent = humanizedText;
+    }
+    
+    // Unwrap marker (replace with its children)
+    const parent = marker.parentNode;
+    while (marker.firstChild) {
+      parent.insertBefore(marker.firstChild, marker);
+    }
+    parent.removeChild(marker);
+    
+    // Dispatch events
+    container.dispatchEvent(new Event('input', { bubbles: true }));
+    container.dispatchEvent(new Event('change', { bubbles: true }));
+    container.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+    
+    activeMarkers.delete(markerId);
+    console.log('[Content] ✓ Marker-based replacement successful');
+    
+    return true;
+  } catch (e) {
+    console.error('[Content] replaceByMarker error:', e);
+    return false;
+  }
+}
+
+// Cleanup leftover markers
+function cleanupMarkers() {
+  activeMarkers.forEach(markerId => {
+    const marker = document.querySelector(`[data-sw-marker="${markerId}"]`);
+    if (marker) {
+      const parent = marker.parentNode;
+      if (parent) {
+        while (marker.firstChild) {
+          parent.insertBefore(marker.firstChild, marker);
+        }
+        parent.removeChild(marker);
+      }
+    }
+  });
+  activeMarkers.clear();
+}
 
 console.log('[Content] SapienWrite ready');
