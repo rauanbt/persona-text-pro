@@ -1237,17 +1237,7 @@ function createDialog(text, wordCount, wordBalance, selectedTone = null) {
   // Event listeners
   document.getElementById('sapienwrite-cancel').onclick = closeDialog;
   
-  let preMarkerId = null;
   const humanizeBtn = document.getElementById('sapienwrite-humanize');
-  humanizeBtn.onmousedown = () => {
-    try {
-      const res = markSelection();
-      preMarkerId = (res && 'markerId' in res) ? res.markerId : null;
-      console.log('[Content] 🏷 preMarkerId assigned on mousedown:', preMarkerId);
-    } catch (e) {
-      console.warn('[Content] markSelection() on mousedown failed:', e);
-    }
-  };
   
   humanizeBtn.onclick = () => {
     const tone = document.getElementById('sapienwrite-tone').value;
@@ -1259,8 +1249,7 @@ function createDialog(text, wordCount, wordBalance, selectedTone = null) {
       action: 'humanizeWithTone',
       text: text,
       tone: tone,
-      toneIntensity: toneIntensity,
-      preMarkerId
+      toneIntensity: toneIntensity
     });
   };
 }
@@ -1279,8 +1268,21 @@ function closeDialog(opts = {}) {
   // No backdrop needed for compact toast style
 }
 
+let currentMarkerId = null; // Store markerId globally for use across functions
+
 function showProcessing() {
   console.log('[Content] 🎬 showProcessing() CALLED');
+  
+  // Insert text token NOW (right before API call)
+  try {
+    const result = markSelection();
+    currentMarkerId = result?.markerId || null;
+    console.log('[Content] 🏷️ Text token inserted:', currentMarkerId);
+  } catch (e) {
+    console.warn('[Content] Failed to insert token:', e);
+    currentMarkerId = null;
+  }
+  
   closeDialog({ preserveMarkers: true }); // Remove any existing dialog first but keep markers
   
   // Create compact dark toast (LinkedIn style)
@@ -1347,10 +1349,15 @@ function getWordDiff(original, humanized) {
   return { removed, added, changePct };
 }
 
-function showResult(originalText, humanizedText, markerId = null) {
+function showResult(originalText, humanizedText, receivedMarkerId = null) {
+  // Use currentMarkerId from showProcessing if no markerId was passed
+  const markerId = receivedMarkerId || currentMarkerId;
+  
   const isGmail = window.location.hostname.includes('mail.google.com');
   console.log('[Gmail Debug] showResult start', { 
     markerId, 
+    receivedMarkerId,
+    currentMarkerId,
     isGmail,
     hasHumanizedText: !!humanizedText,
     textLength: humanizedText?.length 
