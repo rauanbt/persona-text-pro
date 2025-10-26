@@ -307,6 +307,106 @@ document.addEventListener('selectionchange', () => {
   }
 });
 
+// Helper: Normalize text for consistent searching (handle NBSP, zero-width spaces)
+function normalizeForSearch(s) {
+  return (s || '').replace(/\u00A0/g, ' ').replace(/\u200B/g, '');
+}
+
+// Helper: Re-resolve Gmail's contenteditable when container becomes stale
+function resolveEditableContainer(prevContainer, selectionText, preContext, postContext) {
+  console.log('[Content] Resolving editable container', {
+    hasPrev: !!prevContainer,
+    prevInDOM: prevContainer ? document.body.contains(prevContainer) : false,
+    prevEditable: prevContainer ? prevContainer.isContentEditable : false
+  });
+  
+  // 1) Prefer previous container if still valid
+  if (prevContainer && document.body.contains(prevContainer) && prevContainer.isContentEditable) {
+    console.log('[Content] Previous container still valid');
+    return prevContainer;
+  }
+
+  // 2) Gmail-specific selectors
+  const gmailSelector = [
+    'div[aria-label="Message body"][contenteditable="true"]',
+    'div[aria-label="Message Body"][contenteditable="true"]',
+    'div[role="textbox"][contenteditable="true"]',
+    'div[contenteditable="true"][g_editable="true"]'
+  ].join(',');
+
+  // 3) Collect all candidates
+  const candidates = [
+    ...document.querySelectorAll(gmailSelector),
+    ...document.querySelectorAll('[contenteditable="true"]')
+  ].filter(el => {
+    // Exclude our own dialog
+    return el.id !== 'sapienwrite-dialog' && 
+           el.closest('#sapienwrite-dialog') === null &&
+           document.body.contains(el);
+  });
+
+  console.log('[Content] Found candidate editables:', candidates.length);
+
+  if (candidates.length === 0) {
+    console.warn('[Content] No editable candidates found');
+    return prevContainer || null;
+  }
+
+  // 4) Score candidates based on text/context match
+  const normalizedSel = normalizeForSearch(selectionText || '');
+  const normalizedPre = normalizeForSearch(preContext || '');
+  const normalizedPost = normalizeForSearch(postContext || '');
+  
+  let best = { el: null, score: -1 };
+  
+  for (const el of candidates) {
+    const text = (el.textContent || el.innerText || '');
+    const norm = normalizeForSearch(text);
+    let score = 0;
+    
+    // Selection text match
+    if (normalizedSel && norm.includes(normalizedSel)) {
+      score += 2;
+      console.log('[Content] Candidate contains selection text:', el.getAttribute('aria-label') || el.className);
+    }
+    
+    // Pre-context match
+    if (normalizedPre && norm.includes(normalizedPre)) {
+      score += 1;
+      console.log('[Content] Candidate contains pre-context');
+    }
+    
+    // Post-context match
+    if (normalizedPost && norm.includes(normalizedPost)) {
+      score += 1;
+      console.log('[Content] Candidate contains post-context');
+    }
+    
+    // Favor visible/editable nodes
+    const rect = el.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) {
+      score += 0.5;
+    }
+    
+    if (score > best.score) {
+      best = { el, score };
+    }
+  }
+  
+  if (best.el) {
+    console.log('[Content] Best container found with score:', best.score, {
+      tagName: best.el.tagName,
+      ariaLabel: best.el.getAttribute('aria-label'),
+      role: best.el.getAttribute('role'),
+      className: best.el.className
+    });
+  } else {
+    console.warn('[Content] No good candidate found, using first or prev');
+  }
+  
+  return best.el || candidates[0] || prevContainer || null;
+}
+
 // Track selections in INPUT/TEXTAREA
 document.addEventListener('select', (e) => {
   const t = e.target;
@@ -469,24 +569,28 @@ async function replaceSelectedText(originalText, humanizedText) {
     }
     
     // TIER 2: ContentEditable - restore selection and replace
-    if (lastSelection?.range && lastSelection?.container) {
+    if (lastSelection?.range || lastSelection?.container) {
       try {
-        const container = lastSelection.container;
+        // Re-resolve container using helper (handles stale containers)
+        let container = resolveEditableContainer(
+          lastSelection.container,
+          lastSelection.text,
+          lastSelection.preContext,
+          lastSelection.postContext
+        );
         
-        // Verify container is still in DOM
-        if (!document.body.contains(container)) {
-          console.log('[Content] Container no longer in DOM');
-        } else {
-          // VERIFY container is valid (relaxed check for Gmail dynamic DOM)
-          let containerLooksValid = document.body.contains(container) && container.isContentEditable;
-          if (!containerLooksValid) {
-            console.warn('[Content] Container invalid or not contenteditable');
-            showNotification('⚠️ Editor changed. Select again if this fails.', 'info');
-          }
-          // Do not return; proceed with replacement attempts
-          console.log('[Content] Container validation:', { containerLooksValid, isContentEditable: container.isContentEditable });
-          
-          const range = lastSelection.range;
+        if (!container) {
+          console.warn('[Content] No contenteditable container found after resolution');
+          throw new Error('No valid container');
+        }
+        
+        console.log('[Content] Using container:', {
+          tagName: container.tagName,
+          ariaLabel: container.getAttribute('aria-label'),
+          isContentEditable: container.isContentEditable
+        });
+        
+        const range = lastSelection.range;
           
           // Gmail-specific: Re-focus composer and stabilize selection
           const isGmail = window.location.hostname.includes('mail.google.com');
@@ -528,22 +632,34 @@ async function replaceSelectedText(originalText, humanizedText) {
         } catch (e) {
           console.log('[Content] Stored range invalid, searching for text instead');
           
-          // FALLBACK: Search for original text in container and create new range
-          const containerText = container.textContent || container.innerText;
-          let startIndex = containerText.indexOf(lastSelection.text);
+          // FALLBACK: Search for original text in container with normalization
+          const rawContainerText = container.textContent || container.innerText || '';
+          const containerText = normalizeForSearch(rawContainerText);
+          const normalizedSelText = normalizeForSearch(lastSelection.text);
+          
+          console.log('[Content] Searching for text:', {
+            containerLength: containerText.length,
+            selectionLength: normalizedSelText.length,
+            containerPreview: containerText.substring(0, 100)
+          });
+          
+          let startIndex = containerText.indexOf(normalizedSelText);
           
           // Use context-based search if simple indexOf fails and context is available
           if (startIndex === -1 && (lastSelection.preContext || lastSelection.postContext)) {
             console.log('[Content] Using context-based search for text location');
+            const normalizedPre = normalizeForSearch(lastSelection.preContext || '');
+            const normalizedPost = normalizeForSearch(lastSelection.postContext || '');
+            
             let best = { index: -1, score: -1 };
             let from = 0, pos;
-            while ((pos = containerText.indexOf(lastSelection.text, from)) !== -1) {
+            while ((pos = containerText.indexOf(normalizedSelText, from)) !== -1) {
               from = pos + 1;
               const pre = containerText.slice(Math.max(0, pos - 20), pos);
-              const post = containerText.slice(pos + lastSelection.text.length, pos + lastSelection.text.length + 20);
+              const post = containerText.slice(pos + normalizedSelText.length, pos + normalizedSelText.length + 20);
               let score = 0;
-              if (lastSelection.preContext && pre.endsWith(lastSelection.preContext)) score += 1;
-              if (lastSelection.postContext && post.startsWith(lastSelection.postContext)) score += 1;
+              if (normalizedPre && pre.endsWith(normalizedPre)) score += 1;
+              if (normalizedPost && post.startsWith(normalizedPost)) score += 1;
               if (score > best.score) best = { index: pos, score };
             }
             if (best.index !== -1) {
@@ -552,11 +668,34 @@ async function replaceSelectedText(originalText, humanizedText) {
             }
           }
           
+          // If still not found, search across all editable candidates
           if (startIndex === -1) {
-            console.warn('[Content] Original text not found in container - text may have changed');
-            // Don't continue to execCommand - go straight to next tier
+            console.log('[Content] Text not found in current container, searching other editables');
+            const candidates = [
+              ...document.querySelectorAll('[contenteditable="true"]')
+            ].filter(el => el.id !== 'sapienwrite-dialog' && el.closest('#sapienwrite-dialog') === null);
+            
+            for (const candidate of candidates) {
+              const candidateText = normalizeForSearch(candidate.textContent || candidate.innerText || '');
+              const idx = candidateText.indexOf(normalizedSelText);
+              if (idx !== -1) {
+                console.log('[Content] Found text in alternative container:', {
+                  tagName: candidate.tagName,
+                  ariaLabel: candidate.getAttribute('aria-label')
+                });
+                container = candidate;
+                startIndex = idx;
+                break;
+              }
+            }
+          }
+          
+          if (startIndex === -1) {
+            console.warn('[Content] Original text not found in any container - text may have changed');
             throw new Error('Text not found in container');
           }
+          
+          console.log('[Content] Text found at index:', startIndex);
           
           // Create new range by walking the DOM
           const newRange = document.createRange();
@@ -575,8 +714,8 @@ async function replaceSelectedText(originalText, humanizedText) {
                 foundStart = true;
               }
               
-              if (foundStart && !foundEnd && charCount + nodeLength >= startIndex + lastSelection.text.length) {
-                newRange.setEnd(node, startIndex + lastSelection.text.length - charCount);
+              if (foundStart && !foundEnd && charCount + nodeLength >= startIndex + normalizedSelText.length) {
+                newRange.setEnd(node, startIndex + normalizedSelText.length - charCount);
                 foundEnd = true;
               }
               
@@ -597,7 +736,17 @@ async function replaceSelectedText(originalText, humanizedText) {
               console.log('[Content] Successfully created and added new range from text search');
             } catch (rangeError) {
               console.warn('[Content] Failed to add new range:', rangeError);
-              throw new Error('Could not create valid range');
+              // Try again after double rAF for Gmail stabilization
+              await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+              try {
+                sel.removeAllRanges();
+                sel.addRange(newRange);
+                activeRange = newRange;
+                console.log('[Content] Range added successfully after stabilization');
+              } catch (retryError) {
+                console.error('[Content] Range add failed even after stabilization:', retryError);
+                throw new Error('Could not create valid range');
+              }
             }
           } else {
             console.warn('[Content] Could not find text boundaries in DOM');
@@ -622,13 +771,13 @@ async function replaceSelectedText(originalText, humanizedText) {
           const isMultiline = /\n/.test(humanizedText) || /\n/.test(lastSelection?.text || '');
           
           if (isGmail && isMultiline) {
-            console.log('[Content] Gmail multiline path chosen');
+            console.log('[Content] Gmail multiline path chosen - using insertHTML');
             const html = textToGmailHTML(humanizedText);
             const htmlSuccess = document.execCommand('insertHTML', false, html);
             console.log('[Content] Gmail multiline insertHTML result:', htmlSuccess);
             
             if (htmlSuccess) {
-              console.log('[Content] Gmail multiline HTML succeeded');
+              console.log('[Content] ✓ Success path: Gmail multiline insertHTML');
               showNotification('Text replaced!', 'success');
               
               lastReplacement = {
@@ -647,7 +796,7 @@ async function replaceSelectedText(originalText, humanizedText) {
           console.log('[Content] execCommand insertText result:', execSuccess);
         
   if (execSuccess) {
-    console.log('[Content] execCommand succeeded');
+    console.log('[Content] ✓ Success path: execCommand insertText');
     showNotification('Text replaced!', 'success');
     
     lastReplacement = {
@@ -698,7 +847,7 @@ async function replaceSelectedText(originalText, humanizedText) {
             container.dispatchEvent(new Event('change', { bubbles: true }));
             container.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
             
-            console.log('[Content] Manual replacement succeeded');
+            console.log('[Content] ✓ Success path: Manual TextNode insertion');
             showNotification('Text replaced!', 'success');
             
             lastReplacement = {
@@ -715,7 +864,7 @@ async function replaceSelectedText(originalText, humanizedText) {
           console.log('[Content] Manual replacement failed, trying insertHTML as last resort');
           const htmlSuccess = document.execCommand('insertHTML', false, humanizedText);
           if (htmlSuccess) {
-            console.log('[Content] insertHTML succeeded (last resort)');
+            console.log('[Content] ✓ Success path: Last resort insertHTML');
             showNotification('Text replaced!', 'success');
             
             lastReplacement = {
