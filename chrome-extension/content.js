@@ -309,7 +309,8 @@ document.addEventListener('selectionchange', () => {
 
 // Helper: Normalize text for consistent searching (handle NBSP, zero-width spaces)
 function normalizeForSearch(s) {
-  return (s || '').replace(/\u00A0/g, ' ').replace(/\u200B/g, '');
+  // Replace NBSP and ZWSP with normal space to preserve length for index mapping
+  return (s || '').replace(/\u00A0/g, ' ').replace(/\u200B/g, ' ');
 }
 
 // Helper: Re-resolve Gmail's contenteditable when container becomes stale
@@ -331,7 +332,8 @@ function resolveEditableContainer(prevContainer, selectionText, preContext, post
     'div[aria-label="Message body"][contenteditable="true"]',
     'div[aria-label="Message Body"][contenteditable="true"]',
     'div[role="textbox"][contenteditable="true"]',
-    'div[contenteditable="true"][g_editable="true"]'
+    'div[contenteditable="true"][g_editable="true"]',
+    '.Am.Al.editable[contenteditable="true"]'
   ].join(',');
 
   // 3) Collect all candidates
@@ -398,7 +400,8 @@ function resolveEditableContainer(prevContainer, selectionText, preContext, post
       tagName: best.el.tagName,
       ariaLabel: best.el.getAttribute('aria-label'),
       role: best.el.getAttribute('role'),
-      className: best.el.className
+      className: best.el.className,
+      id: best.el.id
     });
   } else {
     console.warn('[Content] No good candidate found, using first or prev');
@@ -695,28 +698,48 @@ async function replaceSelectedText(originalText, humanizedText) {
             throw new Error('Text not found in container');
           }
           
-          console.log('[Content] Text found at index:', startIndex);
+          console.log('[Content] Text found at normalized index:', startIndex);
           
-          // Create new range by walking the DOM
+          // Create new range by walking the DOM with length-preserving normalization
           const newRange = document.createRange();
           let charCount = 0;
           let foundStart = false;
           let foundEnd = false;
           
+          // Helper to map normalized offset to raw offset
+          function mapNormalizedOffsetToRaw(rawText, normalizedOffset) {
+            let normCount = 0;
+            for (let i = 0; i < rawText.length; i++) {
+              if (normCount === normalizedOffset) {
+                return i;
+              }
+              normCount += normalizeForSearch(rawText[i]).length;
+            }
+            return rawText.length;
+          }
+          
           function walkTextNodes(node) {
             if (foundEnd) return;
             
             if (node.nodeType === Node.TEXT_NODE) {
-              const nodeLength = node.textContent.length;
+              const rawText = node.textContent || '';
+              const normText = normalizeForSearch(rawText);
+              const nodeLength = normText.length;
               
               if (!foundStart && charCount + nodeLength > startIndex) {
-                newRange.setStart(node, startIndex - charCount);
+                const normalizedOffsetInNode = startIndex - charCount;
+                const rawOffset = mapNormalizedOffsetToRaw(rawText, normalizedOffsetInNode);
+                newRange.setStart(node, rawOffset);
                 foundStart = true;
+                console.log('[Content] Range start set at raw offset:', rawOffset, 'from normalized:', normalizedOffsetInNode);
               }
               
               if (foundStart && !foundEnd && charCount + nodeLength >= startIndex + normalizedSelText.length) {
-                newRange.setEnd(node, startIndex + normalizedSelText.length - charCount);
+                const normalizedOffsetInNode = startIndex + normalizedSelText.length - charCount;
+                const rawOffset = mapNormalizedOffsetToRaw(rawText, normalizedOffsetInNode);
+                newRange.setEnd(node, rawOffset);
                 foundEnd = true;
+                console.log('[Content] Range end set at raw offset:', rawOffset, 'from normalized:', normalizedOffsetInNode);
               }
               
               charCount += nodeLength;
@@ -733,18 +756,18 @@ async function replaceSelectedText(originalText, humanizedText) {
             try {
               sel.addRange(newRange);
               activeRange = newRange;
-              console.log('[Content] Successfully created and added new range from text search');
+              console.log('[Content] ✓ Successfully created and added new range from text search');
             } catch (rangeError) {
-              console.warn('[Content] Failed to add new range:', rangeError);
+              console.warn('[Content] Failed to add new range (attempt 1):', rangeError.message);
               // Try again after double rAF for Gmail stabilization
               await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
               try {
                 sel.removeAllRanges();
                 sel.addRange(newRange);
                 activeRange = newRange;
-                console.log('[Content] Range added successfully after stabilization');
+                console.log('[Content] ✓ Range added successfully after double rAF stabilization');
               } catch (retryError) {
-                console.error('[Content] Range add failed even after stabilization:', retryError);
+                console.error('[Content] ✗ Range add failed even after stabilization:', retryError.message);
                 throw new Error('Could not create valid range');
               }
             }
