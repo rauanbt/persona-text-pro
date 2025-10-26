@@ -991,47 +991,15 @@ async function replaceSelectedText(originalText, humanizedText) {
     }
     
     // TIER 4: Clipboard fallback (final resort)
-    console.log('[Content] Auto-replace blocked, using clipboard');
-    closeDialog(); // Close the result dialog before showing clipboard toast
-    navigator.clipboard.writeText(humanizedText).catch(() => {});
+    console.log('[Content] Auto-replace blocked, using clipboard fallback');
+    try {
+      await navigator.clipboard.writeText(humanizedText);
+      console.log('[Content] Text copied to clipboard as fallback');
+    } catch (e) {
+      console.warn('[Content] Clipboard write failed:', e);
+    }
     
-    // Show dark toast notification (matching result dialog style)
-    const toast = document.createElement('div');
-    toast.id = 'sapienwrite-dialog';
-    toast.style.cssText = `
-      all: initial;
-      position: fixed !important;
-      top: 20px !important;
-      right: 20px !important;
-      z-index: 2147483647 !important;
-      background: #111827 !important;
-      color: #F9FAFB !important;
-      padding: 14px !important;
-      border-radius: 10px !important;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.3) !important;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-      font-size: 13px !important;
-      max-width: 350px !important;
-      display: flex !important;
-      flex-direction: row !important;
-      align-items: center !important;
-      gap: 8px !important;
-    `;
-    
-    toast.innerHTML = `
-      <div style="color: #10B981; font-size: 16px;">✓</div>
-      <div style="flex: 1; line-height: 1.4;">Text copied to clipboard - paste manually</div>
-    `;
-    
-    safeAppendToBody(toast);
-    
-    // Auto-close after 3 seconds
-    setTimeout(() => {
-      if (toast.parentNode) {
-        toast.parentNode.removeChild(toast);
-      }
-    }, 3000);
-    
+    // Don't close dialog or show toast here - let the caller handle UI
     return false;
     
   } catch (error) {
