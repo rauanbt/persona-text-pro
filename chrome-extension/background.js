@@ -683,7 +683,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   // Try to get structured text from content script first
   console.log('[Background] Requesting structured text from content...');
   try {
-    const response = await chrome.tabs.sendMessage(tab.id, { action: 'getLastSelection' });
+    const response = await chrome.tabs.sendMessage(tab.id, { action: 'getLastSelection' }, Number.isInteger(info.frameId) ? { frameId: info.frameId } : undefined);
     if (response?.text) {
       selectedText = response.text;
       console.log('[Background] Got structured text from content:', selectedText.substring(0, 100));
@@ -700,10 +700,10 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   
   if (!selectedText || !selectedText.trim()) {
     console.log('[Background] ❌ No text selected, aborting');
-    await broadcastToAllFrames(tab.id, {
+    await safeSendMessage(tab.id, {
       action: 'showError',
       message: 'No text selected. Please select text and try again.'
-    });
+    }, Number.isInteger(info.frameId) ? { frameId: info.frameId } : {});
     return;
   }
   
@@ -711,7 +711,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   
   // STEP 2: Show spinner INSTANTLY
   console.log('[Background] 🎬 Showing spinner NOW');
-  await broadcastToAllFrames(tab.id, { action: 'showProcessing' });
+  await safeSendMessage(tab.id, { action: 'showProcessing' }, Number.isInteger(info.frameId) ? { frameId: info.frameId } : {});
   const ack = await waitForProcessingAck(tab.id, 500);
   if (!ack) {
     console.log('[Background] No processingAck received, injecting fallback spinner');
@@ -726,7 +726,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     'strong',
     true,
     tab.id,
-    undefined
+    info.frameId
   );
   
   console.log('[Background] ========= TONE HANDLER COMPLETE =========');
