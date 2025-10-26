@@ -2,7 +2,18 @@
 
 console.log('[Background] Service worker initialized');
 
-self.importScripts('config.js', 'auth.js');
+// Load configuration with fallback
+try {
+  self.importScripts('config.js');
+} catch (e) {
+  console.error('[Background] Failed to load config.js:', e);
+  // Last-resort fallback so the worker can still start
+  self.SUPABASE_URL = self.SUPABASE_URL || "https://nycrxoppbsakpkkeiqzb.supabase.co";
+  self.SUPABASE_ANON_KEY = self.SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55Y3J4b3BwYnNha3Bra2VpcXpiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg4Nzc2NDMsImV4cCI6MjA3NDQ1MzY0M30.On7TSxxCpJT868Kygk1PgfUACyPodjx78G5lKxejt74";
+}
+
+// Load auth helpers (depends on the globals above)
+self.importScripts('auth.js');
 
 // Track in-flight humanize requests to prevent concurrent calls
 const inFlight = new Map(); // key: `${tabId}:${frameId}`, value: AbortController
