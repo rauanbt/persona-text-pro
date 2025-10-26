@@ -1237,7 +1237,19 @@ function createDialog(text, wordCount, wordBalance, selectedTone = null) {
   // Event listeners
   document.getElementById('sapienwrite-cancel').onclick = closeDialog;
   
-  document.getElementById('sapienwrite-humanize').onclick = () => {
+  let preMarkerId = null;
+  const humanizeBtn = document.getElementById('sapienwrite-humanize');
+  humanizeBtn.onmousedown = () => {
+    try {
+      const res = markSelection();
+      preMarkerId = (res && 'markerId' in res) ? res.markerId : null;
+      console.log('[Content] 🏷 preMarkerId assigned on mousedown:', preMarkerId);
+    } catch (e) {
+      console.warn('[Content] markSelection() on mousedown failed:', e);
+    }
+  };
+  
+  humanizeBtn.onclick = () => {
     const tone = document.getElementById('sapienwrite-tone').value;
     const toneIntensity = document.getElementById('sapienwrite-tone-intensity')?.value || 'strong';
     selectedTone = tone;
@@ -1247,7 +1259,8 @@ function createDialog(text, wordCount, wordBalance, selectedTone = null) {
       action: 'humanizeWithTone',
       text: text,
       tone: tone,
-      toneIntensity: toneIntensity
+      toneIntensity: toneIntensity,
+      preMarkerId
     });
   };
 }

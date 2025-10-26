@@ -852,21 +852,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         const forceRewrite = message.forceRewrite !== undefined ? message.forceRewrite : true;
         console.log('[Background] ✅ TONE SELECTED:', message.tone, mappedTone !== message.tone ? `→ ${mappedTone}` : '', '| intensity:', intensity, '| force_rewrite:', forceRewrite);
         
-        // Mark selection before processing (critical for Gmail)
-        let markerId = null;
-        try {
-          const markerResp = await chrome.tabs.sendMessage(
-            sender.tab.id,
-            { action: 'markSelection' },
-            { frameId: sender.frameId }
-          );
-          markerId = markerResp?.markerId || null;
-          console.log('[Background] 📍 Selection marked:', markerId ? markerId : 'no marker (input field or no selection)');
-        } catch (e) {
-          console.warn('[Background] ⚠️ Could not mark selection:', e.message);
+        // Prefer preMarkerId from content mousedown; fallback to marking here
+        let markerId = message.preMarkerId ?? null;
+        if (markerId) {
+          console.log('[Background] 📍 Using preMarkerId from content:', markerId);
+        } else {
+          try {
+            const markerResp = await chrome.tabs.sendMessage(
+              sender.tab.id,
+              { action: 'markSelection' },
+              { frameId: sender.frameId }
+            );
+            markerId = markerResp?.markerId || null;
+            console.log('[Background] 📍 Selection marked via fallback:', markerId ? markerId : 'no marker (input field or no selection)');
+          } catch (e) {
+            console.warn('[Background] ⚠️ Could not mark selection via fallback:', e.message);
+          }
         }
         
         // Show processing spinner
+        await safeSendMessage(sender.tab.id, { action: 'showProcessing' }, { frameId: sender.frameId });
+        
         await safeSendMessage(sender.tab.id, { action: 'showProcessing' }, { frameId: sender.frameId });
         
         await handleHumanizeRequest(message.text, mappedTone, intensity, forceRewrite, markerId, sender.tab?.id, sender.frameId);
