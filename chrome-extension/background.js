@@ -290,47 +290,128 @@ async function injectOverlay(tabId, type, payload = {}) {
             replace.style.borderRadius = '8px';
             replace.style.cursor = 'pointer';
             replace.style.fontWeight = '500';
-            replace.addEventListener('click', () => {
+            replace.addEventListener('click', async () => {
+              const original = originalText || '';
+              const text = humanizedText || '';
+              function dispatchAll(el) {
+                if (!el) return;
+                try { el.dispatchEvent(new Event('input', { bubbles: true })); } catch {}
+                try { el.dispatchEvent(new Event('change', { bubbles: true })); } catch {}
+                try { el.dispatchEvent(new Event('keyup', { bubbles: true })); } catch {}
+              }
+              function gmailHtmlFromText(t) {
+                const esc = (s) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                const lines = String(t).split('\n');
+                return lines.map(l => l.length ? `<div>${esc(l)}</div>` : '<div><br></div>').join('');
+              }
+
               let replaced = false;
+
+              // Tier 1: Active input/textarea replacement
               const activeEl = document.activeElement;
               if (activeEl && (activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'INPUT')) {
                 try {
                   const start = activeEl.selectionStart;
                   const end = activeEl.selectionEnd;
-                  if (start !== null && end !== null) {
-                    const currentValue = activeEl.value;
-                    activeEl.value = currentValue.substring(0, start) + humanizedText + currentValue.substring(end);
-                    activeEl.selectionStart = activeEl.selectionEnd = start + humanizedText.length;
-                    activeEl.dispatchEvent(new Event('input', { bubbles: true }));
-                    activeEl.dispatchEvent(new Event('change', { bubbles: true }));
+                  if (start != null && end != null && start !== end) {
+                    const before = activeEl.value.slice(0, start);
+                    const after = activeEl.value.slice(end);
+                    activeEl.value = before + text + after;
+                    const caret = before.length + text.length;
+                    activeEl.selectionStart = activeEl.selectionEnd = caret;
+                    dispatchAll(activeEl);
                     replaced = true;
-                    replace.textContent = '✓ Replaced!';
-                    replace.style.background = '#10B981';
-                    setTimeout(() => { clear(); root.remove(); }, 800);
+                  } else if (typeof activeEl.value === 'string' && original && activeEl.value.includes(original)) {
+                    activeEl.value = activeEl.value.replace(original, text);
+                    dispatchAll(activeEl);
+                    replaced = true;
                   }
                 } catch (e) {}
               }
+
+              // Tier 2: ContentEditable selection replacement
               if (!replaced) {
                 try {
-                  const success = document.execCommand('insertText', false, humanizedText);
-                  if (success) {
-                    replaced = true;
-                    replace.textContent = '✓ Replaced!';
-                    replace.style.background = '#10B981';
-                    setTimeout(() => { clear(); root.remove(); }, 800);
+                  const sel = window.getSelection && window.getSelection();
+                  if (sel && sel.rangeCount > 0) {
+                    const range = sel.getRangeAt(0);
+                    // Gmail multiline handling
+                    if (location.hostname.includes('mail.google.com') && text.includes('\n')) {
+                      try {
+                        const html = gmailHtmlFromText(text);
+                        if (document.execCommand('insertHTML', false, html)) {
+                          replaced = true;
+                        }
+                      } catch (e) {}
+                    }
+                    if (!replaced) {
+                      try {
+                        if (document.execCommand('insertText', false, text)) {
+                          replaced = true;
+                        }
+                      } catch (e) {}
+                    }
+                    if (!replaced) {
+                      try {
+                        range.deleteContents();
+                        const node = document.createTextNode(text);
+                        range.insertNode(node);
+                        range.setStartAfter(node);
+                        range.setEndAfter(node);
+                        sel.removeAllRanges();
+                        sel.addRange(range);
+                        replaced = true;
+                      } catch (e) {}
+                    }
                   }
                 } catch (e) {}
               }
-              if (!replaced) {
-                navigator.clipboard.writeText(humanizedText || '').then(() => {
-                  replace.textContent = '✓ Copied!';
-                  replace.style.background = '#10B981';
-                  setTimeout(() => { clear(); root.remove(); }, 1500);
-                }).catch(() => {
-                  replace.textContent = '✗ Failed';
-                  replace.style.background = '#EF4444';
-                });
+
+              if (replaced) {
+                replace.textContent = '✓ Replaced!';
+                replace.style.background = '#10B981';
+                setTimeout(() => { clear(); root.remove(); }, 800);
+                return;
               }
+
+              // Tier 3: Clipboard fallback with clear instructions UI
+              try { await navigator.clipboard.writeText(text); } catch (e) {}
+
+              // Replace overlay content with guidance instead of changing button to "Copied!"
+              el.innerHTML = '';
+              const msg = document.createElement('div');
+              msg.style.lineHeight = '1.5';
+              msg.innerHTML = '<strong>⚠ Couldn\'t auto-replace</strong><br>The text was copied. Click your editor and press Ctrl/Cmd+V to paste.';
+
+              const actions2 = document.createElement('div');
+              actions2.style.display = 'flex';
+              actions2.style.gap = '8px';
+              actions2.style.marginTop = '8px';
+
+              const copyAgain = document.createElement('button');
+              copyAgain.textContent = 'Copy again';
+              copyAgain.style.background = '#2563EB';
+              copyAgain.style.color = '#fff';
+              copyAgain.style.border = '0';
+              copyAgain.style.padding = '8px 10px';
+              copyAgain.style.borderRadius = '8px';
+              copyAgain.style.cursor = 'pointer';
+              copyAgain.onclick = async () => { try { await navigator.clipboard.writeText(text); copyAgain.textContent = 'Copied!'; } catch {} };
+
+              const closeBtn = document.createElement('button');
+              closeBtn.textContent = 'Close';
+              closeBtn.style.background = '#374151';
+              closeBtn.style.color = '#E5E7EB';
+              closeBtn.style.border = '0';
+              closeBtn.style.padding = '8px 10px';
+              closeBtn.style.borderRadius = '8px';
+              closeBtn.style.cursor = 'pointer';
+              closeBtn.onclick = () => { clear(); root.remove(); };
+
+              actions2.appendChild(copyAgain);
+              actions2.appendChild(closeBtn);
+              el.appendChild(msg);
+              el.appendChild(actions2);
             });
             
             const copy = document.createElement('button');
@@ -1040,7 +1121,15 @@ async function handleHumanizeRequest(text, tone, toneIntensity, forceRewrite, ta
     };
     
     console.log('[Background] Sending message:', resultMessage);
-    const delivered = await safeSendMessage(tabId, resultMessage, Number.isInteger(frameId) ? { frameId } : {});
+    let delivered = await safeSendMessage(tabId, resultMessage, Number.isInteger(frameId) ? { frameId } : {});
+    if (!delivered) {
+      await new Promise(r => setTimeout(r, 200));
+      delivered = await safeSendMessage(tabId, resultMessage, Number.isInteger(frameId) ? { frameId } : {});
+    }
+    if (!delivered) {
+      await new Promise(r => setTimeout(r, 200));
+      delivered = await safeSendMessage(tabId, resultMessage, Number.isInteger(frameId) ? { frameId } : {});
+    }
     if (!delivered) {
       await injectOverlay(tabId, 'result', { originalText: text, humanizedText: humanizedText });
     }
