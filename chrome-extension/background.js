@@ -873,8 +873,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         // Show processing spinner
         await safeSendMessage(sender.tab.id, { action: 'showProcessing' }, { frameId: sender.frameId });
         
-        await safeSendMessage(sender.tab.id, { action: 'showProcessing' }, { frameId: sender.frameId });
-        
         await handleHumanizeRequest(message.text, mappedTone, intensity, forceRewrite, markerId, sender.tab?.id, sender.frameId);
         sendResponse({ success: true });
       } catch (error) {

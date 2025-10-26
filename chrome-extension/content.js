@@ -161,6 +161,7 @@ let lastReplacement = null; // Track last replacement for undo
 let lastInputSelection = null; // { element, start, end, valueSnapshot }
 let selectedTone = 'regular'; // Track currently selected tone for display
 let selectedToneIntensity = 'strong'; // Track selected tone intensity
+let savedCaretPosition = null; // Gmail: store caret before marking
 
 // DOM-based structured text extraction (preserves paragraphs)
 function extractStructuredText() {
@@ -1344,7 +1345,13 @@ function getWordDiff(original, humanized) {
 }
 
 function showResult(originalText, humanizedText, markerId = null) {
-  console.log('[Content] showResult() called', { markerId });
+  const isGmail = window.location.hostname.includes('mail.google.com');
+  console.log('[Gmail Debug] showResult start', { 
+    markerId, 
+    isGmail,
+    hasHumanizedText: !!humanizedText,
+    textLength: humanizedText?.length 
+  });
   closeDialog({ preserveMarkers: true }); // Remove any existing dialog but keep markers
   
   // SANITIZE humanizedText one more time before rendering (final safety)
@@ -1397,9 +1404,8 @@ function showResult(originalText, humanizedText, markerId = null) {
   `;
   
   safeAppendToBody(dialog);
-  console.log('[Content] Result dialog rendered');
+  console.log('[Gmail Debug] Result dialog rendered');
   
-  const isGmail = window.location.hostname.includes('mail.google.com');
   let replaceTriggered = false; // Prevent double execution
   
   const replaceBtn = document.getElementById('sapienwrite-replace');
@@ -1407,6 +1413,8 @@ function showResult(originalText, humanizedText, markerId = null) {
     replaceBtn.onmousedown = (e) => {
       e.preventDefault();
       e.stopPropagation();
+      
+      console.log('[Gmail Debug] replaceBtn mousedown fired');
       
       try {
         const sel = window.getSelection();
@@ -1418,27 +1426,30 @@ function showResult(originalText, humanizedText, markerId = null) {
             container = container.parentElement;
           }
           lastSelection = { ...(lastSelection || {}), text: sel.toString(), range: r, container };
-          console.log('[Content] Selection captured on mousedown');
+          console.log('[Gmail Debug] Selection captured on mousedown');
         }
       } catch (err) {
-        console.warn('[Content] Failed to capture selection on mousedown:', err);
+        console.warn('[Gmail Debug] Failed to capture selection on mousedown:', err);
       }
       
       // For Gmail: trigger replacement immediately on mousedown to preserve selection
       if (isGmail && !replaceTriggered) {
         replaceTriggered = true;
-        console.log('[Content] Gmail: triggering replacement on mousedown');
+        console.log('[Gmail Debug] Gmail path triggered on mousedown');
         requestAnimationFrame(async () => {
-          // Try marker-based replacement first
+          // Force marker-based replacement for Gmail
           let replaced = false;
           if (markerId) {
+            console.log('[Gmail Debug] Using marker-based replacement exclusively');
             replaced = await replaceByMarker(markerId, humanizedText);
-            console.log('[Content] Marker-based replacement:', replaced);
+            console.log('[Gmail Debug] replaceByMarker returned:', replaced);
           }
           
           // Fallback to regular replacement if marker failed
           if (!replaced) {
+            console.log('[Gmail Debug] Gmail marker failed, fallback triggered');
             replaced = await replaceSelectedText(originalText, humanizedText);
+            console.log('[Gmail Debug] fallback replaceSelectedText returned:', replaced);
           }
           
           // Check if dialog still exists before updating
@@ -1916,6 +1927,18 @@ function markSelection() {
   
   try {
     const range = sel.getRangeAt(0);
+    
+    // Save caret position BEFORE wrapping (Gmail caret restoration)
+    try {
+      savedCaretPosition = {
+        node: range.startContainer,
+        offset: range.startOffset
+      };
+      console.log('[Gmail Debug] Caret position saved:', savedCaretPosition);
+    } catch (e) {
+      console.warn('[Gmail Debug] Could not save caret position:', e);
+    }
+    
     const container = range.commonAncestorContainer;
     const editable = container.nodeType === 3 ? container.parentElement : container;
     
@@ -1984,18 +2007,20 @@ function markSelection() {
 async function replaceByMarker(markerId, humanizedText) {
   if (!markerId) return false;
   
-  console.log('[Content] replaceByMarker:', markerId);
+  console.log('[Gmail Debug] replaceByMarker start:', markerId);
   
   // Find marker
   const marker = document.querySelector(`[data-sw-marker="${markerId}"]`);
   if (!marker) {
-    console.warn('[Content] Marker not found:', markerId);
+    console.warn('[Gmail Debug] Marker not found for ID:', markerId);
     return false;
   }
   
   try {
     const isGmail = window.location.hostname.includes('mail.google.com');
     const isMultiline = /\n/.test(humanizedText);
+    
+    console.log('[Gmail Debug] isGmail:', isGmail, '| isMultiline:', isMultiline);
     
     // Find contenteditable container
     let container = marker;
@@ -2004,22 +2029,53 @@ async function replaceByMarker(markerId, humanizedText) {
     }
     
     if (!container) {
-      console.warn('[Content] No contenteditable container found');
+      console.warn('[Gmail Debug] No contenteditable container found');
       return false;
     }
     
+    console.log('[Gmail Debug] Container found:', {
+      tagName: container.tagName,
+      ariaLabel: container.getAttribute('aria-label'),
+      textLength: container.textContent.length
+    });
+    
+    // Snapshot text BEFORE replacement for verification
+    const textBeforeReplace = container.textContent || '';
+    console.log('[Gmail Debug] Text before replacement length:', textBeforeReplace.length);
+    
     // Gmail: Use HTML insertion for multiline, textContent for single-line
+    let html;
     if (isGmail && isMultiline) {
       const lines = humanizedText.split('\n');
       const escapeHTML = (s) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-      const html = lines.map(line => {
+      html = lines.map(line => {
         const content = line.trim().length ? escapeHTML(line) : '<br>';
         return `<div>${content}</div>`;
       }).join('');
+      console.log('[Gmail Debug] Inserting multiline HTML');
       marker.innerHTML = html;
     } else {
+      console.log('[Gmail Debug] Inserting textContent');
       marker.textContent = humanizedText;
     }
+    
+    // Gmail Sanitization Protection: MutationObserver
+    let observerTriggered = false;
+    const observer = new MutationObserver((mutations) => {
+      if (!marker.isConnected && !observerTriggered) {
+        observerTriggered = true;
+        console.log('[Gmail Debug] Gmail sanitized marker — retrying insert');
+        const parent = container.querySelector('[contenteditable]') || container;
+        if (parent && html) {
+          const tempSpan = document.createElement('span');
+          tempSpan.innerHTML = html;
+          parent.appendChild(tempSpan);
+          console.log('[Gmail Debug] Retry insert completed');
+        }
+      }
+    });
+    
+    observer.observe(container, { childList: true, subtree: true });
     
     // Unwrap marker (replace with its children)
     const parent = marker.parentNode;
@@ -2028,17 +2084,67 @@ async function replaceByMarker(markerId, humanizedText) {
     }
     parent.removeChild(marker);
     
-    // Dispatch events
-    container.dispatchEvent(new Event('input', { bubbles: true }));
-    container.dispatchEvent(new Event('change', { bubbles: true }));
-    container.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+    console.log('[Gmail Debug] Marker unwrapped');
+    
+    // Dispatch events to trigger Gmail draft update
+    ['input', 'change', 'keyup'].forEach(evt => {
+      container.dispatchEvent(new Event(evt, { bubbles: true }));
+    });
+    
+    // Wait 100ms for Gmail to process, then verify
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    observer.disconnect();
+    
+    const textAfterReplace = container.textContent || '';
+    console.log('[Gmail Debug] Text after replacement length:', textAfterReplace.length);
+    
+    // Verification: Did text actually change?
+    const textChanged = textAfterReplace !== textBeforeReplace;
+    const containsHumanized = textAfterReplace.includes(humanizedText.substring(0, 50));
+    const verified = textChanged || containsHumanized;
+    
+    console.log('[Gmail Debug] Verification:', {
+      textChanged,
+      containsHumanized,
+      verified
+    });
+    
+    // Gmail Fallback: If verification failed, try aggressive span insertion
+    if (isGmail && !verified) {
+      console.log('[Gmail Debug] Verification failed — trying aggressive fallback');
+      try {
+        const tempSpan = document.createElement('span');
+        tempSpan.textContent = humanizedText;
+        container.appendChild(tempSpan);
+        container.dispatchEvent(new Event('input', { bubbles: true }));
+        console.log('[Gmail Debug] Aggressive fallback completed');
+      } catch (e) {
+        console.warn('[Gmail Debug] Aggressive fallback failed:', e);
+      }
+    }
+    
+    // Restore caret position if saved
+    if (savedCaretPosition && savedCaretPosition.node && document.body.contains(savedCaretPosition.node)) {
+      try {
+        const range = document.createRange();
+        range.setStart(savedCaretPosition.node, Math.min(savedCaretPosition.offset, savedCaretPosition.node.length || 0));
+        range.collapse(true);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        console.log('[Gmail Debug] Caret position restored');
+      } catch (e) {
+        console.warn('[Gmail Debug] Could not restore caret:', e);
+      }
+    }
     
     activeMarkers.delete(markerId);
-    console.log('[Content] ✓ Marker-based replacement successful');
+    console.log('[Gmail Debug] ✓ Marker-based replacement completed, verified:', verified);
     
-    return true;
+    return verified;
   } catch (e) {
-    console.error('[Content] replaceByMarker error:', e);
+    console.error('[Gmail Debug] replaceByMarker error:', e);
     return false;
   }
 }
