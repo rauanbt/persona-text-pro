@@ -844,15 +844,37 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('[Background] Message received:', message.action);
   
   if (message.action === 'humanizeWithTone') {
-    // Map legacy tone names to supported tones
-    const mappedTone = mapToneToSupported(message.tone);
-    const intensity = message.toneIntensity || 'strong';
-    const forceRewrite = message.forceRewrite !== undefined ? message.forceRewrite : true;
-    console.log('[Background] ✅ TONE SELECTED:', message.tone, mappedTone !== message.tone ? `→ ${mappedTone}` : '', '| intensity:', intensity, '| force_rewrite:', forceRewrite);
-    
-    handleHumanizeRequest(message.text, mappedTone, intensity, forceRewrite, null, sender.tab?.id, sender.frameId)
-      .then(() => sendResponse({ success: true }))
-      .catch((error) => sendResponse({ success: false, error: error.message }));
+    (async () => {
+      try {
+        // Map legacy tone names to supported tones
+        const mappedTone = mapToneToSupported(message.tone);
+        const intensity = message.toneIntensity || 'strong';
+        const forceRewrite = message.forceRewrite !== undefined ? message.forceRewrite : true;
+        console.log('[Background] ✅ TONE SELECTED:', message.tone, mappedTone !== message.tone ? `→ ${mappedTone}` : '', '| intensity:', intensity, '| force_rewrite:', forceRewrite);
+        
+        // Mark selection before processing (critical for Gmail)
+        let markerId = null;
+        try {
+          const markerResp = await chrome.tabs.sendMessage(
+            sender.tab.id,
+            { action: 'markSelection' },
+            { frameId: sender.frameId }
+          );
+          markerId = markerResp?.markerId || null;
+          console.log('[Background] 📍 Selection marked:', markerId ? markerId : 'no marker (input field or no selection)');
+        } catch (e) {
+          console.warn('[Background] ⚠️ Could not mark selection:', e.message);
+        }
+        
+        // Show processing spinner
+        await safeSendMessage(sender.tab.id, { action: 'showProcessing' }, { frameId: sender.frameId });
+        
+        await handleHumanizeRequest(message.text, mappedTone, intensity, forceRewrite, markerId, sender.tab?.id, sender.frameId);
+        sendResponse({ success: true });
+      } catch (error) {
+        sendResponse({ success: false, error: error.message });
+      }
+    })();
     return true;
   }
   
