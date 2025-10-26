@@ -1252,17 +1252,19 @@ function createDialog(text, wordCount, wordBalance, selectedTone = null) {
   };
 }
 
-function closeDialog() {
+function closeDialog(opts = {}) {
   const dialog = document.getElementById('sapienwrite-dialog');
   if (dialog) dialog.remove();
-  // Cleanup any leftover markers
-  cleanupMarkers();
+  if (!opts.preserveMarkers) {
+    // Cleanup any leftover markers
+    cleanupMarkers();
+  }
   // No backdrop needed for compact toast style
 }
 
 function showProcessing() {
   console.log('[Content] 🎬 showProcessing() CALLED');
-  closeDialog(); // Remove any existing dialog first
+  closeDialog({ preserveMarkers: true }); // Remove any existing dialog first but keep markers
   
   // Create compact dark toast (LinkedIn style)
   const dialog = document.createElement('div');
@@ -1330,7 +1332,7 @@ function getWordDiff(original, humanized) {
 
 function showResult(originalText, humanizedText, markerId = null) {
   console.log('[Content] showResult() called', { markerId });
-  closeDialog(); // Remove any existing dialog
+  closeDialog({ preserveMarkers: true }); // Remove any existing dialog but keep markers
   
   // SANITIZE humanizedText one more time before rendering (final safety)
   humanizedText = humanizedText.replace(/\[?\s*PARAGRAPH[_\s-]?\d+\s*\]?/gi, '');
@@ -1941,6 +1943,18 @@ function markSelection() {
       
       activeMarkers.add(markerId);
       console.log('[Content] ✓ Selection marked:', markerId);
+      // Safety: auto-clean this marker after 30s if still present
+      setTimeout(() => {
+        if (activeMarkers.has(markerId)) {
+          const m = document.querySelector(`[data-sw-marker="${markerId}"]`);
+          if (m && m.parentNode) {
+            while (m.firstChild) m.parentNode.insertBefore(m.firstChild, m);
+            m.parentNode.removeChild(m);
+          }
+          activeMarkers.delete(markerId);
+          console.log('[Content] ⏱️ Auto-cleaned stale marker:', markerId);
+        }
+      }, 30000);
       
       return { markerId };
     } catch (e) {
