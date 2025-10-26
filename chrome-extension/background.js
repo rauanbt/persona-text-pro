@@ -154,10 +154,11 @@ function waitForProcessingAck(tabId, timeoutMs = 500) {
 }
 
 // Minimal overlay injection fallback using chrome.scripting
-async function injectOverlay(tabId, type, payload = {}) {
+async function injectOverlay(tabId, type, payload = {}, frameId) {
   try {
+    const target = Number.isInteger(frameId) ? { tabId, frameIds: [frameId] } : { tabId, allFrames: true };
     await chrome.scripting.executeScript({
-      target: { tabId, allFrames: true },
+      target,
       func: (type, payload) => {
         try {
           const ROOT_ID = 'sapienwrite-overlay-root';
@@ -754,7 +755,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         console.log('[Background] All auto-recovery attempts failed - showing reconnect dialog');
         await injectOverlay(tab.id, 'reconnect', {
           message: 'Your session expired. Click "Reconnect" to sign in again.'
-        });
+        }, info.frameId);
         return; // Stop here
       }
     } else {
@@ -762,7 +763,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       console.log('[Background] No credentials stored - showing reconnect dialog');
       await injectOverlay(tab.id, 'reconnect', {
         message: 'Please sign in to use SapienWrite.'
-      });
+      }, info.frameId);
       return;
     }
   }
@@ -807,7 +808,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   const ack = await waitForProcessingAck(tab.id, 500);
   if (!ack) {
     console.log('[Background] No processingAck received, injecting fallback spinner');
-    await injectOverlay(tab.id, 'processing');
+    await injectOverlay(tab.id, 'processing', {}, info.frameId);
   }
   // STEP 3: Call edge function immediately (backend handles ALL validation)
   console.log('[Background] 🚀 Calling edge function');
@@ -1131,7 +1132,7 @@ async function handleHumanizeRequest(text, tone, toneIntensity, forceRewrite, ta
       delivered = await safeSendMessage(tabId, resultMessage, Number.isInteger(frameId) ? { frameId } : {});
     }
     if (!delivered) {
-      await injectOverlay(tabId, 'result', { originalText: text, humanizedText: humanizedText });
+      await injectOverlay(tabId, 'result', { originalText: text, humanizedText: humanizedText }, frameId);
     }
     console.log('[Background] Message sent successfully');
     
@@ -1145,7 +1146,7 @@ async function handleHumanizeRequest(text, tone, toneIntensity, forceRewrite, ta
           message: 'Request canceled or timed out. Please try again.'
         }, Number.isInteger(frameId) ? { frameId } : {});
         if (!delivered) {
-          await injectOverlay(tabId, 'error', { message: 'Request canceled or timed out. Please try again.' });
+          await injectOverlay(tabId, 'error', { message: 'Request canceled or timed out. Please try again.' }, frameId);
         }
       }
     } else {
@@ -1155,7 +1156,7 @@ async function handleHumanizeRequest(text, tone, toneIntensity, forceRewrite, ta
           message: error.message || 'Failed to humanize text'
         }, Number.isInteger(frameId) ? { frameId } : {});
         if (!delivered) {
-          await injectOverlay(tabId, 'error', { message: error.message || 'Failed to humanize text' });
+          await injectOverlay(tabId, 'error', { message: error.message || 'Failed to humanize text' }, frameId);
         }
       }
     }

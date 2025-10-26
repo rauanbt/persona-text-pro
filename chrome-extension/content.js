@@ -309,8 +309,15 @@ document.addEventListener('selectionchange', () => {
 
 // Helper: Normalize text for consistent searching (handle NBSP, zero-width spaces)
 function normalizeForSearch(s) {
-  // Replace NBSP and ZWSP with normal space to preserve length for index mapping
-  return (s || '').replace(/\u00A0/g, ' ').replace(/\u200B/g, ' ');
+  // Normalize spaces and various zero-width/formatting chars; also normalize quotes
+  return (s || '')
+    .replace(/\u00A0/g, ' ')   // NBSP -> space
+    .replace(/\u200B/g, ' ')   // ZWSP -> space
+    .replace(/\u200D/g, ' ')   // ZWJ -> space
+    .replace(/\u2060/g, ' ')   // WORD JOINER -> space
+    .replace(/\uFEFF/g, ' ')   // BOM/ZWNBS -> space
+    .replace(/[“”]/g, '"')     // curly double -> straight
+    .replace(/[‘’]/g, "'");   // curly single -> straight
 }
 
 // Helper: Re-resolve Gmail's contenteditable when container becomes stale
@@ -327,7 +334,7 @@ function resolveEditableContainer(prevContainer, selectionText, preContext, post
     return prevContainer;
   }
 
-  // 2) Gmail-specific selectors
+  // 2) Editor selectors (Gmail + Outlook + general)
   const gmailSelector = [
     'div[aria-label="Message body"][contenteditable="true"]',
     'div[aria-label="Message Body"][contenteditable="true"]',
@@ -336,9 +343,16 @@ function resolveEditableContainer(prevContainer, selectionText, preContext, post
     '.Am.Al.editable[contenteditable="true"]'
   ].join(',');
 
+  const outlookSelector = [
+    'div[aria-label="Message body"]',
+    'div[aria-label="Message Body"]',
+    '[contenteditable="true"][role="textbox"]'
+  ].join(',');
+
   // 3) Collect all candidates
   const candidates = [
     ...document.querySelectorAll(gmailSelector),
+    ...document.querySelectorAll(outlookSelector),
     ...document.querySelectorAll('[contenteditable="true"]')
   ].filter(el => {
     // Exclude our own dialog
@@ -384,12 +398,11 @@ function resolveEditableContainer(prevContainer, selectionText, preContext, post
       console.log('[Content] Candidate contains post-context');
     }
     
-    // Favor visible/editable nodes
+    // Favor visible/editable nodes and current active element
     const rect = el.getBoundingClientRect();
-    if (rect.width > 0 && rect.height > 0) {
-      score += 0.5;
-    }
-    
+    if (rect.width > 0 && rect.height > 0) score += 0.5;
+    const active = document.activeElement;
+    if (active && (el === active || el.contains(active))) score += 1;
     if (score > best.score) {
       best = { el, score };
     }
@@ -814,23 +827,52 @@ async function replaceSelectedText(originalText, humanizedText) {
             }
           }
           
-          // For single-line or if HTML failed: Try execCommand insertText FIRST
+          // Prefer modern beforeinput path first
+          let beforeInputHandled = false;
+          try {
+            const ev = new InputEvent('beforeinput', {
+              inputType: 'insertReplacementText',
+              data: humanizedText,
+              bubbles: true,
+              cancelable: true
+            });
+            const dispatchResult = container.dispatchEvent(ev);
+            if (ev.defaultPrevented === true || dispatchResult === false) {
+              beforeInputHandled = true;
+            }
+          } catch (e) {}
+
+          if (beforeInputHandled) {
+            console.log('[Content] ✓ Success path: beforeinput handled');
+            showNotification('Text replaced!', 'success');
+            
+            lastReplacement = {
+              originalText: originalText,
+              humanizedText: humanizedText,
+              container: container,
+              range: activeRange
+            };
+            
+            return true;
+          }
+
+          // For single-line or if HTML failed: Try execCommand insertText NEXT
           const execSuccess = document.execCommand('insertText', false, humanizedText);
           console.log('[Content] execCommand insertText result:', execSuccess);
         
-  if (execSuccess) {
-    console.log('[Content] ✓ Success path: execCommand insertText');
-    showNotification('Text replaced!', 'success');
-    
-    lastReplacement = {
-      originalText: originalText,
-      humanizedText: humanizedText,
-      container: container,
-      range: activeRange
-    };
-    
-    return true;
-  }
+          if (execSuccess) {
+            console.log('[Content] ✓ Success path: execCommand insertText');
+            showNotification('Text replaced!', 'success');
+            
+            lastReplacement = {
+              originalText: originalText,
+              humanizedText: humanizedText,
+              container: container,
+              range: activeRange
+            };
+            
+            return true;
+          }
         
           // If execCommand failed, try manual replacement
           console.log('[Content] execCommand failed, trying manual replacement');
@@ -1337,7 +1379,25 @@ function showResult(originalText, humanizedText) {
   
   safeAppendToBody(dialog);
   console.log('[Content] Result dialog rendered');
-  
+  const replaceBtn = document.getElementById('sapienwrite-replace');
+  if (replaceBtn) {
+    replaceBtn.onmousedown = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      try {
+        const sel = window.getSelection();
+        if (sel && sel.rangeCount > 0) {
+          const r = sel.getRangeAt(0).cloneRange();
+          let container = r.commonAncestorContainer;
+          container = container && container.nodeType === 3 ? container.parentElement : container;
+          while (container && !container.isContentEditable) {
+            container = container.parentElement;
+          }
+          lastSelection = { ...(lastSelection || {}), text: sel.toString(), range: r, container };
+        }
+      } catch {}
+    };
+  }
   document.getElementById('sapienwrite-replace').onclick = async () => {
     const replaced = await replaceSelectedText(originalText, humanizedText);
     
