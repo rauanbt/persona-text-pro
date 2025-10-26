@@ -1254,54 +1254,15 @@ function createDialog(text, wordCount, wordBalance, selectedTone = null) {
   };
 }
 
-function closeDialog(opts = {}) {
+function closeDialog() {
   const dialog = document.getElementById('sapienwrite-dialog');
   if (dialog) dialog.remove();
-  
-  // Cleanup specific token if provided
-  if (opts.cleanupTokenId) {
-    cleanupToken(opts.cleanupTokenId);
-  } else if (!opts.preserveMarkers) {
-    // Cleanup all leftover markers
-    cleanupMarkers();
-  }
-  // No backdrop needed for compact toast style
-}
-
-let currentMarkerId = null; // Store markerId globally for use across functions
-
-// Helper to check if a token exists in the DOM
-function tokenExists(markerId) {
-  if (!markerId) return false;
-  const tokenText = `⟦SW:${markerId}⟧`;
-  const walker = document.createTreeWalker(
-    document.body,
-    NodeFilter.SHOW_TEXT,
-    null
-  );
-  let node;
-  while (node = walker.nextNode()) {
-    if (node.nodeValue && node.nodeValue.includes(tokenText)) {
-      return true;
-    }
-  }
-  return false;
 }
 
 function showProcessing() {
   console.log('[Content] 🎬 showProcessing() CALLED');
   
-  // Insert text token NOW (right before API call)
-  try {
-    const result = markSelection();
-    currentMarkerId = result?.markerId || null;
-    console.log('[Content] 🏷️ Text token inserted:', currentMarkerId);
-  } catch (e) {
-    console.warn('[Content] Failed to insert token:', e);
-    currentMarkerId = null;
-  }
-  
-  closeDialog({ preserveMarkers: true }); // Remove any existing dialog first but keep markers
+  closeDialog(); // Remove any existing dialog first
   
   // Create compact dark toast (LinkedIn style)
   const dialog = document.createElement('div');
@@ -1367,26 +1328,14 @@ function getWordDiff(original, humanized) {
   return { removed, added, changePct };
 }
 
-function showResult(originalText, humanizedText, receivedMarkerId = null) {
-  // Build list of candidate marker IDs to try
-  const candidates = Array.from(new Set([receivedMarkerId, currentMarkerId].filter(Boolean)));
-  
-  // Sort so that tokens that exist in DOM are tried first
-  const orderedCandidates = candidates.sort((a, b) => {
-    return Number(tokenExists(b)) - Number(tokenExists(a));
-  });
-  
+function showResult(originalText, humanizedText) {
   const isGmail = window.location.hostname.includes('mail.google.com');
-  console.log('[Gmail Debug] showResult start', { 
-    receivedMarkerId,
-    currentMarkerId,
-    candidates: orderedCandidates,
-    tokensFound: orderedCandidates.map(id => ({ id, exists: tokenExists(id) })),
+  console.log('[Content] showResult start', { 
     isGmail,
     hasHumanizedText: !!humanizedText,
     textLength: humanizedText?.length 
   });
-  closeDialog({ preserveMarkers: true }); // Remove any existing dialog but keep markers
+  closeDialog(); // Remove any existing dialog
   
   // SANITIZE humanizedText one more time before rendering (final safety)
   humanizedText = humanizedText.replace(/\[?\s*PARAGRAPH[_\s-]?\d+\s*\]?/gi, '');
@@ -1440,15 +1389,13 @@ function showResult(originalText, humanizedText, receivedMarkerId = null) {
   safeAppendToBody(dialog);
   console.log('[Gmail Debug] Result dialog rendered');
   
-  let replaceTriggered = false; // Prevent double execution
-  
   const replaceBtn = document.getElementById('sapienwrite-replace');
   if (replaceBtn) {
     replaceBtn.onmousedown = (e) => {
       e.preventDefault();
       e.stopPropagation();
       
-      console.log('[Gmail Debug] replaceBtn mousedown fired');
+      console.log('[Content] replaceBtn mousedown fired');
       
       try {
         const sel = window.getSelection();
@@ -1460,34 +1407,18 @@ function showResult(originalText, humanizedText, receivedMarkerId = null) {
             container = container.parentElement;
           }
           lastSelection = { ...(lastSelection || {}), text: sel.toString(), range: r, container };
-          console.log('[Gmail Debug] Selection captured on mousedown');
+          console.log('[Content] Selection captured on mousedown');
         }
       } catch (err) {
-        console.warn('[Gmail Debug] Failed to capture selection on mousedown:', err);
+        console.warn('[Content] Failed to capture selection on mousedown:', err);
       }
       
       // For Gmail: trigger replacement immediately on mousedown to preserve selection
-      if (isGmail && !replaceTriggered) {
-        replaceTriggered = true;
-        console.log('[Gmail Debug] Gmail path triggered on mousedown');
+      if (isGmail) {
+        console.log('[Content] Gmail path triggered on mousedown');
         requestAnimationFrame(async () => {
-          // Try each candidate token until one succeeds
-          let replaced = false;
-          for (const candidateId of orderedCandidates) {
-            if (candidateId) {
-              console.log('[Gmail Debug] Attempting marker-based replacement with:', candidateId);
-              replaced = await replaceByMarker(candidateId, humanizedText);
-              console.log('[Gmail Debug] Marker replacement result:', replaced);
-              if (replaced) break;
-            }
-          }
-          
-          // Fallback to regular replacement if all marker attempts failed
-          if (!replaced) {
-            console.log('[Gmail Debug] Gmail marker failed, fallback triggered');
-            replaced = await replaceSelectedText(originalText, humanizedText);
-            console.log('[Gmail Debug] fallback replaceSelectedText returned:', replaced);
-          }
+          const replaced = await replaceSelectedText(originalText, humanizedText);
+          console.log('[Content] replaceSelectedText returned:', replaced);
           
           // Check if dialog still exists before updating
           const currentDialog = document.getElementById('sapienwrite-dialog');
@@ -1497,14 +1428,6 @@ function showResult(originalText, humanizedText, receivedMarkerId = null) {
           }
           
           if (replaced) {
-            // Clean up ALL candidate tokens to prevent leftovers
-            orderedCandidates.forEach(id => {
-              if (id) {
-                cleanupToken(id);
-                console.log('[Gmail Debug] Cleaned up token:', id);
-              }
-            });
-            
             currentDialog.innerHTML = `
               <div style="color: #10B981; font-weight: 600; font-size: 13px;">✓ Text replaced!</div>
               <div style="display: flex; gap: 6px; margin-top: 6px;">
@@ -1570,28 +1493,7 @@ function showResult(originalText, humanizedText, receivedMarkerId = null) {
   }
   
   document.getElementById('sapienwrite-replace').onclick = async () => {
-    // Skip if already triggered on mousedown (Gmail)
-    if (replaceTriggered) {
-      console.log('[Content] Replacement already triggered on mousedown, skipping onclick');
-      return;
-    }
-    
-    // Try each candidate token until one succeeds
-    let replaced = false;
-    for (const candidateId of orderedCandidates) {
-      if (candidateId) {
-        console.log('[Content] Attempting marker-based replacement with:', candidateId);
-        replaced = await replaceByMarker(candidateId, humanizedText);
-        console.log('[Content] Marker replacement result:', replaced);
-        if (replaced) break;
-      }
-    }
-    
-    // Fallback to regular replacement if all marker attempts failed
-    if (!replaced) {
-      console.log('[Content] Falling back to text replacement');
-      replaced = await replaceSelectedText(originalText, humanizedText);
-    }
+    const replaced = await replaceSelectedText(originalText, humanizedText);
     
     // Check if dialog still exists before updating
     const currentDialog = document.getElementById('sapienwrite-dialog');
@@ -1601,14 +1503,6 @@ function showResult(originalText, humanizedText, receivedMarkerId = null) {
     }
     
     if (replaced) {
-      // Clean up ALL candidate tokens to prevent leftovers
-      orderedCandidates.forEach(id => {
-        if (id) {
-          cleanupToken(id);
-          console.log('[Content] Cleaned up token:', id);
-        }
-      });
-      
       currentDialog.innerHTML = `
         <div style="color: #10B981; font-weight: 600; font-size: 13px;">✓ Text replaced!</div>
         <div style="display: flex; gap: 6px; margin-top: 6px;">
@@ -1869,12 +1763,6 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
     return;
   }
   
-  // Mark selection with invisible wrapper (for Gmail reliability)
-  if (message.action === 'markSelection') {
-    const result = markSelection();
-    sendResponse(result);
-    return true;
-  }
   
   if (message.action === 'showNotification') {
     showNotification(message.message, message.type || 'info');
@@ -1929,7 +1817,7 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
       }
       
       console.log('[Content] Calling showResult()...');
-      showResult(message.originalText, message.humanizedText, message.markerId);
+      showResult(message.originalText, message.humanizedText);
       console.log('[Content] showResult() completed');
     } catch (error) {
       console.error('[Content] ERROR in showResult handler:', error);
@@ -1956,259 +1844,5 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
   
   sendResponse({ received: true });
 });
-
-// Track active markers for cleanup (text tokens)
-let activeMarkers = new Set();
-
-// Generate unique marker ID
-function generateMarkerId() {
-  return `sw-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-}
-
-// Helper: Escape HTML entities
-function escapeHtml(s) {
-  return (s || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-// Cleanup stray text tokens
-function cleanupToken(markerId) {
-  const needle = `⟦SW:${markerId}⟧`;
-  const walker = document.createTreeWalker(
-    document.body,
-    NodeFilter.SHOW_TEXT
-  );
-  
-  let node;
-  while ((node = walker.nextNode())) {
-    if (node.nodeValue && node.nodeValue.includes(needle)) {
-      node.nodeValue = node.nodeValue.replace(needle, '');
-      console.log('[Content] 🧹 Cleaned up token:', markerId);
-    }
-  }
-  activeMarkers.delete(markerId);
-}
-
-// Mark selection with plain text token (Gmail-proof)
-function markSelection() {
-  console.log('[Content] markSelection() called');
-  
-  // INPUT/TEXTAREA: Can't wrap, return null (use existing input path)
-  const activeEl = document.activeElement;
-  if (activeEl?.tagName === 'TEXTAREA' || activeEl?.tagName === 'INPUT') {
-    console.log('[Content] INPUT/TEXTAREA active, skipping marker');
-    return { markerId: null };
-  }
-  
-  // CONTENTEDITABLE: Insert text token
-  const sel = window.getSelection();
-  if (!sel || sel.rangeCount === 0 || !sel.toString().trim()) {
-    console.log('[Content] No valid selection to mark');
-    return { markerId: null };
-  }
-  
-  try {
-    const range = sel.getRangeAt(0);
-    
-    // Save caret position BEFORE marking (Gmail caret restoration)
-    try {
-      savedCaretPosition = {
-        node: range.startContainer,
-        offset: range.startOffset
-      };
-      console.log('[Content] Caret position saved:', savedCaretPosition);
-    } catch (e) {
-      console.warn('[Content] Could not save caret position:', e);
-    }
-    
-    const container = range.commonAncestorContainer;
-    const editable = container.nodeType === 3 ? container.parentElement : container;
-    
-    // Check if we're in contenteditable
-    let currentNode = editable;
-    let isContentEditable = false;
-    while (currentNode) {
-      if (currentNode.isContentEditable) {
-        isContentEditable = true;
-        break;
-      }
-      currentNode = currentNode.parentElement;
-    }
-    
-    if (!isContentEditable) {
-      console.log('[Content] Not in contenteditable, skipping marker');
-      return { markerId: null };
-    }
-    
-    const markerId = generateMarkerId();
-    const token = `⟦SW:${markerId}⟧`; // Unicode brackets - Gmail won't strip plain text
-    
-    try {
-      // Delete selection and insert text token
-      range.deleteContents();
-      const textNode = document.createTextNode(token);
-      range.insertNode(textNode);
-      
-      // Re-select token (shows focus)
-      const newRange = document.createRange();
-      newRange.selectNode(textNode);
-      sel.removeAllRanges();
-      sel.addRange(newRange);
-      
-      activeMarkers.add(markerId);
-      console.log('[Content] 🏷️ Text token created:', markerId);
-      
-      // Safety: auto-clean this token after 30s if still present
-      setTimeout(() => {
-        if (activeMarkers.has(markerId)) {
-          cleanupToken(markerId);
-          console.log('[Content] ⏱️ Auto-cleaned stale token:', markerId);
-        }
-      }, 30000);
-      
-      return { markerId };
-    } catch (e) {
-      console.warn('[Content] Failed to insert token:', e.message);
-      return { markerId: null };
-    }
-  } catch (e) {
-    console.error('[Content] markSelection error:', e);
-    return { markerId: null };
-  }
-}
-
-// Replace text using text token (Gmail-proof)
-async function replaceByMarker(markerId, humanizedText) {
-  if (!markerId) return false;
-  
-  const needle = `⟦SW:${markerId}⟧`;
-  console.log('[Content] 🔍 Searching for token:', needle);
-  
-  // Walk text nodes to find token
-  const walker = document.createTreeWalker(
-    document.body,
-    NodeFilter.SHOW_TEXT
-  );
-  
-  let tokenNode = null;
-  let node;
-  while ((node = walker.nextNode())) {
-    if (node.nodeValue && node.nodeValue.includes(needle)) {
-      tokenNode = node;
-      break;
-    }
-  }
-  
-  if (!tokenNode) {
-    console.warn('[Content] ❌ Token not found');
-    return false;
-  }
-  
-  console.log('[Content] ✅ Token found, replacing...');
-  
-  try {
-    // Build Gmail-safe HTML
-    const isMultiline = /\n/.test(humanizedText);
-    const isGmail = window.location.hostname.includes('mail.google.com');
-    
-    let html;
-    if (isGmail && isMultiline) {
-      // Gmail: wrap each line in <div>, empty lines → <div><br></div>
-      html = humanizedText
-        .split(/\n/)
-        .map(line => `<div>${line ? escapeHtml(line) : '<br>'}</div>`)
-        .join('');
-    } else {
-      // Single-line or non-Gmail: escape and preserve line breaks
-      html = escapeHtml(humanizedText).replace(/\n/g, '<br>');
-    }
-    
-    const range = document.createRange();
-    const text = tokenNode.nodeValue;
-    const idx = text.indexOf(needle);
-    
-    // Split node if token is in the middle of text
-    if (idx > 0) {
-      tokenNode = tokenNode.splitText(idx);
-    }
-    const after = tokenNode.splitText(needle.length);
-    
-    // Replace token with HTML fragment
-    range.selectNode(tokenNode);
-    range.deleteContents();
-    
-    const frag = range.createContextualFragment(html);
-    range.insertNode(frag);
-    
-    // Cleanup empty adjacent nodes
-    if (after.nodeValue === '') {
-      after.parentNode?.removeChild(after);
-    }
-    
-    // Find contenteditable container and dispatch events
-    let container = tokenNode.parentElement;
-    while (container && !container.isContentEditable) {
-      container = container.parentElement;
-    }
-    
-    if (container) {
-      ['input', 'change', 'keyup'].forEach(evt => {
-        container.dispatchEvent(new Event(evt, { bubbles: true }));
-      });
-    }
-    
-    // Verify replacement stuck (Gmail sometimes sanitizes immediately)
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
-    const editable = document.activeElement;
-    const verification = editable?.textContent || container?.textContent || '';
-    const hasNewText = verification.includes(humanizedText.substring(0, 50));
-    console.log('[Content] Verification:', hasNewText ? '✅ Success' : '⚠️ May have been sanitized');
-    
-    // Restore caret position if saved
-    if (savedCaretPosition && savedCaretPosition.node && document.body.contains(savedCaretPosition.node)) {
-      try {
-        const newRange = document.createRange();
-        newRange.setStart(savedCaretPosition.node, Math.min(savedCaretPosition.offset, savedCaretPosition.node.length || 0));
-        newRange.collapse(true);
-        const sel = window.getSelection();
-        sel.removeAllRanges();
-        sel.addRange(newRange);
-        console.log('[Content] Caret position restored');
-      } catch (e) {
-        console.warn('[Content] Could not restore caret:', e);
-      }
-    }
-    
-    activeMarkers.delete(markerId);
-    console.log('[Content] ✅ Token-based replacement complete');
-    
-    return true;
-  } catch (e) {
-    console.error('[Content] ❌ Token replacement failed:', e);
-    return false;
-  }
-}
-
-// Cleanup leftover markers
-function cleanupMarkers() {
-  activeMarkers.forEach(markerId => {
-    const marker = document.querySelector(`[data-sw-marker="${markerId}"]`);
-    if (marker) {
-      const parent = marker.parentNode;
-      if (parent) {
-        while (marker.firstChild) {
-          parent.insertBefore(marker.firstChild, marker);
-        }
-        parent.removeChild(marker);
-      }
-    }
-  });
-  activeMarkers.clear();
-}
 
 console.log('[Content] SapienWrite ready');

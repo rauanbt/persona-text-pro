@@ -735,18 +735,6 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   console.log(`[Background] ========= TONE CLICKED: ${tone} =========`);
   console.log('[Background] Tab:', tab.id, 'Frame:', info.frameId);
   
-  // STEP 0: Mark the selection before anything else (Gmail reliability)
-  console.log('[Background] Marking selection...');
-  let markerId = null;
-  try {
-    const markerResponse = await chrome.tabs.sendMessage(tab.id, { action: 'markSelection' }, Number.isInteger(info.frameId) ? { frameId: info.frameId } : undefined);
-    if (markerResponse?.markerId) {
-      markerId = markerResponse.markerId;
-      console.log('[Background] ✓ Selection marked:', markerId);
-    }
-  } catch (e) {
-    console.warn('[Background] Failed to mark selection:', e.message);
-  }
   
   // STEP 1: ENSURE VALID SESSION (with auto-refresh)
   console.log('[Background] Ensuring valid session...');
@@ -831,7 +819,6 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     mappedTone,
     'strong',
     true,
-    markerId, // Pass markerId to humanize handler
     tab.id,
     info.frameId
   );
@@ -852,28 +839,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         const forceRewrite = message.forceRewrite !== undefined ? message.forceRewrite : true;
         console.log('[Background] ✅ TONE SELECTED:', message.tone, mappedTone !== message.tone ? `→ ${mappedTone}` : '', '| intensity:', intensity, '| force_rewrite:', forceRewrite);
         
-        // Prefer preMarkerId from content mousedown; fallback to marking here
-        let markerId = message.preMarkerId ?? null;
-        if (markerId) {
-          console.log('[Background] 📍 Using preMarkerId from content:', markerId);
-        } else {
-          try {
-            const markerResp = await chrome.tabs.sendMessage(
-              sender.tab.id,
-              { action: 'markSelection' },
-              { frameId: sender.frameId }
-            );
-            markerId = markerResp?.markerId || null;
-            console.log('[Background] 📍 Selection marked via fallback:', markerId ? markerId : 'no marker (input field or no selection)');
-          } catch (e) {
-            console.warn('[Background] ⚠️ Could not mark selection via fallback:', e.message);
-          }
-        }
-        
         // Show processing spinner
         await safeSendMessage(sender.tab.id, { action: 'showProcessing' }, { frameId: sender.frameId });
         
-        await handleHumanizeRequest(message.text, mappedTone, intensity, forceRewrite, markerId, sender.tab?.id, sender.frameId);
+        await handleHumanizeRequest(message.text, mappedTone, intensity, forceRewrite, sender.tab?.id, sender.frameId);
         sendResponse({ success: true });
       } catch (error) {
         sendResponse({ success: false, error: error.message });
@@ -1055,7 +1024,7 @@ function quickSimilarity(a, b) {
 }
 
 // Handle humanize request with timeout and cancel support
-async function handleHumanizeRequest(text, tone, toneIntensity, forceRewrite, markerId, tabId, frameId) {
+async function handleHumanizeRequest(text, tone, toneIntensity, forceRewrite, tabId, frameId) {
   const key = `${tabId}:${frameId}`;
   
   // Single-flight guard: prevent concurrent humanize from same frame
@@ -1158,8 +1127,7 @@ async function handleHumanizeRequest(text, tone, toneIntensity, forceRewrite, ma
       humanizedText: cleanText,
       tone: tone,
       toneIntensity: toneIntensity,
-      warning: warning,
-      markerId: markerId // Include markerId for marker-based replacement
+      warning: warning
     };
     
     console.log('[Background] Sending message:', resultMessage);
@@ -1173,7 +1141,7 @@ async function handleHumanizeRequest(text, tone, toneIntensity, forceRewrite, ma
       delivered = await safeSendMessage(tabId, resultMessage, Number.isInteger(frameId) ? { frameId } : {});
     }
     if (!delivered) {
-      await injectOverlay(tabId, 'result', { originalText: text, humanizedText: humanizedText, markerId: markerId }, frameId);
+      await injectOverlay(tabId, 'result', { originalText: text, humanizedText: humanizedText }, frameId);
     }
     console.log('[Background] Message sent successfully');
     
