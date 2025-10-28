@@ -257,7 +257,7 @@ export const UseCasesDemo = () => {
                 Try SapienWrite Free
               </Button>
               <p className="text-sm text-muted-foreground mt-4">
-                750 free words monthly • No credit card required
+                500 free words monthly • No credit card required
               </p>
             </CardContent>
           </Card>

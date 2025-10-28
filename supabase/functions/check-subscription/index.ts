@@ -13,7 +13,7 @@ const logStep = (step: string, details?: any) => {
 };
 
 const PLAN_LIMITS = {
-  free: 750,
+  free: 500,
   extension_only: 5000,
   pro: 15000,
   ultra: 30000,

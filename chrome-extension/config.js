@@ -9,7 +9,7 @@
 
   // Plan limits for Chrome Extension
   g.EXTENSION_LIMITS = g.EXTENSION_LIMITS || {
-    free: 750,           // Web only - no extension access
+    free: 500,           // Web only - no extension access
     extension_only: 5000, // Extension only
     ultra: 30000,         // Shared pool with web (no separate bonus)
     master: 30000         // Shared pool with web (no separate bonus, legacy)
@@ -17,7 +17,7 @@
 
   // Web dashboard limits (for reference)
   g.WEB_LIMITS = g.WEB_LIMITS || {
-    free: 750,          // Shared with extension
+    free: 500,          // Shared with extension
     pro: 15000,
     ultra: 30000,
     wordsmith: 15000,   // legacy

@@ -22,7 +22,7 @@ export const WritingJourneyPricing = () => {
       description: "Discover the power of human-like AI writing",
       icon: <Star className="w-8 h-8 text-amber-500" />,
       features: [
-        "750 words per month",
+        "500 words per month",
         "250 words per request",
         "Unlimited AI detection (500 words per check)",
         "All 6 tone personalities",

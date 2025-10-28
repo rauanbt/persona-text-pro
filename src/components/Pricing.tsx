@@ -62,7 +62,7 @@ export const Pricing = () => {
       period: "",
       description: "Perfect for trying out SapienWrite",
       features: [
-        "750 words per month",
+        "500 words per month",
         "250 words per request",
         "Unlimited AI detection (500 words per check)",
         "All 4 tone options",

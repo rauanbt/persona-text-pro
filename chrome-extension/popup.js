@@ -3,7 +3,7 @@
 // Use extension limits from config.js (loaded globally via popup.html)
 const EXT_LIMITS = (typeof EXTENSION_LIMITS !== 'undefined') 
   ? EXTENSION_LIMITS 
-  : { free: 750, extension_only: 5000, ultra: 30000, master: 30000, pro: 0, wordsmith: 0 };
+  : { free: 500, extension_only: 5000, ultra: 30000, master: 30000, pro: 0, wordsmith: 0 };
 
 let subscriptionData = null;
 let wordBalance = 0;
@@ -291,7 +291,7 @@ async function fetchWordBalance() {
     }
     
     const plan = subscriptionData.plan || 'free';
-    const extensionLimit = EXT_LIMITS[plan] || 750;
+    const extensionLimit = EXT_LIMITS[plan] || 500;
     
     const response = await fetch(
       `${SUPABASE_URL}/rest/v1/usage_tracking?user_id=eq.${session.user.id}&select=words_used,extension_words_used`,

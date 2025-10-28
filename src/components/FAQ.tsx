@@ -21,7 +21,7 @@ export const FAQ = () => {
     },
     {
       question: "How much does SapienWrite cost?",
-      answer: "Our Pro plan is $24.95/month (or $14.97/month annually) for 15,000 words, and Ultra is $54.95/month (or $32.97/month annually) for 30,000 words. Annual plans save you 40% - Pro at $179.64/year and Ultra at $395.64/year. We also offer a free plan with 750 words/month to get you started, and an Extension-Only plan at $12.95/month with 5,000 words for Chrome Extension access."
+      answer: "Our Pro plan is $24.95/month (or $14.97/month annually) for 15,000 words, and Ultra is $54.95/month (or $32.97/month annually) for 30,000 words. Annual plans save you 40% - Pro at $179.64/year and Ultra at $395.64/year. We also offer a free plan with 500 words/month to get you started, and an Extension-Only plan at $12.95/month with 5,000 words for Chrome Extension access."
     },
     {
       question: "What are the different tone options?",
@@ -37,7 +37,7 @@ export const FAQ = () => {
     },
     {
       question: "I want to humanize a long essay. Is it possible?",
-      answer: "Yes! Depending on your plan, you can process from 750 words per month (free) to 30,000 words per month (Ultra). For longer documents, you can process them in chunks or upgrade to a higher plan. You can also purchase extra word packages (5,000 for $12.99, 10,000 for $22.99, or 25,000 for $49.99) that never expire."
+      answer: "Yes! Depending on your plan, you can process from 500 words per month (free) to 30,000 words per month (Ultra). For longer documents, you can process them in chunks or upgrade to a higher plan. You can also purchase extra word packages (5,000 for $12.99, 10,000 for $22.99, or 25,000 for $49.99) that never expire."
     },
     {
       question: "Can I see my previous humanizations?",
@@ -45,7 +45,7 @@ export const FAQ = () => {
     },
     {
       question: "What is your refund policy?",
-      answer: "All sales are final. Due to the nature of AI-powered services and the immediate computational costs involved, we do not offer refunds on paid subscriptions. We encourage you to fully test our platform using the free 750-word trial before upgrading."
+      answer: "All sales are final. Due to the nature of AI-powered services and the immediate computational costs involved, we do not offer refunds on paid subscriptions. We encourage you to fully test our platform using the free 500-word trial before upgrading."
     },
     {
       question: "How do I cancel my subscription?",

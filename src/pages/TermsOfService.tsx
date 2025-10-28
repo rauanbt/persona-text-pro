@@ -55,7 +55,7 @@ const TermsOfService = () => {
                   cannot offer refunds once a subscription is activated.
                 </p>
                 <p className="mb-3">
-                  <strong>Free Trial:</strong> Before purchasing, we strongly encourage you to test our platform using the complimentary 750-word trial. 
+                  <strong>Free Trial:</strong> Before purchasing, we strongly encourage you to test our platform using the complimentary 500-word trial. 
                   This allows you to fully experience our service quality and ensure it meets your needs before making a financial commitment.
                 </p>
 

@@ -46,7 +46,7 @@ export const PLAN_PRICES = {
 } as const;
 
 export const PLAN_LIMITS = {
-  free: 750,
+  free: 500,
   pro: 15000,
   ultra: 30000,
   extension_only: 5000

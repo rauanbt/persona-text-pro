@@ -14,7 +14,7 @@ const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
 // Word limits per plan (web dashboard)
 const PLAN_LIMITS = {
-  free: 750,          // Shared pool (web + extension)
+  free: 500,          // Shared pool (web + extension)
   wordsmith: 15000,   // Web only
   master: 30000,      // Web (+ 5k extension bonus)
   extension_only: 0,  // Extension only plan has no web access
@@ -24,7 +24,7 @@ const PLAN_LIMITS = {
 
 // Extension word limits
 const EXTENSION_LIMITS = {
-  free: 750,           // Shared with web pool
+  free: 500,           // Shared with web pool
   extension_only: 5000, // Extension only plan
   ultra: 30000,         // Shared pool with web (no separate bonus)
   master: 30000         // Shared pool with web (no separate bonus, legacy)
@@ -374,7 +374,7 @@ serve(async (req) => {
       currentUsage = extensionWordsUsed;
       totalAvailableWords = planLimit - currentUsage;
     } else if (isFreePlan) {
-      // Free plan: 750 shared words (web + extension)
+      // Free plan: 500 shared words (web + extension)
       planLimit = PLAN_LIMITS.free;
       currentUsage = webWordsUsed + extensionWordsUsed; // Combined usage for free plan
       totalAvailableWords = planLimit - currentUsage + extraWords;
