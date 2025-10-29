@@ -279,12 +279,12 @@ const Dashboard = () => {
     abortControllerRef.current = new AbortController();
     const signal = abortControllerRef.current.signal;
     
-    // Set up 25s timeout
+    // Set up 40s timeout
     const timeoutId = setTimeout(() => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
-    }, 25000);
+    }, 40000);
     
     console.log('[DEBUG] Starting humanization:', { 
       textLength: inputText.length, 
@@ -901,7 +901,7 @@ const Dashboard = () => {
                           {isProcessing ? (
                             <>
                               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Humanizing Text...
+                              Processing (may take up to 40s)...
                             </>
                           ) : (
                             <>
