@@ -38,11 +38,35 @@ const WORD_PACKAGES = [
 
 interface ExtraWordsPackagesProps {
   onClose?: () => void;
+  currentPlan?: string;
 }
 
-export const ExtraWordsPackages: React.FC<ExtraWordsPackagesProps> = ({ onClose }) => {
+export const ExtraWordsPackages: React.FC<ExtraWordsPackagesProps> = ({ onClose, currentPlan = 'free' }) => {
   const { toast } = useToast();
   const [loading, setLoading] = React.useState<string | null>(null);
+
+  // Prevent free users from purchasing extra words
+  if (currentPlan === 'free') {
+    return (
+      <div className="space-y-6 text-center py-8">
+        <div className="mx-auto p-4 bg-primary/10 rounded-full w-fit">
+          <Package className="w-8 h-8 text-primary" />
+        </div>
+        <div className="space-y-2">
+          <h3 className="text-2xl font-bold">Extra Words Available on Paid Plans</h3>
+          <p className="text-muted-foreground max-w-md mx-auto">
+            Purchase extra words packages once you upgrade to a Pro, Ultra, or Master plan. 
+            Extra words never expire and work across all your humanization needs.
+          </p>
+        </div>
+        {onClose && (
+          <Button onClick={onClose}>
+            Got it
+          </Button>
+        )}
+      </div>
+    );
+  }
 
   const handlePurchase = async (priceId: string, packageName: string) => {
     try {

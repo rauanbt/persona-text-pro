@@ -59,7 +59,7 @@ serve(async (req) => {
       ],
       mode: "payment",
       allow_promotion_codes: true,
-      success_url: `${req.headers.get("origin")}/dashboard?word_purchase=success&words=${wordPackage.words}`,
+      success_url: `${req.headers.get("origin")}/dashboard?word_purchase=success&session_id={CHECKOUT_SESSION_ID}&words=${wordPackage.words}`,
       cancel_url: `${req.headers.get("origin")}/dashboard?word_purchase=canceled`,
       metadata: {
         user_id: user.id,

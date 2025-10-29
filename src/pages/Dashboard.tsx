@@ -158,18 +158,44 @@ const Dashboard = () => {
       window.history.replaceState({}, '', window.location.pathname);
     }
     
-    // Check for word purchase success
+    // Check for word purchase success - Process the payment
     if (urlParams.get('word_purchase') === 'success') {
+      const sessionId = urlParams.get('session_id');
       const words = urlParams.get('words');
-      toast({
-        title: "Purchase Successful!",
-        description: `${words} extra words have been added to your account.`,
-        variant: "default"
-      });
+      
+      if (sessionId) {
+        // Call process-word-purchase to actually add the words
+        supabase.functions.invoke('process-word-purchase', {
+          body: { sessionId }
+        }).then(({ data, error }) => {
+          if (error) {
+            console.error('Error processing word purchase:', error);
+            toast({
+              title: "Processing Error",
+              description: "Failed to add words to your account. Please contact support.",
+              variant: "destructive"
+            });
+          } else {
+            toast({
+              title: "Purchase Successful!",
+              description: `${data?.words_added || words} extra words have been added to your account.`,
+              variant: "default"
+            });
+            // Refresh usage to show updated extra words
+            fetchUsage();
+          }
+        });
+      } else {
+        toast({
+          title: "Payment Received",
+          description: "Processing your purchase. It may take a moment to reflect in your account.",
+          variant: "default"
+        });
+        setTimeout(() => fetchUsage(), 3000);
+      }
+      
       // Clean up URL
       window.history.replaceState({}, '', window.location.pathname);
-      // Refresh usage to show updated extra words
-      setTimeout(() => fetchUsage(), 2000);
     }
   }, [checkSubscription]);
 
@@ -813,7 +839,7 @@ const Dashboard = () => {
                       </div>
                     )}
                     
-                    {!isExtensionOnlyPlan && (
+                    {!isExtensionOnlyPlan && currentPlan !== 'free' && (
                       <Dialog open={showExtraWordsDialog} onOpenChange={setShowExtraWordsDialog}>
                         <DialogTrigger asChild>
                           <Button 
@@ -829,7 +855,10 @@ const Dashboard = () => {
                           <DialogHeader>
                             <DialogTitle>Extra Words Packages</DialogTitle>
                           </DialogHeader>
-                          <ExtraWordsPackages onClose={() => setShowExtraWordsDialog(false)} />
+                          <ExtraWordsPackages 
+                            currentPlan={currentPlan} 
+                            onClose={() => setShowExtraWordsDialog(false)} 
+                          />
                         </DialogContent>
                       </Dialog>
                     )}
