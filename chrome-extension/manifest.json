@@ -3,6 +3,7 @@
   "name": "SapienWrite - AI Text Humanizer",
   "version": "1.0.17",
   "description": "Humanize AI-generated text anywhere on the web. Requires SapienWrite subscription.",
+  "homepage_url": "https://sapienwrite.com",
   "permissions": ["storage", "activeTab", "contextMenus", "webNavigation", "notifications", "scripting", "clipboardWrite", "alarms"],
   "host_permissions": ["https://nycrxoppbsakpkkeiqzb.supabase.co/*", "https://sapienwrite.com/*"],
   "action": {

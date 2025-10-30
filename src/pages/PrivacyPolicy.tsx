@@ -33,6 +33,24 @@ const PrivacyPolicy = () => {
                 <h3 className="text-xl font-semibold mb-3">Payment Information</h3>
                 <p>Any financial account information added to your account is directed to our third party payment processor (Stripe) and is stored by them. We do have access to subscriber information through our third party payments provider and may retain data about our subscribers through our third party payments processor.</p>
 
+                <h3 className="text-xl font-semibold mb-3 mt-6">Chrome Extension Data</h3>
+                <p>Our Chrome Extension collects and processes:</p>
+                <ul className="list-disc pl-6 space-y-1">
+                  <li><strong>Selected text:</strong> Text you highlight and choose to humanize is sent to our servers for processing</li>
+                  <li><strong>Authentication data:</strong> Your login session is stored locally to maintain your signed-in state</li>
+                  <li><strong>Usage statistics:</strong> Word count and feature usage to track your subscription limits</li>
+                  <li><strong>Storage:</strong> We store your authentication token and preferences locally in your browser</li>
+                </ul>
+                <p className="mt-3">The extension requires the following permissions:</p>
+                <ul className="list-disc pl-6 space-y-1">
+                  <li><strong>storage:</strong> To save your authentication session and preferences</li>
+                  <li><strong>activeTab:</strong> To access selected text on the current page when you request humanization</li>
+                  <li><strong>contextMenus:</strong> To add "Humanize with SapienWrite" to your right-click menu</li>
+                  <li><strong>notifications:</strong> To notify you when text processing is complete</li>
+                  <li><strong>scripting:</strong> To inject our interface into web pages for text selection</li>
+                  <li><strong>clipboardWrite:</strong> To copy humanized text to your clipboard</li>
+                </ul>
+
                 <h2 className="text-2xl font-semibold mb-4 mt-8">How We Use Your Information</h2>
                 <p>We use your personal data to:</p>
                 <ul className="list-disc pl-6 space-y-1">
@@ -48,6 +66,15 @@ const PrivacyPolicy = () => {
 
                 <h2 className="text-2xl font-semibold mb-4 mt-8">Data Security</h2>
                 <p>The security of your personal data is important to us. We implement appropriate technical and organizational security measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction.</p>
+
+                <h2 className="text-2xl font-semibold mb-4 mt-8">Data Transmission</h2>
+                <p>When you use our Chrome Extension or web application to humanize text:</p>
+                <ul className="list-disc pl-6 space-y-1">
+                  <li>The text you submit is transmitted securely via HTTPS to our servers</li>
+                  <li>Text is processed by our AI service (Google Gemini) and immediately returned</li>
+                  <li>We do not permanently store the content you submit for humanization</li>
+                  <li>Only usage statistics (word count) are retained for subscription management</li>
+                </ul>
 
                 <h2 className="text-2xl font-semibold mb-4 mt-8">Third-Party Services</h2>
                 <p>Our Service may contain links to third-party websites or services. We are not responsible for the privacy practices of these third parties. We encourage you to read their privacy policies.</p>
@@ -71,8 +98,9 @@ const PrivacyPolicy = () => {
                 <h2 className="text-2xl font-semibold mb-4 mt-8">Contact Us</h2>
                 <p>If you have any questions about this Privacy Policy, you can contact us:</p>
                 <ul className="list-disc pl-6 space-y-1">
-                  <li>Through our contact form</li>
-                  <li>At our address: 800 High School Way, #140, Mountain View, CA, 94041</li>
+                  <li>By email: support@sapienwrite.com</li>
+                  <li>Through our contact form at https://sapienwrite.com/contact</li>
+                  <li>By mail: 800 High School Way, #140, Mountain View, CA, 94041</li>
                 </ul>
               </div>
             </div>
