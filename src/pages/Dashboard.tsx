@@ -1101,7 +1101,7 @@ const Dashboard = () => {
                     Chrome Extension Access
                   </CardTitle>
                   <Badge variant="secondary" className="w-fit">
-                    Active - {currentPlan === 'ultra' ? '30,000 words/month (shared)' : '5,000 words/month'}
+                    Active - {currentPlan === 'ultra' ? '40,000 words/month (shared)' : '5,000 words/month'}
                   </Badge>
                 </CardHeader>
               </Card>
@@ -1229,7 +1229,7 @@ const Dashboard = () => {
                       </div>
                     )}
                     <div className="text-sm text-muted-foreground mb-1">
-                      30,000 words/month
+                      40,000 words/month
                     </div>
                     <div className="text-xs text-muted-foreground mb-3 flex items-center gap-1">
                       <Chrome className="h-3 w-3" />

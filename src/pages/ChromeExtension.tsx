@@ -70,9 +70,9 @@ const ChromeExtension = () => {
                 <CardContent className="p-6">
                   <div className="text-xs font-bold text-purple-600 mb-2">BEST VALUE</div>
                   <h3 className="text-2xl font-bold mb-2">Ultra</h3>
-                  <div className="text-3xl font-bold text-primary mb-4">$54.95<span className="text-lg text-muted-foreground">/month</span></div>
+                  <div className="text-3xl font-bold text-primary mb-4">$39.95<span className="text-lg text-muted-foreground">/month</span></div>
                   <ul className="space-y-2 mb-6">
-                    <li className="flex items-center"><Check className="w-4 h-4 text-purple-500 mr-2" />30,000 words/month</li>
+                    <li className="flex items-center"><Check className="w-4 h-4 text-purple-500 mr-2" />40,000 words/month</li>
                     <li className="flex items-center"><Check className="w-4 h-4 text-purple-500 mr-2" />✅ Extension + Web Platform</li>
                     <li className="flex items-center"><Check className="w-4 h-4 text-purple-500 mr-2" />Premium triple-engine</li>
                   </ul>

@@ -21,7 +21,7 @@ export const FAQ = () => {
     },
     {
       question: "How much does SapienWrite cost?",
-      answer: "Our Pro plan is $24.95/month (or $14.97/month annually) for 15,000 words, and Ultra is $54.95/month (or $32.97/month annually) for 30,000 words. Annual plans save you 40% - Pro at $179.64/year and Ultra at $395.64/year. We also offer a free plan with 500 words/month to get you started, and an Extension-Only plan at $12.95/month with 5,000 words for Chrome Extension access."
+      answer: "Our Pro plan is $17.95/month (or $8.95/month annually) for 15,000 words, and Ultra is $39.95/month (or $19.95/month annually) for 40,000 words. Annual plans save you 50% - Pro at $107.40/year and Ultra at $239.40/year. We also offer a free plan with 500 words/month to get you started, and an Extension-Only plan at $12.95/month with 5,000 words for Chrome Extension access."
     },
     {
       question: "What are the different tone options?",
@@ -29,7 +29,7 @@ export const FAQ = () => {
     },
     {
       question: "Is there a Chrome extension?",
-      answer: "Yes! The SapienWrite Chrome Extension is available in two ways: (1) Included FREE with our Ultra plan ($54.95/month), or (2) Available as a standalone Extension-Only subscription for $12.95/month with 5,000 words. The extension lets you humanize text anywhere on the web with a simple right-click."
+      answer: "Yes! The SapienWrite Chrome Extension is available in two ways: (1) Included FREE with our Ultra plan ($39.95/month), or (2) Available as a standalone Extension-Only subscription for $12.95/month with 5,000 words. The extension lets you humanize text anywhere on the web with a simple right-click."
     },
     {
       question: "What languages does SapienWrite support?",
@@ -37,7 +37,7 @@ export const FAQ = () => {
     },
     {
       question: "I want to humanize a long essay. Is it possible?",
-      answer: "Yes! Depending on your plan, you can process from 500 words per month (free) to 30,000 words per month (Ultra). For longer documents, you can process them in chunks or upgrade to a higher plan. You can also purchase extra word packages (5,000 for $12.99, 10,000 for $22.99, or 25,000 for $49.99) that never expire."
+      answer: "Yes! Depending on your plan, you can process from 500 words per month (free) to 40,000 words per month (Ultra). For longer documents, you can process them in chunks or upgrade to a higher plan. You can also purchase extra word packages (5,000 for $12.99, 10,000 for $22.99, or 25,000 for $49.99) that never expire."
     },
     {
       question: "Can I see my previous humanizations?",
