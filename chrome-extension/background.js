@@ -492,6 +492,13 @@ async function ensureFreshSessionFast() {
 
 // Full session check (used by popup and non-urgent flows)
 async function ensureFreshSession() {
+  // Check if reconnect is blocked after logout
+  const { block_reconnect_until } = await chrome.storage.local.get(['block_reconnect_until']);
+  if (block_reconnect_until && Date.now() < block_reconnect_until) {
+    console.log('[Background] Reconnect blocked after recent logout');
+    return { success: false, reason: 'blocked_after_logout' };
+  }
+  
   const authenticated = await isAuthenticated();
   if (authenticated) {
     const session = await getSession();
@@ -546,6 +553,13 @@ async function ensureFreshSession() {
 
 // Helper to request session from web app
 async function requestSessionFromWebApp(timeoutMs = 2000, isReconnectFlow = false) {
+  // Check if reconnect is blocked after logout
+  const { block_reconnect_until } = await chrome.storage.local.get(['block_reconnect_until']);
+  if (block_reconnect_until && Date.now() < block_reconnect_until) {
+    console.log('[Background] Reconnect blocked after recent logout');
+    return { success: false, reason: 'blocked_after_logout' };
+  }
+  
   return new Promise((resolve) => {
     chrome.tabs.query({}, async (tabs) => {
       const sapienWriteTabs = tabs.filter(tab => 
@@ -958,10 +972,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'signOut') {
     console.log('[Background] Sign out requested');
     signOut()
-      .then(() => {
+      .then(async () => {
         // Clear session cache
         sessionCache.session = null;
         sessionCache.timestamp = 0;
+        
+        // Block reconnect for 60 seconds to prevent auto-reconnect from web
+        const blockUntil = Date.now() + 60000;
+        await chrome.storage.local.set({ block_reconnect_until: blockUntil });
+        console.log('[Background] Reconnect blocked for 60 seconds after logout');
+        
         sendResponse({ success: true });
       })
       .catch(error => sendResponse({ success: false, error: error.message }));

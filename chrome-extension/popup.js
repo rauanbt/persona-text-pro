@@ -293,8 +293,12 @@ async function fetchWordBalance() {
     const plan = subscriptionData.plan || 'free';
     const extensionLimit = EXT_LIMITS[plan] || 500;
     
+    // Get current month in YYYY-MM format
+    const now = new Date();
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    
     const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/usage_tracking?user_id=eq.${session.user.id}&select=words_used,extension_words_used`,
+      `${SUPABASE_URL}/rest/v1/usage_tracking?user_id=eq.${session.user.id}&month_year=eq.${currentMonth}&select=words_used,extension_words_used`,
       {
         headers: {
           'apikey': SUPABASE_ANON_KEY,
@@ -318,8 +322,8 @@ async function fetchWordBalance() {
       wordBalance = Math.max(0, extensionLimit - extensionUsed);
     } else if (plan === 'ultra' || plan === 'master') {
       const totalUsed = (usageData.words_used || 0) + (usageData.extension_words_used || 0);
-      wordBalance = Math.max(0, 30000 - totalUsed);
-      totalLimit = 30000; // Shared 30k pool for web + extension
+      wordBalance = Math.max(0, 40000 - totalUsed);
+      totalLimit = 40000; // Shared 40k pool for web + extension
     } else {
       wordBalance = 0;
     }
@@ -437,8 +441,9 @@ document.getElementById('upgrade-ultra-button')?.addEventListener('click', () =>
 document.getElementById('logout-link')?.addEventListener('click', async (e) => {
   e.preventDefault();
   console.log('[Popup] Logout clicked');
-  // Complete sign out - clears remember_me flag
+  // Complete sign out - clears remember_me flag and blocks reconnect
   await chrome.runtime.sendMessage({ action: 'signOut' });
+  // Don't call requestSessionFromWebApp - let the logout complete
   showLoginView();
 });
 
