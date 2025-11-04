@@ -307,6 +307,7 @@ serve(async (req) => {
       .single();
 
     const userPlan = profile?.current_plan || 'free';
+    console.log('[HYBRID-HUMANIZE] User plan from profile:', userPlan, 'for user:', userData.user.id);
 
     // Detect input language for all plans
     let inputLangCode = 'en';
@@ -325,7 +326,8 @@ serve(async (req) => {
       console.log('[HYBRID-HUMANIZE] Non-English text detected - rejecting free user request');
       return new Response(JSON.stringify({ 
         error: 'Free plan supports English only. Upgrade to Pro or Ultra plan for 50+ languages.',
-        upgrade_required: true
+        upgrade_required: true,
+        current_plan: userPlan
       }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -364,7 +366,8 @@ serve(async (req) => {
       if (!isExtensionRequest) {
         return new Response(JSON.stringify({ 
           error: 'Extension-Only plan users must use the Chrome Extension. Upgrade to Pro or Ultra for web access.',
-          upgrade_required: true
+          upgrade_required: true,
+          current_plan: userPlan
         }), {
           status: 403,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -387,7 +390,8 @@ serve(async (req) => {
       // Pro/Wordsmith: No extension access
       return new Response(JSON.stringify({ 
         error: 'Pro plan does not include Chrome Extension access. Upgrade to Ultra or get Extension-Only plan.',
-        upgrade_required: true
+        upgrade_required: true,
+        current_plan: userPlan
       }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
