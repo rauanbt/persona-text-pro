@@ -48,7 +48,7 @@ export const WritingJourneyPricing = () => {
         "1,500 words per request",
         "Unlimited AI detection (2,500 words per check)",
         "All 6 tone personalities",
-        "Advanced dual-engine humanization (Gemini + ChatGPT)",
+        "Advanced dual-engine humanization (Gemini + ChatGPT) + Tone Generator",
         "50+ languages supported"
       ],
       buttonText: "Choose Pro",
@@ -68,13 +68,13 @@ export const WritingJourneyPricing = () => {
       description: "Unlimited creativity with our most advanced tools",
       icon: <Crown className="w-8 h-8 text-purple-500" />,
       features: [
-        "30,000 words per month",
+        "40,000 words per month",
         "3,000 words per request",
         "Unlimited AI detection (2,500 words per check)",
         "All 6 tone personalities",
-        "Premium triple-engine humanization (Gemini + ChatGPT + Claude)",
+        "Premium triple-engine humanization (Gemini + ChatGPT + Claude) + Tone Generator",
         "50+ languages supported",
-        "✅ Chrome Extension Included (30k shared pool)"
+        "✅ Chrome Extension Included (40k shared pool)"
       ],
       buttonText: "Become an Ultra",
       popular: false,
@@ -96,7 +96,7 @@ export const WritingJourneyPricing = () => {
         "5,000 words per month",
         "Chrome Extension access only",
         "All 6 tone personalities",
-        "Premium triple-engine humanization (Gemini + ChatGPT + Claude)",
+        "Premium triple-engine humanization (Gemini + ChatGPT + Claude) + Tone Generator",
         "No web platform access"
       ],
       buttonText: "Get Extension",

@@ -83,11 +83,9 @@ export const Pricing = () => {
         "15,000 words per month",
         "1,500 words per request",
         "Unlimited AI detection (2,500 words per check)",
-        "All 4 tone options",
-        "My Writing Style",
-        "Advanced Humanization Engine",
-        "50+ languages supported",
-        "Fast mode"
+        "All 6 tone personalities",
+        "Dual-engine humanization (Gemini + ChatGPT) + Tone Generator",
+        "50+ languages supported"
       ],
       buttonText: "Choose Pro",
       popular: true,
@@ -103,9 +101,9 @@ export const Pricing = () => {
       description: "Chrome Extension access only",
       features: [
         "5,000 extension words per month",
-        "Chrome Extension access",
-        "All 4 tone options",
-        "Advanced humanization",
+        "Chrome Extension access only",
+        "All 6 tone personalities",
+        "Triple-engine humanization (Gemini + ChatGPT + Claude) + Tone Generator",
         "No web dashboard access"
       ],
       buttonText: "Get Extension-Only",
@@ -121,14 +119,13 @@ export const Pricing = () => {
       period: isAnnual ? "per month (billed annually)" : "per month",
       description: "For teams and heavy users",
       features: [
-        "30,000 words per month",
+        "40,000 words per month",
         "3,000 words per request",
         "Unlimited AI detection (2,500 words per check)",
-        "All 4 tone options",
-        "My Writing Style",
-        "Advanced Humanization Engine",
-        "Ultra-human writing output",
-        "Chrome Extension included (shared pool)",
+        "All 6 tone personalities",
+        "Triple-engine humanization (Gemini + ChatGPT + Claude) + Tone Generator",
+        "50+ languages supported",
+        "✅ Chrome Extension Included (40k shared pool)",
         "Priority support"
       ],
       buttonText: "Choose Ultra",

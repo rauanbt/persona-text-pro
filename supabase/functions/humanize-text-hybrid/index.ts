@@ -19,14 +19,14 @@ const PLAN_LIMITS = {
   master: 30000,      // Web (+ 5k extension bonus)
   extension_only: 0,  // Extension only plan has no web access
   pro: 15000,         // Web only
-  ultra: 30000        // Web (+ 5k extension bonus)
+  ultra: 40000        // Web + extension shared pool
 };
 
 // Extension word limits
 const EXTENSION_LIMITS = {
   free: 500,           // Shared with web pool
   extension_only: 5000, // Extension only plan
-  ultra: 30000,         // Shared pool with web (no separate bonus)
+  ultra: 40000,         // Shared pool with web (no separate bonus)
   master: 30000         // Shared pool with web (no separate bonus, legacy)
 };
 

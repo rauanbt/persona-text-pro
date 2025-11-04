@@ -7,28 +7,28 @@ export const PLAN_PRICES = {
   },
   pro: {
     monthly: { 
-      price: 24.95, 
-      display: "$24.95",
-      priceId: "price_1SD818H8HT0u8xph48V9GxXG" 
+      price: 17.95, 
+      display: "$17.95",
+      priceId: "price_1SD818H8HT0u8xph48V9GxXG" // UPDATE WITH NEW STRIPE PRICE ID
     },
     annual: { 
-      price: 14.97, 
-      display: "$14.97",
-      yearlyTotal: 179.64,
-      priceId: "price_1SGMnjH8HT0u8xphJXTgm1Ii" 
+      price: 8.95, 
+      display: "$8.95",
+      yearlyTotal: 107.40,
+      priceId: "price_1SGMnjH8HT0u8xphJXTgm1Ii" // UPDATE WITH NEW STRIPE PRICE ID
     }
   },
   ultra: {
     monthly: { 
-      price: 54.95, 
-      display: "$54.95",
-      priceId: "price_1SD81xH8HT0u8xphuqiq8xet" 
+      price: 39.95, 
+      display: "$39.95",
+      priceId: "price_1SD81xH8HT0u8xphuqiq8xet" // UPDATE WITH NEW STRIPE PRICE ID
     },
     annual: { 
-      price: 32.97, 
-      display: "$32.97",
-      yearlyTotal: 395.64,
-      priceId: "price_1SGMo6H8HT0u8xphytzP4SFR" 
+      price: 19.95, 
+      display: "$19.95",
+      yearlyTotal: 239.40,
+      priceId: "price_1SGMo6H8HT0u8xphytzP4SFR" // UPDATE WITH NEW STRIPE PRICE ID
     }
   },
   extension_only: {
@@ -48,7 +48,7 @@ export const PLAN_PRICES = {
 export const PLAN_LIMITS = {
   free: 500,
   pro: 15000,
-  ultra: 30000,
+  ultra: 40000,
   extension_only: 5000
 } as const;
 
