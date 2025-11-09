@@ -24,6 +24,9 @@ verify_jwt = true
 [functions.send-contact-email]
 verify_jwt = true
 
+[functions.stripe-webhook]
+verify_jwt = false
+
 [functions.ai-detection-lovable]
 verify_jwt = false
 
