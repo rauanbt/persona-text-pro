@@ -1,13 +1,13 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
-import { Resend } from "npm:resend@2.0.0";
+import { Resend } from "https://esm.sh/resend@2.0.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+const resend = new Resend(Deno.env.get("RESEND_API_KEY") as string);
 
 // Plan details mapping using actual Stripe price IDs
 const PLAN_DETAILS: Record<string, {
@@ -131,8 +131,9 @@ serve(async (req) => {
       event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
       logStep("Webhook signature verified", { eventType: event.type });
     } catch (err) {
-      logStep("Webhook signature verification failed", { error: err.message });
-      return new Response(JSON.stringify({ error: `Webhook signature verification failed: ${err.message}` }), {
+      const error = err as Error;
+      logStep("Webhook signature verification failed", { error: error.message });
+      return new Response(JSON.stringify({ error: `Webhook signature verification failed: ${error.message}` }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -278,26 +279,25 @@ serve(async (req) => {
         });
 
         logStep("Receipt email sent successfully", { 
-          emailId: emailResponse.id,
           customerEmail,
           planName: planDetails.name
         });
 
         return new Response(JSON.stringify({ 
           received: true, 
-          email_sent: true,
-          email_id: emailResponse.id
+          email_sent: true
         }), {
           status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       } catch (emailError) {
-        logStep("Failed to send receipt email", { error: emailError.message });
+        const error = emailError as Error;
+        logStep("Failed to send receipt email", { error: error.message });
         // Don't fail the webhook if email fails
         return new Response(JSON.stringify({ 
           received: true, 
           email_sent: false,
-          error: emailError.message
+          error: error.message
         }), {
           status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -430,25 +430,24 @@ serve(async (req) => {
         });
 
         logStep("Renewal receipt sent successfully", { 
-          emailId: emailResponse.id,
           customerEmail,
           planName: planDetails.name
         });
 
         return new Response(JSON.stringify({ 
           received: true, 
-          email_sent: true,
-          email_id: emailResponse.id
+          email_sent: true
         }), {
           status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       } catch (emailError) {
-        logStep("Failed to send renewal receipt", { error: emailError.message });
+        const error = emailError as Error;
+        logStep("Failed to send renewal receipt", { error: error.message });
         return new Response(JSON.stringify({ 
           received: true, 
           email_sent: false,
-          error: emailError.message
+          error: error.message
         }), {
           status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
