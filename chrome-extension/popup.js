@@ -277,15 +277,13 @@ function updatePlanBadge(plan) {
   badge.className = `status-badge ${planClasses[plan] || 'status-free'}`;
 }
 
-// Fetch word balance
+// Fetch word balance using canonical usage-summary function
 async function fetchWordBalance() {
-  // Clear any cached balance on popup open
-  console.log('[Popup] Fetching fresh word balance...');
+  console.log('[Popup] Fetching fresh word balance from usage-summary...');
   
   try {
     const session = await getSession();
     
-    // Validate session before using it
     if (!session || !session.user) {
       console.error('[Popup] No valid session for word balance');
       await clearSession();
@@ -293,67 +291,46 @@ async function fetchWordBalance() {
       return;
     }
     
-    const plan = subscriptionData.plan || 'free';
-    const extensionLimit = EXT_LIMITS[plan] || 500;
+    // Call the canonical usage-summary edge function
+    const data = await callSupabaseFunction('usage-summary', { source: 'extension' });
     
-    // Get current month in YYYY-MM format using UTC to avoid timezone issues
-    const now = new Date();
-    const year = now.getUTCFullYear();
-    const month = String(now.getUTCMonth() + 1).padStart(2, '0');
-    const currentMonth = `${year}-${month}`;
+    console.log('[Popup] Usage summary received:', data);
     
-    console.log('[Popup] Fetching usage for month:', currentMonth);
-    console.log('[Popup] Current date (UTC):', now.toISOString());
-    console.log('[Popup] Current date (Local):', now.toLocaleString());
+    const remaining = data.extension_remaining || data.remaining_shared || 0;
+    const limit = data.extension_limit || data.plan_limit || 0;
     
-    const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/usage_tracking?user_id=eq.${session.user.id}&month_year=eq.${currentMonth}&select=words_used,extension_words_used`,
-      {
-        headers: {
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${session.access_token}`
-        }
-      }
-    );
+    wordBalance = remaining;
+    updateWordBalanceUI(remaining, limit);
     
-    if (!response.ok) throw new Error('Failed to fetch usage');
-    
-    const data = await response.json();
-    console.log('[Popup] Usage data received:', data);
-    const usageData = data[0] || { words_used: 0, extension_words_used: 0 };
-    console.log('[Popup] Parsed usage:', usageData);
-    
-    // Calculate balance based on plan
-    let totalLimit = extensionLimit;
-    if (plan === 'free') {
-      const totalUsed = (usageData.words_used || 0) + (usageData.extension_words_used || 0);
-      wordBalance = Math.max(0, extensionLimit - totalUsed);
-    } else if (plan === 'extension_only') {
-      const extensionUsed = usageData.extension_words_used || 0;
-      wordBalance = Math.max(0, extensionLimit - extensionUsed);
-    } else if (plan === 'ultra' || plan === 'master') {
-      const totalUsed = (usageData.words_used || 0) + (usageData.extension_words_used || 0);
-      wordBalance = Math.max(0, 40000 - totalUsed);
-      totalLimit = 40000; // Shared 40k pool for web + extension
-    } else {
-      wordBalance = 0;
-    }
-    
-    updateWordBalanceUI(wordBalance, totalLimit);
-    
-    // Store last fetch timestamp and balance for cache management
+    // Store diagnostic info for troubleshooting
     await localSet({ 
       lastBalanceFetch: Date.now(),
-      lastKnownBalance: wordBalance 
+      lastKnownBalance: remaining,
+      last_usage_summary: {
+        timestamp: new Date().toISOString(),
+        plan: data.plan,
+        plan_limit: data.plan_limit,
+        web_used: data.web_used,
+        extension_used: data.extension_used,
+        shared_used: data.shared_used,
+        remaining_shared: data.remaining_shared,
+        extension_limit: data.extension_limit,
+        extension_remaining: data.extension_remaining,
+        extra_words: data.extra_words,
+        month_year: data.month_year
+      }
     });
-    console.log('[Popup] Word balance updated:', wordBalance);
     
+    console.log('[Popup] Word balance updated:', remaining, '/', limit);
+    
+    const plan = data.plan || 'free';
     if (wordBalance <= 0 && plan !== 'pro' && plan !== 'wordsmith') {
       document.getElementById('upgrade-prompt').classList.remove('hidden');
     }
   } catch (error) {
     console.error('[Popup] Error fetching word balance:', error);
     document.getElementById('word-count').textContent = 'Error';
+    showError('Failed to fetch word balance. Please try refreshing.');
   }
 }
 
