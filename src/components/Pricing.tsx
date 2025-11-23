@@ -74,26 +74,6 @@ export const Pricing = () => {
       isFree: true
     },
     {
-      name: "Pro",
-      monthlyPrice: PLAN_PRICES.pro.monthly.display,
-      annualPrice: PLAN_PRICES.pro.annual.display,
-      period: isAnnual ? "per month (billed annually)" : "per month",
-      description: "Perfect for professionals and content creators",
-      features: [
-        "15,000 words per month",
-        "1,500 words per request",
-        "Unlimited AI detection (2,500 words per check)",
-        "All 6 tone personalities",
-        "Dual-engine humanization (Gemini + ChatGPT) + Tone Generator",
-        "50+ languages supported"
-      ],
-      buttonText: "Choose Pro",
-      popular: true,
-      isFree: false,
-      monthlyPriceId: PLAN_PRICES.pro.monthly.priceId,
-      annualPriceId: PLAN_PRICES.pro.annual.priceId
-    },
-    {
       name: "Extension-Only",
       monthlyPrice: PLAN_PRICES.extension_only.monthly.display,
       annualPrice: PLAN_PRICES.extension_only.annual.display,
@@ -188,7 +168,7 @@ export const Pricing = () => {
           </div>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+        <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
           {plans.map((plan, index) => {
             const isHighlighted = highlightedPlan === plan.name.toLowerCase().replace('-only', '_only');
             const showExtensionBadge = fromExtension && (plan.name === 'Extension-Only' || plan.name === 'Ultra');
