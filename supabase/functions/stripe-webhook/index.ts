@@ -29,11 +29,43 @@ const PLAN_DETAILS: Record<string, {
       'Advanced AI engines (GPT-4, Claude) + Fast engines',
       '50+ languages supported',
       'All tone options (Professional, Casual, Academic, Creative, Technical)',
+      'Priority support',
+      '⚠️ LEGACY PRICING - Old monthly price'
+    ]
+  },
+  // Ultra Monthly - NEW PRICING
+  'price_1SWYfhH8HT0u8xphzdZ9kO1A': {
+    name: 'Ultra Plan',
+    wordLimit: 40000,
+    billingPeriod: 'Monthly',
+    hasExtension: true,
+    features: [
+      '40,000 words per month (shared pool across web & extension)',
+      'Chrome Extension access included',
+      'Advanced AI engines (GPT-4, Claude) + Fast engines',
+      '50+ languages supported',
+      'All tone options (Professional, Casual, Academic, Creative, Technical)',
       'Priority support'
     ]
   },
-  // Ultra Annual
+  // Ultra Annual - LEGACY PRICING
   'price_1SGMo6H8HT0u8xphytzP4SFR': {
+    name: 'Ultra Plan',
+    wordLimit: 40000,
+    billingPeriod: 'Annual',
+    hasExtension: true,
+    features: [
+      '40,000 words per month (shared pool across web & extension)',
+      'Chrome Extension access included',
+      'Advanced AI engines (GPT-4, Claude) + Fast engines',
+      '50+ languages supported',
+      'All tone options (Professional, Casual, Academic, Creative, Technical)',
+      'Priority support',
+      '💰 Save 40% with annual billing (LEGACY - Old pricing)'
+    ]
+  },
+  // Ultra Annual - NEW PRICING
+  'price_1SWYfwH8HT0u8xphFTyNNhan': {
     name: 'Ultra Plan',
     wordLimit: 40000,
     billingPeriod: 'Annual',
@@ -48,9 +80,9 @@ const PLAN_DETAILS: Record<string, {
       '💰 Save 40% with annual billing'
     ]
   },
-  // Pro Monthly
+  // Pro Monthly - DEPRECATED (Legacy customers only)
   'price_1SD818H8HT0u8xph48V9GxXG': {
-    name: 'Pro Plan',
+    name: 'Pro Plan (DEPRECATED)',
     wordLimit: 15000,
     billingPeriod: 'Monthly',
     hasExtension: false,
@@ -60,12 +92,13 @@ const PLAN_DETAILS: Record<string, {
       'Advanced AI engines (GPT-4, Claude) + Fast engines',
       '50+ languages supported',
       'All tone options (Professional, Casual, Academic, Creative, Technical)',
-      'Email support'
+      'Email support',
+      '⚠️ LEGACY PLAN - No longer available for new customers'
     ]
   },
-  // Pro Annual
+  // Pro Annual - DEPRECATED (Legacy customers only)
   'price_1SGMnjH8HT0u8xphJXTgm1Ii': {
-    name: 'Pro Plan',
+    name: 'Pro Plan (DEPRECATED)',
     wordLimit: 15000,
     billingPeriod: 'Annual',
     hasExtension: false,
@@ -76,7 +109,8 @@ const PLAN_DETAILS: Record<string, {
       '50+ languages supported',
       'All tone options (Professional, Casual, Academic, Creative, Technical)',
       'Email support',
-      '💰 Save 40% with annual billing'
+      '💰 Save 40% with annual billing',
+      '⚠️ LEGACY PLAN - No longer available for new customers'
     ]
   },
   // Extension-Only
