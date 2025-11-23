@@ -17,11 +17,11 @@ export const FAQ = () => {
     },
     {
       question: "Are there limits on AI detection checks?",
-      answer: "No! We offer unlimited AI detection checks for all users. Free users can check up to 500 words per request, while paid subscribers (Pro, Ultra) can check up to 2,500 words per request. There's no monthly limit on the number of checks you can perform."
+      answer: "No! We offer unlimited AI detection checks for all users. Free users can check up to 500 words per request, while paid subscribers can check up to 2,500 words per request. There's no monthly limit on the number of checks you can perform."
     },
     {
       question: "How much does SapienWrite cost?",
-      answer: "We offer three plans: Free (500 words/month), Extension-Only at $12.95/month with 5,000 words for Chrome Extension access, and Ultra at $39.95/month (or $19.95/month annually) for 40,000 words with everything included. Annual Ultra plan saves you 50% at $239.40/year. All plans include AI detection bypass and tone options."
+      answer: "We offer three plans: Free (500 words/month), Extension-Only at $12.95/month with 5,000 words for Chrome Extension access, and Ultra at $39.95/month (or $23.97/month annually) for 40,000 words with everything included. Annual Ultra plan saves you 40% at $287.64/year. All plans include AI detection bypass and tone options."
     },
     {
       question: "What are the different tone options?",

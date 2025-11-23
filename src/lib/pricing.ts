@@ -25,13 +25,13 @@ export const PLAN_PRICES = {
     monthly: { 
       price: 39.95, 
       display: "$39.95",
-      priceId: "price_1SD81xH8HT0u8xphuqiq8xet"
+      priceId: "price_1SWYfhH8HT0u8xphzdZ9kO1A"
     },
     annual: { 
       price: 23.97, 
       display: "$23.97",
       yearlyTotal: 287.64,
-      priceId: "price_1SGMo6H8HT0u8xphytzP4SFR"
+      priceId: "price_1SWYfwH8HT0u8xphFTyNNhan"
     }
   },
   extension_only: {
