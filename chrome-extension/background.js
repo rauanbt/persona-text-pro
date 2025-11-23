@@ -1165,6 +1165,12 @@ async function handleHumanizeRequest(text, tone, toneIntensity, forceRewrite, ta
     }
     console.log('[Background] Message sent successfully');
     
+    // Broadcast balance update to popup for real-time sync
+    chrome.runtime.sendMessage({
+      action: 'balanceUpdated',
+      wordsUsed: wordCount
+    }).catch(err => console.log('[Background] Could not notify popup:', err));
+    
   } catch (error) {
     console.error('[Background] Error humanizing:', error);
     

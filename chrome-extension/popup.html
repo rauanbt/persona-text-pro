@@ -78,8 +78,41 @@
       color: #6b21a8;
     }
 
+    .status-ultra {
+      background: #e9d5ff;
+      color: #6b21a8;
+    }
+
     .word-balance {
       margin-top: 15px;
+    }
+
+    .refresh-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 20px;
+      padding: 4px 8px;
+      transition: transform 0.3s;
+      opacity: 0.6;
+    }
+
+    .refresh-btn:hover {
+      opacity: 1;
+    }
+
+    .refresh-btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.3;
+    }
+
+    .refresh-btn.spinning {
+      animation: refreshSpin 0.6s linear;
+    }
+
+    @keyframes refreshSpin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
     }
 
     .word-count {
@@ -296,7 +329,10 @@
         </div>
 
         <div class="word-balance">
-          <div class="word-count" id="word-count">0</div>
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div class="word-count" id="word-count">0</div>
+            <button id="refresh-balance-btn" class="refresh-btn" title="Refresh balance">🔄</button>
+          </div>
           <div class="word-label">words remaining this month</div>
           <div class="progress-bar">
             <div class="progress-fill" id="progress-fill"></div>

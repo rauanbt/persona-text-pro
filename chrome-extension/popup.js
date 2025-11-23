@@ -279,6 +279,9 @@ function updatePlanBadge(plan) {
 
 // Fetch word balance
 async function fetchWordBalance() {
+  // Clear any cached balance on popup open
+  console.log('[Popup] Fetching fresh word balance...');
+  
   try {
     const session = await getSession();
     
@@ -293,9 +296,15 @@ async function fetchWordBalance() {
     const plan = subscriptionData.plan || 'free';
     const extensionLimit = EXT_LIMITS[plan] || 500;
     
-    // Get current month in YYYY-MM format
+    // Get current month in YYYY-MM format using UTC to avoid timezone issues
     const now = new Date();
-    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const year = now.getUTCFullYear();
+    const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+    const currentMonth = `${year}-${month}`;
+    
+    console.log('[Popup] Fetching usage for month:', currentMonth);
+    console.log('[Popup] Current date (UTC):', now.toISOString());
+    console.log('[Popup] Current date (Local):', now.toLocaleString());
     
     const response = await fetch(
       `${SUPABASE_URL}/rest/v1/usage_tracking?user_id=eq.${session.user.id}&month_year=eq.${currentMonth}&select=words_used,extension_words_used`,
@@ -310,7 +319,9 @@ async function fetchWordBalance() {
     if (!response.ok) throw new Error('Failed to fetch usage');
     
     const data = await response.json();
+    console.log('[Popup] Usage data received:', data);
     const usageData = data[0] || { words_used: 0, extension_words_used: 0 };
+    console.log('[Popup] Parsed usage:', usageData);
     
     // Calculate balance based on plan
     let totalLimit = extensionLimit;
@@ -329,6 +340,13 @@ async function fetchWordBalance() {
     }
     
     updateWordBalanceUI(wordBalance, totalLimit);
+    
+    // Store last fetch timestamp and balance for cache management
+    await localSet({ 
+      lastBalanceFetch: Date.now(),
+      lastKnownBalance: wordBalance 
+    });
+    console.log('[Popup] Word balance updated:', wordBalance);
     
     if (wordBalance <= 0 && plan !== 'pro' && plan !== 'wordsmith') {
       document.getElementById('upgrade-prompt').classList.remove('hidden');
@@ -447,11 +465,36 @@ document.getElementById('logout-link')?.addEventListener('click', async (e) => {
   showLoginView();
 });
 
+// Wire up manual refresh button
+document.getElementById('refresh-balance-btn')?.addEventListener('click', async () => {
+  const btn = document.getElementById('refresh-balance-btn');
+  if (!btn) return;
+  
+  console.log('[Popup] Manual refresh triggered');
+  btn.classList.add('spinning');
+  btn.disabled = true;
+  
+  try {
+    await fetchWordBalance();
+  } finally {
+    btn.classList.remove('spinning');
+    btn.disabled = false;
+  }
+});
+
 // Listen for storage changes
 chrome.storage.onChanged.addListener((changes, areaName) => {
   if (areaName === 'local' && changes.access_token) {
     console.log('[Popup] Session updated - refreshing');
     loadUserData().catch(() => showLoginView());
+  }
+});
+
+// Listen for balance updates from background script (real-time sync)
+chrome.runtime.onMessage.addListener((message) => {
+  if (message.action === 'balanceUpdated') {
+    console.log('[Popup] Balance updated from background, refreshing...', message.wordsUsed);
+    fetchWordBalance(); // Refresh balance immediately
   }
 });
 
