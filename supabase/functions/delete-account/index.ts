@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import Stripe from "https://esm.sh/stripe@18.5.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -40,6 +41,45 @@ serve(async (req) => {
     }
 
     console.log(`[delete-account] Deleting account for user: ${user.id}`);
+
+    // First, get the Stripe customer ID to cancel subscriptions
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("stripe_customer_id")
+      .eq("user_id", user.id)
+      .single();
+
+    // Cancel all active Stripe subscriptions if customer exists
+    if (profile?.stripe_customer_id) {
+      console.log(`[delete-account] Found Stripe customer: ${profile.stripe_customer_id}`);
+      
+      try {
+        const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
+          apiVersion: "2025-08-27.basil",
+        });
+        
+        // List all active subscriptions
+        const subscriptions = await stripe.subscriptions.list({
+          customer: profile.stripe_customer_id,
+          status: 'active',
+        });
+        
+        console.log(`[delete-account] Found ${subscriptions.data.length} active subscriptions`);
+        
+        // Cancel each active subscription
+        for (const subscription of subscriptions.data) {
+          await stripe.subscriptions.cancel(subscription.id);
+          console.log(`[delete-account] Canceled subscription: ${subscription.id}`);
+        }
+        
+        if (subscriptions.data.length > 0) {
+          console.log(`[delete-account] Successfully canceled ${subscriptions.data.length} subscription(s)`);
+        }
+      } catch (stripeError) {
+        console.error("[delete-account] Error canceling Stripe subscriptions:", stripeError);
+        // Continue with account deletion even if Stripe cancellation fails
+      }
+    }
 
     // Delete user data in order (respecting foreign key constraints)
     

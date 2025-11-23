@@ -212,10 +212,11 @@ async function loadUserData() {
       subscriptionData = await checkSubscription();
       console.log('[Popup] Subscription:', subscriptionData);
     } catch (subError) {
-      // Handle refresh_token_already_used error
+      // Handle account deleted or invalid token errors
       if (subError.message?.includes('refresh_token_already_used') || 
-          subError.message?.includes('Invalid Refresh Token')) {
-        console.log('[Popup] Token error - requesting fresh session');
+          subError.message?.includes('Invalid Refresh Token') ||
+          subError.message?.includes('Session expired or account deleted')) {
+        console.log('[Popup] Auth error - session invalid or account deleted');
         await clearSession();
         await requestSessionFromWebApp();
         showLoginView();
@@ -329,6 +330,15 @@ async function fetchWordBalance() {
     }
   } catch (error) {
     console.error('[Popup] Error fetching word balance:', error);
+    
+    // Handle account deleted error
+    if (error.message?.includes('Session expired or account deleted')) {
+      console.log('[Popup] Account deleted - showing login view');
+      await clearSession();
+      showLoginView();
+      return;
+    }
+    
     document.getElementById('word-count').textContent = 'Error';
     showError('Failed to fetch word balance. Please try refreshing.');
   }

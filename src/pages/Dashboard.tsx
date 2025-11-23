@@ -545,6 +545,13 @@ const Dashboard = () => {
     setIsDeletingAccount(true);
     
     try {
+      // Notify extension that account is being deleted (before actual deletion)
+      window.postMessage({
+        type: 'ACCOUNT_DELETED',
+        timestamp: Date.now()
+      }, '*');
+      console.log('[Dashboard] Broadcasted account deletion to extension');
+
       const { data, error } = await supabase.functions.invoke('delete-account', {
         headers: {
           Authorization: `Bearer ${session?.access_token}`,
@@ -555,7 +562,7 @@ const Dashboard = () => {
 
       toast({
         title: "Account Deleted",
-        description: "Your account has been permanently deleted. You can create a new account any time.",
+        description: "Your account and all subscriptions have been permanently deleted.",
       });
 
       // Sign out and redirect to home
@@ -690,12 +697,19 @@ const Dashboard = () => {
                       <li>All humanization requests</li>
                       <li>All extra word purchases</li>
                       <li>Your account profile</li>
+                      {(currentPlan === 'ultra' || currentPlan === 'master' || currentPlan === 'extension_only') && (
+                        <li className="text-amber-600 dark:text-amber-400 font-semibold">
+                          <strong>Active Stripe subscriptions will be canceled</strong>
+                        </li>
+                      )}
                     </ul>
-                    <p className="text-amber-600 dark:text-amber-400 font-semibold">
-                      ⚠️ Important: This will NOT cancel your Stripe subscription.
-                    </p>
+                    {(currentPlan === 'ultra' || currentPlan === 'master' || currentPlan === 'extension_only') && (
+                      <p className="text-amber-600 dark:text-amber-400 font-semibold">
+                        ⚠️ Your {currentPlan === 'extension_only' ? 'Extension' : 'Ultra'} subscription will be canceled immediately.
+                      </p>
+                    )}
                     <p className="text-sm">
-                      If you have an active subscription, please click "Manage Subscription" first to cancel your billing before deleting your account.
+                      If you're using the Chrome extension, it will be automatically logged out and you'll need to sign up again if you want to use it in the future.
                     </p>
                     <div className="mt-4">
                       <label className="text-sm font-medium">
