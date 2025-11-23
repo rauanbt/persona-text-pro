@@ -12,12 +12,13 @@ const logStep = (step: string, details?: any) => {
   console.log(`[CHECK-SUBSCRIPTION] ${step}${detailsStr}`);
 };
 
+// CANONICAL PLAN LIMITS - Must match usage-summary function
 const PLAN_LIMITS = {
   free: 500,
   extension_only: 5000,
   pro: 15000,
-  ultra: 40000,
-  master: 30000
+  ultra: 40000, // Updated to 40K
+  master: 30000, // legacy
 } as const;
 
 async function getCurrentMonthUsage(userId: string, monthYear: string, supabaseClient: any) {
@@ -153,7 +154,7 @@ serve(async (req) => {
 
       logStep("Subscription found", { subscriptionId: subscription.id, status: subscription.status, priceId, productId, endDate: subscriptionEnd });
 
-      // Plan mappings (keep existing IDs)
+      // Plan mappings - include new Ultra price IDs
       const proPriceIds = [
         'price_1SD818H8HT0u8xph48V9GxXG',
         'price_1SD81lH8HT0u8xph8dYBxkqi',
@@ -167,10 +168,12 @@ serve(async (req) => {
         'prod_T8y7e3nrqQ6aOa',
       ];
       const ultraPriceIds = [
-        'price_1SD81xH8HT0u8xphuqiq8xet',
-        'price_1SD828H8HT0u8xphUaDaMTDV',
-        'price_1SCfkUH8HT0u8xphj7aOiKux',
-        'price_1SCgCCH8HT0u8xphO8rBX20v',
+        'price_1SD81xH8HT0u8xphuqiq8xet', // Legacy
+        'price_1SD828H8HT0u8xphUaDaMTDV', // Legacy
+        'price_1SCfkUH8HT0u8xphj7aOiKux', // Legacy
+        'price_1SCgCCH8HT0u8xphO8rBX20v', // Legacy
+        'price_1SWYfhH8HT0u8xphzdZ9kO1A', // New Monthly 40K
+        'price_1SWYfwH8HT0u8xphFTyNNhan', // New Annual 40K
       ];
       const ultraProductIds = [
         'prod_T7ntTU0aXJOIQG',

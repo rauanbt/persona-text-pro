@@ -207,37 +207,34 @@ const Dashboard = () => {
 
   const fetchUsage = async () => {
     if (!user) return;
-
+    
     try {
-      const currentMonth = new Date().toISOString().slice(0, 7);
-      
-      // Fetch usage, extra words balance, and detection limit in parallel
-      const [usageResult, profileResult] = await Promise.all([
-        supabase
-          .from('usage_tracking')
-          .select('words_used, extension_words_used, requests_count')
-          .eq('user_id', user.id)
-          .eq('month_year', currentMonth)
-          .maybeSingle(),
-        supabase
-          .from('profiles')
-          .select('extra_words_balance, current_plan')
-          .eq('user_id', user.id)
-          .single()
-      ]);
-
-      if (usageResult.error && usageResult.error.code !== 'PGRST116') {
-        throw usageResult.error;
+      const { data: session } = await supabase.auth.getSession();
+      if (!session?.session?.access_token) {
+        console.error('[Dashboard] No session token available');
+        return;
       }
 
-      if (profileResult.error) {
-        throw profileResult.error;
+      const { data, error } = await supabase.functions.invoke('usage-summary', {
+        body: { source: 'web' },
+      });
+
+      if (error) {
+        console.error('[Dashboard] Error fetching usage summary:', error);
+        return;
       }
 
-      setUsage(usageResult.data || { words_used: 0, extension_words_used: 0, requests_count: 0 });
-      setExtraWords(profileResult.data?.extra_words_balance || 0);
+      console.log('[Dashboard] Usage summary received:', data);
+
+      setUsage({
+        words_used: data.web_used || 0,
+        extension_words_used: data.extension_used || 0,
+        requests_count: data.requests_count || 0
+      });
+
+      setExtraWords(data.extra_words || 0);
     } catch (error) {
-      console.error('Error fetching usage:', error);
+      console.error('[Dashboard] Error in fetchUsage:', error);
     } finally {
       setLoading(false);
     }
