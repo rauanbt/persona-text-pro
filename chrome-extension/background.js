@@ -997,6 +997,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   
+  if (message.action === 'accountDeleted') {
+    console.log('[Background] Account deleted - clearing session');
+    signOut()
+      .then(async () => {
+        // Clear session cache
+        sessionCache.session = null;
+        sessionCache.timestamp = 0;
+        console.log('[Background] Extension session cleared after account deletion');
+        sendResponse({ success: true });
+      })
+      .catch(error => {
+        console.error('[Background] Error clearing session after account deletion:', error);
+        sendResponse({ success: false, error: error.message });
+      });
+    return true;
+  }
+  
   if (message.action === 'requestSessionFromWebApp') {
     console.log('[Background] Requesting session from web app...');
     

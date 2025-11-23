@@ -392,6 +392,13 @@ async function callSupabaseFunction(functionName, body = {}) {
     }
   );
   
+  // Handle auth errors - account may have been deleted
+  if (response.status === 401 || response.status === 403) {
+    console.error('[Auth] Session invalid - clearing (account may be deleted)');
+    await clearSession();
+    throw new Error('Session expired or account deleted');
+  }
+  
   if (!response.ok) {
     const error = await response.text();
     throw new Error(`Function call failed: ${error}`);

@@ -42,6 +42,21 @@ window.addEventListener('message', (event) => {
       }
     });
   }
+  
+  if (event.data.type === 'ACCOUNT_DELETED') {
+    console.log('[AuthBridge] Account deletion notification received');
+    
+    // Forward account deletion to extension background script
+    chrome.runtime.sendMessage({
+      action: 'accountDeleted'
+    }, (response) => {
+      if (response?.success) {
+        console.log('[AuthBridge] Account deletion notification sent');
+      } else {
+        console.error('[AuthBridge] Failed to send account deletion');
+      }
+    });
+  }
 });
 
 console.log('[AuthBridge] Ready to receive session data');
