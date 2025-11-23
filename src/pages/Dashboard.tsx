@@ -12,9 +12,11 @@ import { ExtraWordsPackages } from '@/components/ExtraWordsPackages';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AIDetectionResults } from '@/components/AIDetectionResults';
-import { Loader2, Copy, Download, ExternalLink, Crown, Zap, Plus, Brain, Shield, Chrome, ChevronDown, Check, HelpCircle } from 'lucide-react';
+import { Loader2, Copy, Download, ExternalLink, Crown, Zap, Plus, Brain, Shield, Chrome, ChevronDown, Check, HelpCircle, Trash2 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useNavigate } from 'react-router-dom';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Input } from '@/components/ui/input';
 
 import { PLAN_LIMITS, PLAN_PRICES } from '@/lib/pricing';
 
@@ -37,6 +39,8 @@ const Dashboard = () => {
   const [showExtensionSetup, setShowExtensionSetup] = useState(false);
   const [showResult, setShowResult] = useState(false);
   const [highlightedPlan, setHighlightedPlan] = useState<string | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const resultRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   
@@ -526,6 +530,48 @@ const Dashboard = () => {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText !== 'DELETE') {
+      toast({
+        title: "Confirmation required",
+        description: "Please type DELETE to confirm account deletion.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsDeletingAccount(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('delete-account', {
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Account Deleted",
+        description: "Your account has been permanently deleted. You can create a new account any time.",
+      });
+
+      // Sign out and redirect to home
+      await signOut();
+      navigate('/');
+    } catch (error: any) {
+      console.error('Error deleting account:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete account. Please try again or contact support.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeletingAccount(false);
+      setDeleteConfirmText('');
+    }
+  };
+
   const copyToClipboard = () => {
     navigator.clipboard.writeText(humanizedText);
     toast({
@@ -605,8 +651,8 @@ const Dashboard = () => {
               {authLoading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
             </div>
           </div>
-          <div className="flex items-center space-x-4">
-            <span className="text-sm text-muted-foreground">
+          <div className="flex items-center space-x-2">
+            <span className="text-sm text-muted-foreground hidden sm:inline">
               Welcome, {user?.email}
             </span>
             <Button 
@@ -622,7 +668,69 @@ const Dashboard = () => {
               {isRefreshing ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : null}
               Refresh Status
             </Button>
-            <Button onClick={signOut} variant="outline">
+            
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
+                  <Trash2 className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Delete Account</span>
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription className="space-y-3">
+                    <p>
+                      This action <strong>cannot be undone</strong>. This will permanently delete your account and remove all your data from our servers, including:
+                    </p>
+                    <ul className="list-disc list-inside space-y-1 text-sm">
+                      <li>All usage history and word balances</li>
+                      <li>All humanization requests</li>
+                      <li>All extra word purchases</li>
+                      <li>Your account profile</li>
+                    </ul>
+                    <p className="text-amber-600 dark:text-amber-400 font-semibold">
+                      ⚠️ Important: This will NOT cancel your Stripe subscription.
+                    </p>
+                    <p className="text-sm">
+                      If you have an active subscription, please click "Manage Subscription" first to cancel your billing before deleting your account.
+                    </p>
+                    <div className="mt-4">
+                      <label className="text-sm font-medium">
+                        Type <code className="bg-muted px-1 py-0.5 rounded">DELETE</code> to confirm:
+                      </label>
+                      <Input
+                        value={deleteConfirmText}
+                        onChange={(e) => setDeleteConfirmText(e.target.value)}
+                        placeholder="Type DELETE"
+                        className="mt-2"
+                      />
+                    </div>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel onClick={() => setDeleteConfirmText('')}>
+                    Cancel
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDeleteAccount}
+                    disabled={deleteConfirmText !== 'DELETE' || isDeletingAccount}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {isDeletingAccount ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Deleting...
+                      </>
+                    ) : (
+                      'Delete Account'
+                    )}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            
+            <Button onClick={signOut} variant="outline" size="sm">
               Sign Out
             </Button>
           </div>
