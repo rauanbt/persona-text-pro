@@ -53,10 +53,16 @@ const Dashboard = () => {
   const webWordsUsed = usage.words_used || 0;
   const extensionWordsUsed = usage.extension_words_used || 0;
   
-  const remainingWords = Math.max(0, webPlanLimit - webWordsUsed);
+  // For Ultra/Master: combine web + extension usage (shared pool)
+  const isSharedPool = currentPlan === 'ultra' || currentPlan === 'master';
+  const totalWordsUsed = isSharedPool 
+    ? webWordsUsed + extensionWordsUsed 
+    : webWordsUsed;
+  
+  const remainingWords = Math.max(0, webPlanLimit - totalWordsUsed);
   const extensionRemainingWords = hasExtensionBonus ? Math.max(0, extensionLimit - extensionWordsUsed) : 0;
   const totalAvailableWords = remainingWords + extraWords;
-  const usagePercentage = Math.min((webWordsUsed / webPlanLimit) * 100, 100);
+  const usagePercentage = Math.min((totalWordsUsed / webPlanLimit) * 100, 100);
   const extensionUsagePercentage = hasExtensionBonus ? Math.min((extensionWordsUsed / extensionLimit) * 100, 100) : 0;
 
   useEffect(() => {
@@ -729,10 +735,10 @@ const Dashboard = () => {
                       </div>
                     )}
                     
-                    <div className="bg-amber-50 dark:bg-amber-950/20 rounded-lg p-4 text-sm">
+                      <div className="bg-amber-50 dark:bg-amber-950/20 rounded-lg p-4 text-sm">
                       <p className="font-medium mb-2">Want web dashboard access?</p>
                       <p className="text-muted-foreground mb-3">
-                        Upgrade to Pro or Ultra plan to unlock the web humanizer and AI detection tools.
+                        Upgrade to Ultra plan to unlock the web humanizer and AI detection tools with 40,000 words in a shared pool.
                       </p>
                       <Button 
                         variant="default" 
@@ -764,6 +770,25 @@ const Dashboard = () => {
                         <span className="font-bold text-primary">{totalAvailableWords.toLocaleString()} words</span>
                       </div>
                     </div>
+                    
+                    {/* Usage Breakdown for Ultra Shared Pool */}
+                    {isSharedPool && (webWordsUsed > 0 || extensionWordsUsed > 0) && (
+                      <div className="mt-3 p-3 bg-muted/50 rounded-md text-sm space-y-1">
+                        <div className="font-medium text-muted-foreground mb-2">Usage Breakdown:</div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">🌐 Web Dashboard:</span>
+                          <span className="font-medium">{webWordsUsed.toLocaleString()} words</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">🧩 Chrome Extension:</span>
+                          <span className="font-medium">{extensionWordsUsed.toLocaleString()} words</span>
+                        </div>
+                        <div className="border-t border-muted pt-1 mt-2 flex justify-between items-center font-semibold">
+                          <span>Total Used:</span>
+                          <span>{totalWordsUsed.toLocaleString()} words</span>
+                        </div>
+                      </div>
+                    )}
                     
                     {/* Extension Words for Extension-Only Plan */}
                      {hasExtensionBonus && (
@@ -1148,28 +1173,6 @@ const Dashboard = () => {
 
                   {currentPlan === 'free' && (
                     <>
-                      {/* Pro Plan */}
-                      <div className="border rounded-lg p-4">
-                        <div className="font-semibold">Pro Plan</div>
-                        <div className="text-2xl font-bold">
-                          {isAnnualBilling ? PLAN_PRICES.pro.annual.display : PLAN_PRICES.pro.monthly.display}/mo
-                        </div>
-                        {isAnnualBilling && (
-                          <div className="text-sm text-muted-foreground">
-                            ${PLAN_PRICES.pro.annual.yearlyTotal}/year (billed annually)
-                          </div>
-                        )}
-                        <div className="text-sm text-muted-foreground mb-3">
-                          15,000 words/month
-                        </div>
-                        <Button 
-                          onClick={() => handleUpgrade(isAnnualBilling ? PLAN_PRICES.pro.annual.priceId : PLAN_PRICES.pro.monthly.priceId)}
-                          className="w-full"
-                        >
-                          Upgrade to Pro
-                        </Button>
-                      </div>
-
                       {/* Extension-Only Plan */}
                       <div className={`border rounded-lg p-4 transition-all ${
                         highlightedPlan === 'extension' ? 'border-2 border-primary shadow-lg' : ''
@@ -1238,9 +1241,8 @@ const Dashboard = () => {
                     <Button 
                       onClick={() => handleUpgrade(isAnnualBilling ? PLAN_PRICES.ultra.annual.priceId : PLAN_PRICES.ultra.monthly.priceId)}
                       className="w-full"
-                      variant={currentPlan === 'pro' ? 'default' : 'secondary'}
                     >
-                      {currentPlan === 'pro' ? 'Upgrade to Ultra' : 'Get Ultra'}
+                      Get Ultra
                     </Button>
                   </div>
                 </CardContent>

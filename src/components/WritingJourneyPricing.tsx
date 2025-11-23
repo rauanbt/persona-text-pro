@@ -36,30 +36,6 @@ export const WritingJourneyPricing = () => {
       borderColor: "border-amber-200 dark:border-amber-800"
     },
     {
-      name: "Pro",
-      subtitle: "For professional creators",
-      monthlyPrice: PLAN_PRICES.pro.monthly.display,
-      annualPrice: PLAN_PRICES.pro.annual.display,
-      period: isAnnual ? "per month (billed annually)" : "per month",
-      description: "Elevate your content with advanced writing intelligence",
-      icon: <Zap className="w-8 h-8 text-blue-500" />,
-      features: [
-        "15,000 words per month",
-        "1,500 words per request",
-        "Unlimited AI detection (2,500 words per check)",
-        "All 6 tone personalities",
-        "Advanced dual-engine humanization (Gemini + ChatGPT) + Tone Generator",
-        "50+ languages supported"
-      ],
-      buttonText: "Choose Pro",
-      popular: true,
-      isFree: false,
-      monthlyPriceId: PLAN_PRICES.pro.monthly.priceId,
-      annualPriceId: PLAN_PRICES.pro.annual.priceId,
-      bgGradient: "from-blue-50/50 to-indigo-50/50 dark:from-blue-950/20 dark:to-indigo-950/20",
-      borderColor: "border-blue-200 dark:border-blue-800"
-    },
-    {
       name: "Ultra",
       subtitle: "For content powerhouses",
       monthlyPrice: PLAN_PRICES.ultra.monthly.display,
@@ -77,7 +53,7 @@ export const WritingJourneyPricing = () => {
         "✅ Chrome Extension Included (40k shared pool)"
       ],
       buttonText: "Become an Ultra",
-      popular: false,
+      popular: true,
       isFree: false,
       monthlyPriceId: PLAN_PRICES.ultra.monthly.priceId,
       annualPriceId: PLAN_PRICES.ultra.annual.priceId,
@@ -161,7 +137,7 @@ export const WritingJourneyPricing = () => {
           </div>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
+        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
           {journeys.map((journey, index) => (
             <Card key={index} className={`relative overflow-hidden transition-all duration-300 hover:shadow-2xl ${journey.popular ? 'scale-105 shadow-xl' : 'hover:scale-102'} bg-gradient-to-br ${journey.bgGradient} border-2 ${journey.borderColor} flex flex-col h-full`}>
               {journey.popular && (

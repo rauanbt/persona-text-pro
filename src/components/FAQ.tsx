@@ -21,7 +21,7 @@ export const FAQ = () => {
     },
     {
       question: "How much does SapienWrite cost?",
-      answer: "Our Pro plan is $17.95/month (or $8.95/month annually) for 15,000 words, and Ultra is $39.95/month (or $19.95/month annually) for 40,000 words. Annual plans save you 50% - Pro at $107.40/year and Ultra at $239.40/year. We also offer a free plan with 500 words/month to get you started, and an Extension-Only plan at $12.95/month with 5,000 words for Chrome Extension access."
+      answer: "We offer three plans: Free (500 words/month), Extension-Only at $12.95/month with 5,000 words for Chrome Extension access, and Ultra at $39.95/month (or $19.95/month annually) for 40,000 words with everything included. Annual Ultra plan saves you 50% at $239.40/year. All plans include AI detection bypass and tone options."
     },
     {
       question: "What are the different tone options?",
