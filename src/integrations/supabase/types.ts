@@ -137,6 +137,7 @@ export type Database = {
           current_plan: string | null
           email: string
           extra_words_balance: number | null
+          first_subscription_date: string | null
           full_name: string | null
           id: string
           stripe_customer_id: string | null
@@ -148,6 +149,7 @@ export type Database = {
           current_plan?: string | null
           email: string
           extra_words_balance?: number | null
+          first_subscription_date?: string | null
           full_name?: string | null
           id?: string
           stripe_customer_id?: string | null
@@ -159,6 +161,7 @@ export type Database = {
           current_plan?: string | null
           email?: string
           extra_words_balance?: number | null
+          first_subscription_date?: string | null
           full_name?: string | null
           id?: string
           stripe_customer_id?: string | null
