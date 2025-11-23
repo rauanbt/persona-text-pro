@@ -71,13 +71,14 @@ serve(async (req) => {
     // Read profile to prefer saved Stripe customer id
     const { data: profileData } = await supabaseClient
       .from('profiles')
-      .select('current_plan, stripe_customer_id')
+      .select('current_plan, stripe_customer_id, first_subscription_date')
       .eq('user_id', user.id)
       .maybeSingle();
 
-    const oldPlan = profileData?.current_plan || 'free';
+    const oldPlan = (profileData?.current_plan as string | null) || 'free';
     let savedCustomerId = profileData?.stripe_customer_id as string | null | undefined;
-    logStep("Current plan fetched", { oldPlan, hasStripeCustomerId: !!savedCustomerId });
+    const hadFirstSubscription = !!profileData?.first_subscription_date;
+    logStep("Current plan fetched", { oldPlan, hasStripeCustomerId: !!savedCustomerId, hadFirstSubscription });
 
     // Helper to find a customer with a valid subscription among multiple customers
     const findCustomerWithValidSub = async (email: string): Promise<string | null> => {
@@ -254,14 +255,24 @@ serve(async (req) => {
         }
       }
 
-      // Upsert profile with plan and stripe customer id
-      await supabaseClient.from('profiles').upsert({
+      // Check if this is the first time user subscribes to a paid plan (inside hasActiveSub block, plan is never 'free')
+      const isFirstSubscription = !hadFirstSubscription && oldPlan === 'free';
+      const updateData: any = {
         user_id: user.id,
         email: user.email,
         current_plan: plan,
         stripe_customer_id: customerId,
         updated_at: new Date().toISOString(),
-      }, { onConflict: 'user_id' });
+      };
+      
+      // Store first subscription date if this is their first paid plan
+      if (isFirstSubscription) {
+        updateData.first_subscription_date = new Date().toISOString();
+        logStep("First paid subscription detected", { plan, oldPlan });
+      }
+      
+      // Upsert profile with plan and stripe customer id
+      await supabaseClient.from('profiles').upsert(updateData, { onConflict: 'user_id' });
     } else {
       logStep("No active subscription found");
       await supabaseClient.from('profiles').upsert({

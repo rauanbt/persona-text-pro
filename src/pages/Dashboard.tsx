@@ -27,6 +27,7 @@ const Dashboard = () => {
   const [selectedTone, setSelectedTone] = useState('regular');
   const [isProcessing, setIsProcessing] = useState(false);
   const [usage, setUsage] = useState({ words_used: 0, extension_words_used: 0, requests_count: 0 });
+  const [usageSummary, setUsageSummary] = useState<any>(null);
   const [extraWords, setExtraWords] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showExtraWordsDialog, setShowExtraWordsDialog] = useState(false);
@@ -237,6 +238,7 @@ const Dashboard = () => {
       });
 
       setExtraWords(data.extra_words || 0);
+      setUsageSummary(data); // Store full summary for prorated info
     } catch (error) {
       console.error('[Dashboard] Error in fetchUsage:', error);
     } finally {
@@ -757,10 +759,23 @@ const Dashboard = () => {
                     ? 'Extension-Only plan - use the Chrome Extension to humanize text'
                     : (
                       <>
-                        Monthly usage resets on the 1st of each month
-                        {currentPlan === 'ultra' && (
-                          <span className="block text-xs mt-1 text-muted-foreground">
-                            Web-only usage shown. Extension shares the same monthly pool.
+                        {usageSummary?.is_first_month ? (
+                          <span className="block">
+                            <span className="font-medium text-amber-600 dark:text-amber-400">
+                              Prorated first month:
+                            </span> {usageSummary.days_remaining_in_first_month} days ({webPlanLimit.toLocaleString()} words)
+                            <span className="block text-xs mt-1 text-muted-foreground">
+                              Full {PLAN_LIMITS[currentPlan as keyof typeof PLAN_LIMITS]?.toLocaleString()} words starting next month (resets 1st)
+                            </span>
+                          </span>
+                        ) : (
+                          <span className="block">
+                            Monthly usage resets on the 1st of each month
+                            {currentPlan === 'ultra' && (
+                              <span className="block text-xs mt-1 text-muted-foreground">
+                                Web-only usage shown. Extension shares the same monthly pool.
+                              </span>
+                            )}
                           </span>
                         )}
                       </>

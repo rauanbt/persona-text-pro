@@ -48,10 +48,10 @@ serve(async (req) => {
 
     console.log('[USAGE-SUMMARY] User authenticated:', user.id, user.email);
 
-    // Get profile data
+    // Get profile data including first subscription date
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('current_plan, extra_words_balance')
+      .select('current_plan, extra_words_balance, first_subscription_date')
       .eq('user_id', user.id)
       .single();
 
@@ -65,6 +65,7 @@ serve(async (req) => {
 
     const currentPlan = profile.current_plan || 'free';
     const extraWords = profile.extra_words_balance || 0;
+    const firstSubscriptionDate = profile.first_subscription_date;
 
     // Get current month usage
     const now = new Date();
@@ -85,8 +86,34 @@ serve(async (req) => {
     const extUsed = usage?.extension_words_used || 0;
     const requestsCount = usage?.requests_count || 0;
 
-    // Calculate limits and remaining words
-    const planLimit = PLAN_LIMITS[currentPlan as keyof typeof PLAN_LIMITS] || 0;
+    // Calculate base plan limit
+    let planLimit: number = PLAN_LIMITS[currentPlan as keyof typeof PLAN_LIMITS] || 0;
+    
+    // Calculate if this is first month (prorated)
+    let isFirstMonth = false;
+    let daysRemainingInFirstMonth = 0;
+    
+    if (firstSubscriptionDate && currentPlan !== 'free') {
+      const firstSubDate = new Date(firstSubscriptionDate);
+      const firstSubMonthYear = `${firstSubDate.getFullYear()}-${String(firstSubDate.getMonth() + 1).padStart(2, '0')}`;
+      
+      // Check if current month is the first subscription month
+      if (monthYear === firstSubMonthYear) {
+        isFirstMonth = true;
+        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        daysRemainingInFirstMonth = daysInMonth - firstSubDate.getDate() + 1;
+        
+        // Prorate the plan limit for first month
+        const basePlanLimit = PLAN_LIMITS[currentPlan as keyof typeof PLAN_LIMITS] || 0;
+        planLimit = Math.floor(basePlanLimit * (daysRemainingInFirstMonth / daysInMonth));
+        console.log('[USAGE-SUMMARY] First month detected, prorating limit', {
+          originalLimit: basePlanLimit,
+          proratedLimit: planLimit,
+          daysRemaining: daysRemainingInFirstMonth,
+          daysInMonth
+        });
+      }
+    }
     
     // Shared plans: free, ultra, master (web + extension share the pool)
     const sharedPlans = ['free', 'ultra', 'master'];
@@ -124,6 +151,9 @@ serve(async (req) => {
       extra_words: extraWords,
       requests_count: requestsCount,
       month_year: monthYear,
+      is_first_month: isFirstMonth,
+      days_remaining_in_first_month: daysRemainingInFirstMonth,
+      resets_on: '1st of each month',
     };
 
     console.log('[USAGE-SUMMARY] Calculated usage:', JSON.stringify(response));
