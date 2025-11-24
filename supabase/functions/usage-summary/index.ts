@@ -30,13 +30,15 @@ serve(async (req) => {
       );
     }
 
+    // Extract token from Bearer header
+    const token = authHeader.replace('Bearer ', '');
+    
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    // Pass token directly to getUser for proper authentication
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
     if (userError || !user) {
       console.error('[USAGE-SUMMARY] Auth error:', userError);
       return new Response(

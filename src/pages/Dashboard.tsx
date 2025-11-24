@@ -778,13 +778,13 @@ const Dashboard = () => {
                     ? 'Extension-Only plan - use the Chrome Extension to humanize text'
                     : (
                       <>
-                        {usageSummary?.is_first_month ? (
+                         {usageSummary?.is_first_month ? (
                           <span className="block">
                             <span className="font-medium text-amber-600 dark:text-amber-400">
-                              Prorated first month:
-                            </span> {usageSummary.days_remaining_in_first_month} days ({usageSummary.plan_limit?.toLocaleString()} words)
+                              🎉 Prorated first month:
+                            </span> {usageSummary.days_remaining_in_first_month} days remaining ({usageSummary.plan_limit?.toLocaleString()} words available)
                             <span className="block text-xs mt-1 text-muted-foreground">
-                              Full {PLAN_LIMITS[currentPlan as keyof typeof PLAN_LIMITS]?.toLocaleString()} words starting next month (resets 1st)
+                              Your full {PLAN_LIMITS[currentPlan as keyof typeof PLAN_LIMITS]?.toLocaleString()} word allowance starts December 1st
                             </span>
                           </span>
                         ) : (
@@ -894,7 +894,10 @@ const Dashboard = () => {
                     <Progress value={usagePercentage} className="mb-2" />
                     <div className="flex justify-between text-sm text-muted-foreground">
                       <div>
-                        <div>{remainingWords.toLocaleString()} monthly words remaining</div>
+                        <div>
+                          {remainingWords.toLocaleString()} 
+                          {usageSummary?.is_first_month ? ' prorated' : ' monthly'} words remaining
+                        </div>
                         {extraWords > 0 && (
                           <div className="text-primary font-medium">
                             + {extraWords.toLocaleString()} extra words
