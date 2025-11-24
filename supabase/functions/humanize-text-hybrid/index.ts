@@ -299,14 +299,15 @@ serve(async (req) => {
     }
     const currentMonth = new Date().toISOString().slice(0, 7);
 
-    // Get user profile to check plan
+    // Get user profile to check plan and first subscription date for proration
     const { data: profile } = await supabase
       .from('profiles')
-      .select('current_plan, extra_words_balance')
+      .select('current_plan, extra_words_balance, first_subscription_date')
       .eq('user_id', userData.user.id)
       .single();
 
     const userPlan = profile?.current_plan || 'free';
+    const firstSubscriptionDate = profile?.first_subscription_date;
     console.log('[HYBRID-HUMANIZE] User plan from profile:', userPlan, 'for user:', userData.user.id);
 
     // Detect input language for all plans
@@ -361,6 +362,28 @@ serve(async (req) => {
     let currentUsage: number;
     let totalAvailableWords: number;
     
+    // Apply proration for first month (same logic as usage-summary)
+    let isFirstMonth = false;
+    let daysRemainingInFirstMonth = 0;
+    
+    if (firstSubscriptionDate && userPlan !== 'free') {
+      const now = new Date();
+      const firstSubDate = new Date(firstSubscriptionDate);
+      const firstSubMonthYear = `${firstSubDate.getFullYear()}-${String(firstSubDate.getMonth() + 1).padStart(2, '0')}`;
+      
+      // Check if current month is the first subscription month
+      if (currentMonth === firstSubMonthYear) {
+        isFirstMonth = true;
+        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        daysRemainingInFirstMonth = daysInMonth - firstSubDate.getDate() + 1;
+        
+        console.log('[HYBRID-HUMANIZE] First month detected - applying proration', {
+          daysRemaining: daysRemainingInFirstMonth,
+          daysInMonth
+        });
+      }
+    }
+    
     if (isExtensionOnlyPlan) {
       // Extension-Only plan: 5000 extension words, no web access
       if (!isExtensionRequest) {
@@ -382,8 +405,19 @@ serve(async (req) => {
       currentUsage = webWordsUsed + extensionWordsUsed; // Combined usage for free plan
       totalAvailableWords = planLimit - currentUsage + extraWords;
     } else if (hasExtensionAccess) {
-      // Ultra/Master: 30,000 shared words (web + extension combined)
-      planLimit = PLAN_LIMITS[userPlan as keyof typeof PLAN_LIMITS] || 30000;
+      // Ultra/Master: shared words (web + extension combined)
+      const basePlanLimit = PLAN_LIMITS[userPlan as keyof typeof PLAN_LIMITS] || 30000;
+      
+      // Apply proration if first month
+      if (isFirstMonth && daysRemainingInFirstMonth > 0) {
+        const now = new Date();
+        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        planLimit = Math.floor(basePlanLimit * (daysRemainingInFirstMonth / daysInMonth));
+        console.log('[HYBRID-HUMANIZE] Prorating limit from', basePlanLimit, 'to', planLimit, 'words');
+      } else {
+        planLimit = basePlanLimit;
+      }
+      
       currentUsage = webWordsUsed + extensionWordsUsed; // Combined usage for shared pool
       totalAvailableWords = planLimit - currentUsage + extraWords;
     } else if (isExtensionRequest) {
@@ -397,7 +431,7 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     } else {
-      // Web request for Pro/Wordsmith
+      // Web request for other plans (Wordsmith/Master legacy)
       planLimit = PLAN_LIMITS[userPlan as keyof typeof PLAN_LIMITS] || PLAN_LIMITS.free;
       currentUsage = webWordsUsed;
       totalAvailableWords = planLimit - currentUsage + extraWords;
