@@ -202,59 +202,6 @@ serve(async (req) => {
 
       logStep("Determined subscription tier", { priceId, productId, plan });
 
-      // Handle plan changes (upgrade/downgrade)
-      const hierarchy = { free: 0, extension_only: 1, pro: 2, ultra: 3 } as const;
-      const isUpgrade = hierarchy[plan] > hierarchy[(oldPlan as keyof typeof hierarchy) ?? 'free'];
-      const isDowngrade = hierarchy[plan] < hierarchy[(oldPlan as keyof typeof hierarchy) ?? 'free'];
-      
-      const now = new Date();
-      const monthYear = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-      
-      if (isUpgrade) {
-        // Calculate remaining words from old plan and preserve them
-        const oldLimit = PLAN_LIMITS[oldPlan as keyof typeof PLAN_LIMITS] || 0;
-        const currentUsage = await getCurrentMonthUsage(user.id, monthYear, supabaseClient);
-        const wordsRemaining = Math.max(0, oldLimit - currentUsage.words_used);
-        
-        // Set words_used to negative to effectively add remaining words to new plan
-        const newWordsUsed = wordsRemaining > 0 ? -wordsRemaining : 0;
-        
-        logStep("Plan upgrade detected, preserving remaining words", { 
-          oldPlan, 
-          newPlan: plan, 
-          oldLimit, 
-          currentUsage: currentUsage.words_used, 
-          wordsRemaining, 
-          newWordsUsed 
-        });
-        
-        const { error: updateError } = await supabaseClient
-          .from('usage_tracking')
-          .update({ words_used: newWordsUsed, updated_at: new Date().toISOString() })
-          .eq('user_id', user.id)
-          .eq('month_year', monthYear);
-          
-        if (updateError) {
-          logStep("Error updating word count on upgrade", { error: updateError.message });
-        } else {
-          logStep("Remaining words preserved successfully", { effectiveBalance: (PLAN_LIMITS[plan] - newWordsUsed) });
-        }
-      } else if (isDowngrade) {
-        // On downgrade, reset to 0 (user chose a smaller plan)
-        logStep("Plan downgrade detected, resetting word count", { oldPlan, newPlan: plan });
-        const { error: resetError } = await supabaseClient
-          .from('usage_tracking')
-          .update({ words_used: 0, updated_at: new Date().toISOString() })
-          .eq('user_id', user.id)
-          .eq('month_year', monthYear);
-          
-        if (resetError) {
-          logStep("Error resetting word count on downgrade", { error: resetError.message });
-        } else {
-          logStep("Word count reset successfully");
-        }
-      }
-
       // Check if this is the first time user subscribes to a paid plan (inside hasActiveSub block, plan is never 'free')
       const isFirstSubscription = !hadFirstSubscription && oldPlan === 'free';
       const updateData: any = {
