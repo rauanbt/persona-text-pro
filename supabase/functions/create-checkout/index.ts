@@ -59,25 +59,13 @@ serve(async (req) => {
       return Math.floor(nextMonth.getTime() / 1000); // Unix timestamp
     };
 
-    // Calculate prorated days and words for display in checkout
-    const now = new Date();
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const daysRemaining = daysInMonth - now.getDate() + 1;
-    
-    // Determine plan limit based on price ID
-    const planLimit = priceId.includes('ultra') || priceId.includes('QrNXMaRxqhNSH') ? 40000 
-                    : priceId.includes('extension') || priceId.includes('QL6VqZJQ77U4W') ? 5000 
-                    : 15000;
-    const proratedLimit = Math.floor(planLimit * (daysRemaining / daysInMonth));
-
     const session = await stripe.checkout.sessions.create({
       customer: customerId || undefined,
       customer_email: customerId ? undefined : user.email,
       line_items: [
         { 
           price: priceId, 
-          quantity: 1,
-          description: `Prorated for remaining ${daysRemaining} days of ${now.toLocaleString('default', { month: 'long' })} (${proratedLimit.toLocaleString()} words)`
+          quantity: 1
         },
       ],
       mode: "subscription",
