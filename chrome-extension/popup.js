@@ -3,7 +3,7 @@
 // Use extension limits from config.js (loaded globally via popup.html)
 const EXT_LIMITS = (typeof EXTENSION_LIMITS !== 'undefined') 
   ? EXTENSION_LIMITS 
-  : { free: 500, extension_only: 5000, ultra: 30000, master: 30000, pro: 0, wordsmith: 0 };
+  : { free: 500, extension_only: 5000, ultra: 40000, master: 30000, pro: 0, wordsmith: 0 };
 
 let subscriptionData = null;
 let wordBalance = 0;

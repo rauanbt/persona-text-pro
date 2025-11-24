@@ -52,7 +52,9 @@ const Dashboard = () => {
   const currentPlan = subscriptionData.plan;
   const isExtensionOnlyPlan = currentPlan === 'extension_only';
   const hasExtensionBonus = currentPlan === 'extension_only';
-  const webPlanLimit = PLAN_LIMITS[currentPlan as keyof typeof PLAN_LIMITS];
+  
+  // Use prorated limit from usage-summary if available, otherwise fallback to PLAN_LIMITS
+  const webPlanLimit = usageSummary?.plan_limit || PLAN_LIMITS[currentPlan as keyof typeof PLAN_LIMITS];
   const extensionLimit = hasExtensionBonus ? 5000 : 0;
   
   const webWordsUsed = usage.words_used || 0;
@@ -64,7 +66,10 @@ const Dashboard = () => {
     ? webWordsUsed + extensionWordsUsed 
     : webWordsUsed;
   
-  const remainingWords = Math.max(0, webPlanLimit - totalWordsUsed);
+  // Use prorated values from usage-summary for accurate remaining words
+  const remainingWords = usageSummary?.remaining_shared !== undefined 
+    ? usageSummary.remaining_shared 
+    : Math.max(0, webPlanLimit - totalWordsUsed);
   const extensionRemainingWords = hasExtensionBonus ? Math.max(0, extensionLimit - extensionWordsUsed) : 0;
   const totalAvailableWords = remainingWords + extraWords;
   const usagePercentage = Math.min((totalWordsUsed / webPlanLimit) * 100, 100);
@@ -777,7 +782,7 @@ const Dashboard = () => {
                           <span className="block">
                             <span className="font-medium text-amber-600 dark:text-amber-400">
                               Prorated first month:
-                            </span> {usageSummary.days_remaining_in_first_month} days ({webPlanLimit.toLocaleString()} words)
+                            </span> {usageSummary.days_remaining_in_first_month} days ({usageSummary.plan_limit?.toLocaleString()} words)
                             <span className="block text-xs mt-1 text-muted-foreground">
                               Full {PLAN_LIMITS[currentPlan as keyof typeof PLAN_LIMITS]?.toLocaleString()} words starting next month (resets 1st)
                             </span>
