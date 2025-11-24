@@ -91,13 +91,32 @@ serve(async (req) => {
     const nextMonthName = nextMonth.toLocaleString('default', { month: 'long' });
     const thisMonthName = now.toLocaleString('default', { month: 'long' });
 
+    // Fetch price details from Stripe to get unit_amount and currency
+    const priceObject = await stripe.prices.retrieve(priceId);
+    const unitAmount = priceObject.unit_amount || 3995; // fallback to $39.95 in cents
+    const currency = priceObject.currency || 'usd';
+
     const session = await stripe.checkout.sessions.create({
       customer: customerId || undefined,
       customer_email: customerId ? undefined : user.email,
       line_items: [
-        { 
-          price: priceId, 
-          quantity: 1
+        {
+          price_data: {
+            currency: currency,
+            unit_amount: unitAmount,
+            recurring: {
+              interval: 'month',
+            },
+            product_data: {
+              name: `SapienWrite ${planType.charAt(0).toUpperCase() + planType.slice(1)} Monthly (~${proratedWords.toLocaleString()} Words This Month)`,
+              description: `Premium AI text humanization - ${proratedWords.toLocaleString()} words for ${thisMonthName}, then ${fullWords.toLocaleString()} words/month from ${nextMonthName}`,
+              metadata: {
+                plan_type: planType,
+                full_monthly_words: fullWords.toString(),
+              },
+            },
+          },
+          quantity: 1,
         },
       ],
       mode: "subscription",
