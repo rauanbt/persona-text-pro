@@ -108,7 +108,7 @@ serve(async (req) => {
       },
       custom_text: {
         submit: {
-          message: `**Today's charge ($${proratedPrice}):** ~${proratedWords.toLocaleString()} words for the remaining ${daysRemaining} days of ${thisMonthName}.\n\n**Starting ${nextMonthName} 1st:** Full ${fullWords.toLocaleString()} words for $${monthlyPrice}/month.`,
+          message: `Today: $${proratedPrice} → ~${proratedWords.toLocaleString()} words (${thisMonthName} ${now.getDate()}-${daysInMonth})\n\nFrom ${nextMonthName} 1st: $${monthlyPrice}/month → ${fullWords.toLocaleString()} words/month`,
         },
       },
       success_url: fromExtension
