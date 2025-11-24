@@ -5,22 +5,6 @@ export const PLAN_PRICES = {
     monthly: { price: 0, display: "Free" },
     annual: { price: 0, display: "Free" }
   },
-  // Legacy Pro plan - deprecated, kept for existing customers only
-  pro: {
-    monthly: { 
-      price: 17.95, 
-      display: "$17.95",
-      priceId: "price_1SD818H8HT0u8xph48V9GxXG",
-      deprecated: true
-    },
-    annual: { 
-      price: 8.95, 
-      display: "$8.95",
-      yearlyTotal: 107.40,
-      priceId: "price_1SGMnjH8HT0u8xphJXTgm1Ii",
-      deprecated: true
-    }
-  },
   ultra: {
     monthly: { 
       price: 39.95, 
@@ -50,7 +34,6 @@ export const PLAN_PRICES = {
 
 export const PLAN_LIMITS = {
   free: 500,
-  pro: 15000,
   ultra: 40000,
   extension_only: 5000
 } as const;
