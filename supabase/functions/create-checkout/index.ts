@@ -52,13 +52,6 @@ serve(async (req) => {
       }
     }
 
-    // Calculate next 1st of month for billing cycle anchor
-    const getNextFirstOfMonth = (): number => {
-      const now = new Date();
-      const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-      return Math.floor(nextMonth.getTime() / 1000); // Unix timestamp
-    };
-
     const session = await stripe.checkout.sessions.create({
       customer: customerId || undefined,
       customer_email: customerId ? undefined : user.email,
@@ -67,10 +60,6 @@ serve(async (req) => {
       ],
       mode: "subscription",
       allow_promotion_codes: true,
-      subscription_data: {
-        billing_cycle_anchor: getNextFirstOfMonth(),
-        proration_behavior: 'create_prorations',
-      },
       success_url: fromExtension 
         ? `${req.headers.get("origin")}/extension-auth?from=extension&payment=success`
         : `${req.headers.get("origin")}/dashboard?success=true`,
