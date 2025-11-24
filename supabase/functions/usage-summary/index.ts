@@ -7,11 +7,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// CANONICAL PLAN LIMITS - Single source of truth
+// CANONICAL PLAN LIMITS - Single source of truth (Pro plan removed)
 const PLAN_LIMITS = {
   free: 500,
   extension_only: 5000,
-  pro: 15000,
   ultra: 40000,
   master: 30000, // legacy
 } as const;

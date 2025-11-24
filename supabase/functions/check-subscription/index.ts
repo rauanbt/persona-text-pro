@@ -155,19 +155,7 @@ serve(async (req) => {
 
       logStep("Subscription found", { subscriptionId: subscription.id, status: subscription.status, priceId, productId, endDate: subscriptionEnd });
 
-      // Plan mappings - include new Ultra price IDs
-      const proPriceIds = [
-        'price_1SD818H8HT0u8xph48V9GxXG',
-        'price_1SD81lH8HT0u8xph8dYBxkqi',
-        'price_1SCfkBH8HT0u8xpho4UsDBf8',
-        'price_1SCgBNH8HT0u8xphoiFMa331',
-      ];
-      const proProductIds = [
-        'prod_T7ntjXdJir4pJK',
-        'prod_T8xfT16dTSyc0w',
-        'prod_T8xfeFL87HWXEJ',
-        'prod_T8y7e3nrqQ6aOa',
-      ];
+      // Plan mappings - Ultra plan only (Pro deprecated)
       const ultraPriceIds = [
         'price_1SD81xH8HT0u8xphuqiq8xet', // Legacy
         'price_1SD828H8HT0u8xphUaDaMTDV', // Legacy
@@ -175,12 +163,14 @@ serve(async (req) => {
         'price_1SCgCCH8HT0u8xphO8rBX20v', // Legacy
         'price_1SWYfhH8HT0u8xphzdZ9kO1A', // New Monthly 40K
         'price_1SWYfwH8HT0u8xphFTyNNhan', // New Annual 40K
+        'price_1SWuMgH8HT0u8xphkf9COT7X', // Active user subscription
       ];
       const ultraProductIds = [
         'prod_T7ntTU0aXJOIQG',
         'prod_T8xfimkR17s4fn',
         'prod_T8xfxAmZCZ7NYv',
         'prod_T8y8LHh8jAESaK',
+        'prod_TTs65bSk4o1n7N', // Active user product
       ];
       const extensionOnlyPriceIds = [
         'price_1SGNtsH8HT0u8xphEd7pG9Po',
@@ -191,13 +181,12 @@ serve(async (req) => {
 
       if (extensionOnlyPriceIds.includes(priceId) || extensionOnlyProductIds.includes(productId)) {
         plan = 'extension_only';
-      } else if (proPriceIds.includes(priceId) || proProductIds.includes(productId)) {
-        plan = 'pro';
       } else if (ultraPriceIds.includes(priceId) || ultraProductIds.includes(productId)) {
         plan = 'ultra';
       } else {
-        plan = 'pro';
-        logStep("Unknown price/product ID, defaulting to pro", { priceId, productId });
+        // Unknown subscription - default to free tier and log for investigation
+        plan = 'free';
+        logStep("Unknown price/product ID, defaulting to free - check Stripe dashboard", { priceId, productId });
       }
 
       logStep("Determined subscription tier", { priceId, productId, plan });
