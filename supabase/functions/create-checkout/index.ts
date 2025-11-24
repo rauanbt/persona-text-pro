@@ -59,6 +59,38 @@ serve(async (req) => {
       return Math.floor(nextMonth.getTime() / 1000); // Unix timestamp
     };
 
+    // Calculate prorated word allocation for display
+    const now = new Date();
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const daysRemaining = daysInMonth - now.getDate() + 1;
+
+    // Plan catalog with full monthly words and prices
+    const planDetails = {
+      ultra: { fullWords: 40000, monthlyPrice: 39.95 },
+      extension: { fullWords: 5000, monthlyPrice: 9.95 },
+      pro: { fullWords: 15000, monthlyPrice: 19.95 },
+    } as const;
+
+    let planType: keyof typeof planDetails = 'ultra';
+
+    // Infer plan type from priceId
+    if (priceId.includes('extension') || priceId.includes('QL6VqZJQ77U4W')) {
+      planType = 'extension';
+    } else if (priceId.includes('pro')) {
+      planType = 'pro';
+    }
+
+    const { fullWords, monthlyPrice } = planDetails[planType];
+
+    // Words & price for the remaining days of this month
+    const proratedWords = Math.floor(fullWords * (daysRemaining / daysInMonth));
+    const proratedPrice = (monthlyPrice * (daysRemaining / daysInMonth)).toFixed(2);
+
+    // Next full billing month name
+    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const nextMonthName = nextMonth.toLocaleString('default', { month: 'long' });
+    const thisMonthName = now.toLocaleString('default', { month: 'long' });
+
     const session = await stripe.checkout.sessions.create({
       customer: customerId || undefined,
       customer_email: customerId ? undefined : user.email,
@@ -73,6 +105,11 @@ serve(async (req) => {
       subscription_data: {
         billing_cycle_anchor: getNextFirstOfMonth(),
         proration_behavior: 'create_prorations',
+      },
+      custom_text: {
+        submit: {
+          message: `**Today's charge ($${proratedPrice}):** ~${proratedWords.toLocaleString()} words for the remaining ${daysRemaining} days of ${thisMonthName}.\n\n**Starting ${nextMonthName} 1st:** Full ${fullWords.toLocaleString()} words for $${monthlyPrice}/month.`,
+        },
       },
       success_url: fromExtension
         ? `${req.headers.get("origin")}/extension-auth?from=extension&payment=success`
