@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { CheckCircle, Loader2 } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 
 const ExtensionAuth = () => {
   const { session } = useAuth();
+  const navigate = useNavigate();
   const [status, setStatus] = useState<'checking' | 'success' | 'error'>('checking');
 
   useEffect(() => {
@@ -47,11 +49,6 @@ const ExtensionAuth = () => {
         setTimeout(broadcast, 2000);
 
         setStatus('success');
-        
-        // Auto-close after 3 seconds
-        setTimeout(() => {
-          window.close();
-        }, 3000);
       } catch (error) {
         console.error('[ExtensionAuth] Error:', error);
         setStatus('error');
@@ -64,6 +61,17 @@ const ExtensionAuth = () => {
       setStatus('error');
     }
   }, [session]);
+
+  // Auto-redirect to dashboard after successful authentication
+  useEffect(() => {
+    if (status === 'success') {
+      const timer = setTimeout(() => {
+        navigate('/dashboard?from=extension-checkout');
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [status, navigate]);
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-background to-secondary/20">
@@ -90,14 +98,14 @@ const ExtensionAuth = () => {
               </h1>
               <p className="text-muted-foreground mb-6">
                 {new URLSearchParams(window.location.search).get('payment') === 'success'
-                  ? 'Your subscription is active. You can now close this tab and return to the extension.'
-                  : 'Your Chrome Extension is now connected. You can close this tab and return to the extension.'}
+                  ? 'Redirecting to your dashboard...'
+                  : 'Your Chrome Extension is now connected. Redirecting...'}
               </p>
               <button
-                onClick={() => window.close()}
+                onClick={() => navigate('/dashboard')}
                 className="w-full px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 font-semibold transition-colors"
               >
-                ✓ Done - Close This Tab
+                Go to Dashboard →
               </button>
             </>
           )}

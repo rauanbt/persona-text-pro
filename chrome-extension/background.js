@@ -989,11 +989,28 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   
   if (message.action === 'subscriptionUpdated') {
-    console.log('[Background] Subscription updated');
-    chrome.runtime.sendMessage({ action: 'subscriptionUpdated' }).catch(() => {
-      console.log('[Background] Popup not open');
+    console.log('[Background] Subscription updated - clearing cache');
+    
+    // Clear cached balance and usage data to force fresh fetch
+    chrome.storage.local.remove([
+      'lastBalanceFetch',
+      'lastKnownBalance',
+      'last_usage_summary',
+      'last_subscription_check'
+    ]).then(() => {
+      console.log('[Background] Cache cleared after subscription update');
+      
+      // Notify popup to reload data
+      chrome.runtime.sendMessage({ action: 'subscriptionUpdated' }).catch(() => {
+        console.log('[Background] Popup not open');
+      });
+      
+      sendResponse({ success: true });
+    }).catch((error) => {
+      console.error('[Background] Error clearing cache:', error);
+      sendResponse({ success: false, error: error.message });
     });
-    sendResponse({ success: true });
+    
     return true;
   }
   

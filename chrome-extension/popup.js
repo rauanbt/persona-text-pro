@@ -139,7 +139,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       showLoginView();
     } else {
       console.log('[Popup] Authenticated - loading user data');
+      showMainView();
       await loadUserData();
+      addCacheClearButton(); // Add cache clear button after loading
     }
   } catch (error) {
     console.error('[Popup] Initialization error:', error);
@@ -446,11 +448,73 @@ document.getElementById('upgrade-ultra-button')?.addEventListener('click', () =>
 document.getElementById('logout-link')?.addEventListener('click', async (e) => {
   e.preventDefault();
   console.log('[Popup] Logout clicked');
-  // Complete sign out - clears remember_me flag and blocks reconnect
-  await chrome.runtime.sendMessage({ action: 'signOut' });
-  // Don't call requestSessionFromWebApp - let the logout complete
-  showLoginView();
+  
+  const link = e.target;
+  const originalText = link.textContent;
+  link.textContent = 'Signing out...';
+  link.style.opacity = '0.5';
+  
+  try {
+    const response = await new Promise((resolve) => {
+      chrome.runtime.sendMessage({ action: 'signOut' }, resolve);
+    });
+    
+    if (response && response.success) {
+      // Clear all cached data
+      await chrome.storage.local.remove([
+        'lastBalanceFetch',
+        'lastKnownBalance',
+        'last_usage_summary',
+        'last_subscription_check'
+      ]);
+      
+      console.log('[Popup] Logout successful, cache cleared');
+      showLoginView();
+    } else {
+      throw new Error(response?.error || 'Logout failed');
+    }
+  } catch (error) {
+    console.error('[Popup] Logout error:', error);
+    link.textContent = originalText;
+    link.style.opacity = '1';
+    showError('Failed to sign out. Please try again.');
+  }
 });
+
+// Add cache clearing button to main view
+function addCacheClearButton() {
+  const mainCard = document.querySelector('.main-card');
+  if (!mainCard || document.getElementById('clear-cache-btn')) return;
+  
+  const btn = document.createElement('button');
+  btn.id = 'clear-cache-btn';
+  btn.textContent = '🔄 Refresh Data';
+  btn.className = 'secondary-button';
+  btn.style.marginTop = '12px';
+  btn.style.width = '100%';
+  btn.addEventListener('click', async () => {
+    btn.textContent = 'Clearing...';
+    btn.disabled = true;
+    
+    await chrome.storage.local.remove([
+      'lastBalanceFetch',
+      'lastKnownBalance',
+      'last_usage_summary',
+      'last_subscription_check'
+    ]);
+    
+    console.log('[Popup] Cache cleared, reloading data');
+    await loadUserData();
+    
+    btn.textContent = '✓ Refreshed!';
+    setTimeout(() => {
+      btn.textContent = '🔄 Refresh Data';
+      btn.disabled = false;
+    }, 2000);
+  });
+  
+  mainCard.appendChild(btn);
+}
 
 // Wire up manual refresh button
 document.getElementById('refresh-balance-btn')?.addEventListener('click', async () => {
