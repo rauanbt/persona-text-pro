@@ -1132,8 +1132,11 @@ const Dashboard = () => {
                         Manage Subscription
                       </Button>
                       <div className="mt-3 p-3 bg-muted/50 rounded-md border">
+                        <p className="text-xs text-muted-foreground mb-2">
+                          When you upgrade, your account is instantly provisioned with premium AI infrastructure, authentication resources, and allocated word credits. Because these digital services are delivered immediately - whether or not all words are used - we cannot revert or partially refund a billing cycle.
+                        </p>
                         <p className="text-xs text-muted-foreground">
-                          <strong className="text-foreground">Cancellation:</strong> Cancel anytime and keep full access until your billing period ends. All subscriptions are non-refundable due to immediate AI processing costs.
+                          You may cancel anytime, and your plan will remain active until the end of the current billing period.
                         </p>
                       </div>
                     </>
