@@ -10,9 +10,10 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Copy, Loader2, Trash2, Calendar, FileText } from 'lucide-react';
+import { ArrowLeft, Copy, Loader2, Trash2, Calendar, FileText, ExternalLink, Chrome, Crown } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { format } from 'date-fns';
+import { PLAN_LIMITS } from '@/lib/pricing';
 
 interface HumanizationRequest {
   id: string;
@@ -32,8 +33,10 @@ const Settings = () => {
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<HumanizationRequest | null>(null);
   const [showDetailDialog, setShowDetailDialog] = useState(false);
+  const [isManagingSubscription, setIsManagingSubscription] = useState(false);
 
   const currentPlan = subscriptionData.plan;
+  const webPlanLimit = PLAN_LIMITS[currentPlan as keyof typeof PLAN_LIMITS] || 0;
 
   useEffect(() => {
     fetchHistory();
@@ -103,6 +106,28 @@ const Settings = () => {
   const openDetailDialog = (request: HumanizationRequest) => {
     setSelectedRequest(request);
     setShowDetailDialog(true);
+  };
+
+  const handleManageSubscription = async () => {
+    setIsManagingSubscription(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('customer-portal');
+      
+      if (error) throw error;
+      
+      if (data?.url) {
+        window.open(data.url, '_blank');
+      }
+    } catch (error: any) {
+      console.error('Error opening customer portal:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to open subscription management",
+        variant: "destructive",
+      });
+    } finally {
+      setIsManagingSubscription(false);
+    }
   };
 
   return (
@@ -230,6 +255,68 @@ const Settings = () => {
                     <p>Current Plan: <Badge variant="secondary">{currentPlan.toUpperCase()}</Badge></p>
                   </div>
                 </div>
+
+                {/* Subscription Management */}
+                {subscriptionData.subscribed && (
+                  <div className="border-t pt-6">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="text-sm font-medium flex items-center gap-2">
+                            <Crown className="h-4 w-4 text-primary" />
+                            Subscription
+                          </h3>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {webPlanLimit.toLocaleString()} words/month
+                          </p>
+                        </div>
+                        <Button 
+                          onClick={handleManageSubscription}
+                          disabled={isManagingSubscription}
+                          variant="outline"
+                          size="sm"
+                        >
+                          {isManagingSubscription ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Loading...
+                            </>
+                          ) : (
+                            <>
+                              <ExternalLink className="h-4 w-4 mr-2" />
+                              Manage Subscription
+                            </>
+                          )}
+                        </Button>
+                      </div>
+
+                      {/* Chrome Extension Status */}
+                      {(currentPlan === 'ultra' || currentPlan === 'extension_only') && (
+                        <div className="p-3 bg-muted/50 rounded-md border">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Chrome className="h-4 w-4 text-primary" />
+                            <span className="text-sm font-medium">Chrome Extension Access</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {currentPlan === 'ultra' 
+                              ? 'Active - 40,000 words/month (shared pool with web)' 
+                              : 'Active - 5,000 words/month'}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Refund Policy */}
+                      <div className="p-3 bg-muted/50 rounded-md border text-xs text-muted-foreground space-y-2">
+                        <p>
+                          When you upgrade, your account is instantly provisioned with premium AI infrastructure, authentication resources, and allocated word credits. Because these digital services are delivered immediately - whether or not all words are used - we cannot revert or partially refund a billing cycle.
+                        </p>
+                        <p>
+                          You may cancel anytime, and your plan will remain active until the end of the current billing period.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Delete Account Section */}
                 <div className="border-t pt-6">
