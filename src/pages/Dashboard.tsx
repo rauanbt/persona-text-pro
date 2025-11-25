@@ -906,12 +906,6 @@ const Dashboard = () => {
                       </div>
                       <span>{usage.requests_count} requests made</span>
                     </div>
-                    <div className="mt-2 pt-2 border-t">
-                      <div className="flex justify-between text-sm">
-                        <span className="font-medium">Total Available:</span>
-                        <span className="font-bold text-primary">{totalAvailableWords.toLocaleString()} words</span>
-                      </div>
-                    </div>
                     
                     {/* Usage Breakdown for Ultra Shared Pool */}
                     {isSharedPool && (webWordsUsed > 0 || extensionWordsUsed > 0) && (
