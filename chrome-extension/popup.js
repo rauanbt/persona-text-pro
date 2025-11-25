@@ -111,6 +111,18 @@ async function initDiagnostics() {
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('[Popup] Initializing...');
   
+  // Display version from manifest
+  try {
+    const manifest = chrome.runtime.getManifest();
+    const versionLabel = document.getElementById('version-label');
+    if (versionLabel && manifest?.version) {
+      versionLabel.textContent = `v${manifest.version}`;
+      console.log('[Popup] Version:', manifest.version);
+    }
+  } catch (e) {
+    console.warn('[Popup] Could not set version:', e);
+  }
+  
   // HARD DEADLINE: Show UI within 1 second no matter what
   const uiDeadline = setTimeout(() => {
     console.warn('[Popup] UI deadline reached - forcing login view');
@@ -456,37 +468,42 @@ document.getElementById('upgrade-ultra-button')?.addEventListener('click', () =>
 
 document.getElementById('logout-link')?.addEventListener('click', async (e) => {
   e.preventDefault();
-  console.log('[Popup] Logout clicked');
+  console.log('[Popup] User requested logout - performing aggressive cleanup');
   
   const link = e.target;
   const originalText = link.textContent;
   link.textContent = 'Signing out...';
   link.style.opacity = '0.5';
+  link.style.pointerEvents = 'none';
   
   try {
-    const response = await new Promise((resolve) => {
-      chrome.runtime.sendMessage({ action: 'signOut' }, resolve);
+    // Clear ALL storage immediately and aggressively
+    console.log('[Popup] Clearing all local and session storage...');
+    await Promise.all([
+      chrome.storage.local.clear(),
+      chrome.storage.session.clear()
+    ]);
+    
+    // Send logout signal to background script
+    chrome.runtime.sendMessage({ action: 'signOut' }).catch(err => {
+      console.warn('[Popup] Background signOut failed (non-critical):', err);
     });
     
-    if (response && response.success) {
-      // Clear all cached data
-      await chrome.storage.local.remove([
-        'lastBalanceFetch',
-        'lastKnownBalance',
-        'last_usage_summary',
-        'last_subscription_check'
-      ]);
-      
-      console.log('[Popup] Logout successful, cache cleared');
-      showLoginView();
-    } else {
-      throw new Error(response?.error || 'Logout failed');
-    }
+    console.log('[Popup] Logout complete - all storage cleared');
+    
+    // Force show login view immediately
+    showLoginView();
+    
   } catch (error) {
     console.error('[Popup] Logout error:', error);
+    // Even if there's an error, show login view and clear local state
+    showLoginView();
+    showError('Logged out locally. Please refresh if needed.');
+  } finally {
+    // Reset link state
     link.textContent = originalText;
     link.style.opacity = '1';
-    showError('Failed to sign out. Please try again.');
+    link.style.pointerEvents = 'auto';
   }
 });
 
@@ -538,6 +555,59 @@ document.getElementById('refresh-balance-btn')?.addEventListener('click', async 
     await fetchWordBalance();
   } finally {
     btn.classList.remove('spinning');
+    btn.disabled = false;
+  }
+});
+
+// Force refresh button - Clear all cached data and force fresh fetch
+document.getElementById('force-refresh-button')?.addEventListener('click', async (e) => {
+  e.preventDefault();
+  console.log('[Popup] ========= FORCE REFRESH REQUESTED =========');
+  
+  const btn = e.target;
+  const originalText = btn.textContent;
+  btn.textContent = '🔄 Refreshing...';
+  btn.disabled = true;
+  
+  try {
+    // Verify we have a session before clearing
+    const session = await getSession();
+    if (!session) {
+      showError('Not logged in. Please log in first.');
+      btn.textContent = originalText;
+      btn.disabled = false;
+      return;
+    }
+    
+    console.log('[Popup] Clearing all cached data except auth tokens...');
+    
+    // Clear all cached data EXCEPT auth tokens
+    const authKeys = ['access_token', 'refresh_token', 'session', 'user_email', 'session_stored_at'];
+    const storage = await chrome.storage.local.get(null);
+    const keysToRemove = Object.keys(storage).filter(key => !authKeys.includes(key));
+    
+    if (keysToRemove.length > 0) {
+      await chrome.storage.local.remove(keysToRemove);
+      console.log('[Popup] Cleared cached keys:', keysToRemove);
+    }
+    
+    // Force fresh data fetch
+    console.log('[Popup] Forcing fresh data load...');
+    await loadUserData();
+    
+    btn.textContent = '✓ Refreshed!';
+    console.log('[Popup] ========= FORCE REFRESH COMPLETE =========');
+    
+    // Reset button after 2 seconds
+    setTimeout(() => {
+      btn.textContent = originalText;
+      btn.disabled = false;
+    }, 2000);
+    
+  } catch (err) {
+    console.error('[Popup] Force refresh failed:', err);
+    showError('Failed to refresh. Try logging out and back in.');
+    btn.textContent = originalText;
     btn.disabled = false;
   }
 });
