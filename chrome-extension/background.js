@@ -1081,6 +1081,15 @@ function quickSimilarity(a, b) {
 async function handleHumanizeRequest(text, tone, toneIntensity, forceRewrite, tabId, frameId) {
   const key = `${tabId}:${frameId}`;
   
+  // Validate input text
+  if (!text || typeof text !== 'string' || !text.trim()) {
+    console.error('[Background] Invalid text input');
+    return;
+  }
+  
+  // Calculate word count for balance tracking
+  const wordsUsed = text.split(/\s+/).filter(Boolean).length;
+  
   // Single-flight guard: prevent concurrent humanize from same frame
   if (inFlight.has(key)) {
     console.log('[Background] Request already in flight for', key, '- ignoring duplicate');
@@ -1199,11 +1208,15 @@ async function handleHumanizeRequest(text, tone, toneIntensity, forceRewrite, ta
     }
     console.log('[Background] Message sent successfully');
     
-    // Broadcast balance update to popup for real-time sync
-    chrome.runtime.sendMessage({
-      action: 'balanceUpdated',
-      wordsUsed: wordCount
-    }).catch(err => console.log('[Background] Could not notify popup:', err));
+    // Broadcast balance update to popup for real-time sync (non-critical)
+    try {
+      chrome.runtime.sendMessage({
+        action: 'balanceUpdated',
+        wordsUsed: wordsUsed
+      }).catch(() => {}); // Silent fail - notification is optional
+    } catch (e) {
+      console.warn('[Background] Could not send balance update:', e);
+    }
     
   } catch (error) {
     console.error('[Background] Error humanizing:', error);
