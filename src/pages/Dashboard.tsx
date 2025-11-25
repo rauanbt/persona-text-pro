@@ -12,7 +12,7 @@ import { ExtraWordsPackages } from '@/components/ExtraWordsPackages';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AIDetectionResults } from '@/components/AIDetectionResults';
-import { Loader2, Copy, Download, ExternalLink, Crown, Zap, Plus, Brain, Shield, Chrome, ChevronDown, Check, HelpCircle, Trash2 } from 'lucide-react';
+import { Loader2, Copy, Download, ExternalLink, Crown, Zap, Plus, Brain, Shield, Chrome, ChevronDown, Check, HelpCircle, Settings } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useNavigate } from 'react-router-dom';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -40,8 +40,6 @@ const Dashboard = () => {
   const [showExtensionSetup, setShowExtensionSetup] = useState(false);
   const [showResult, setShowResult] = useState(false);
   const [highlightedPlan, setHighlightedPlan] = useState<string | null>(null);
-  const [deleteConfirmText, setDeleteConfirmText] = useState('');
-  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const resultRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   
@@ -537,55 +535,6 @@ const Dashboard = () => {
     }
   };
 
-  const handleDeleteAccount = async () => {
-    if (deleteConfirmText !== 'DELETE') {
-      toast({
-        title: "Confirmation required",
-        description: "Please type DELETE to confirm account deletion.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsDeletingAccount(true);
-    
-    try {
-      // Notify extension that account is being deleted (before actual deletion)
-      window.postMessage({
-        type: 'ACCOUNT_DELETED',
-        timestamp: Date.now()
-      }, '*');
-      console.log('[Dashboard] Broadcasted account deletion to extension');
-
-      const { data, error } = await supabase.functions.invoke('delete-account', {
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`,
-        },
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Account Deleted",
-        description: "Your account and all subscriptions have been permanently deleted.",
-      });
-
-      // Sign out and redirect to home
-      await signOut();
-      navigate('/');
-    } catch (error: any) {
-      console.error('Error deleting account:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete account. Please try again or contact support.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsDeletingAccount(false);
-      setDeleteConfirmText('');
-    }
-  };
-
   const copyToClipboard = () => {
     navigator.clipboard.writeText(humanizedText);
     toast({
@@ -640,6 +589,10 @@ const Dashboard = () => {
     handleHumanize();
   };
 
+  const handleDeleteAccount = async () => {
+    navigate('/settings');
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -683,73 +636,14 @@ const Dashboard = () => {
               Refresh Status
             </Button>
             
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
-                  <Trash2 className="h-4 w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Delete Account</span>
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                  <AlertDialogDescription className="space-y-3">
-                    <p>
-                      This action <strong>cannot be undone</strong>. This will permanently delete your account and remove all your data from our servers, including:
-                    </p>
-                    <ul className="list-disc list-inside space-y-1 text-sm">
-                      <li>All usage history and word balances</li>
-                      <li>All humanization requests</li>
-                      <li>All extra word purchases</li>
-                      <li>Your account profile</li>
-                      {(currentPlan === 'ultra' || currentPlan === 'master' || currentPlan === 'extension_only') && (
-                        <li className="text-amber-600 dark:text-amber-400 font-semibold">
-                          <strong>Active Stripe subscriptions will be canceled</strong>
-                        </li>
-                      )}
-                    </ul>
-                    {(currentPlan === 'ultra' || currentPlan === 'master' || currentPlan === 'extension_only') && (
-                      <p className="text-amber-600 dark:text-amber-400 font-semibold">
-                        ⚠️ Your {currentPlan === 'extension_only' ? 'Extension' : 'Ultra'} subscription will be canceled immediately.
-                      </p>
-                    )}
-                    <p className="text-sm">
-                      If you're using the Chrome extension, it will be automatically logged out and you'll need to sign up again if you want to use it in the future.
-                    </p>
-                    <div className="mt-4">
-                      <label className="text-sm font-medium">
-                        Type <code className="bg-muted px-1 py-0.5 rounded">DELETE</code> to confirm:
-                      </label>
-                      <Input
-                        value={deleteConfirmText}
-                        onChange={(e) => setDeleteConfirmText(e.target.value)}
-                        placeholder="Type DELETE"
-                        className="mt-2"
-                      />
-                    </div>
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel onClick={() => setDeleteConfirmText('')}>
-                    Cancel
-                  </AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleDeleteAccount}
-                    disabled={deleteConfirmText !== 'DELETE' || isDeletingAccount}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  >
-                    {isDeletingAccount ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Deleting...
-                      </>
-                    ) : (
-                      'Delete Account'
-                    )}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            <Button 
+              onClick={() => navigate('/settings')} 
+              variant="outline" 
+              size="sm"
+            >
+              <Settings className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Settings</span>
+            </Button>
             
             <Button onClick={signOut} variant="outline" size="sm">
               Sign Out
@@ -765,13 +659,8 @@ const Dashboard = () => {
             {/* Usage Stats */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center justify-between">
+                <CardTitle>
                   {isExtensionOnlyPlan ? 'Extension Usage' : 'Web Dashboard Usage'}
-                  {!isExtensionOnlyPlan && (
-                    <Badge variant={usagePercentage > 80 ? 'destructive' : 'default'}>
-                      {usage.words_used.toLocaleString()} / {webPlanLimit.toLocaleString()} words
-                    </Badge>
-                  )}
                 </CardTitle>
                 <CardDescription>
                   {isExtensionOnlyPlan 
