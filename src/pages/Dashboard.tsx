@@ -319,12 +319,12 @@ const Dashboard = () => {
     abortControllerRef.current = new AbortController();
     const signal = abortControllerRef.current.signal;
     
-    // Set up 40s timeout
+    // Set up 90s timeout
     const timeoutId = setTimeout(() => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
-    }, 40000);
+    }, 90000);
     
     console.log('[DEBUG] Starting humanization:', { 
       textLength: inputText.length, 
