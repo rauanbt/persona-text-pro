@@ -454,7 +454,16 @@ serve(async (req) => {
 
     // Tone-specific system prompts with ANTI-AI-DETECTION rules as PRIMARY goal
     const tonePrompts = {
-      regular: `CRITICAL LENGTH RULES (MUST ENFORCE):
+      regular: `CRITICAL POV PRESERVATION RULE:
+- NEVER change the speaker's perspective
+- If original is first-person (I, me, my), output MUST be first-person
+- If original is second-person (you, your), output MUST stay second-person  
+- If original is third-person (he, she, they), output MUST stay third-person
+- You are helping the AUTHOR rewrite THEIR OWN text - not commenting on someone else's text
+- Example: "I'm working on this" → "I'm working on it" ✅
+- Example: "I'm working on this" → "You're working on this" ❌ FORBIDDEN
+
+CRITICAL LENGTH RULES (MUST ENFORCE):
 - Output must be ±10-15% of input word count (STRICT LIMIT)
 - Don't add extra sentences or explanations
 - Don't expand phrases unnecessarily
@@ -509,7 +518,16 @@ MANDATORY RULES:
 
 Rewrite naturally as if a real human typed this casually.`,
 
-      formal: `CRITICAL LENGTH RULES (MUST ENFORCE):
+      formal: `CRITICAL POV PRESERVATION RULE:
+- NEVER change the speaker's perspective
+- If original is first-person (I, me, my), output MUST be first-person
+- If original is second-person (you, your), output MUST stay second-person
+- If original is third-person (he, she, they), output MUST stay third-person
+- You are helping the AUTHOR rewrite THEIR OWN text - not commenting on someone else's text
+- Example: "I'm pleased to inform" → "I am delighted to inform" ✅
+- Example: "I'm pleased to inform" → "You are pleased to inform" ❌ FORBIDDEN
+
+CRITICAL LENGTH RULES (MUST ENFORCE):
 - Target output: ${Math.floor(wordCount * 0.9)}-${Math.ceil(wordCount * 1.15)} words (±10-15%)
 - "Don't expand" = Don't add NEW SENTENCES or lengthy explanations
 - "Do enhance" = Replace informal words with formal equivalents (same length)
@@ -564,7 +582,16 @@ MANDATORY RULES:
 
 Make it sound like a professional human wrote this formally, not an AI.`,
 
-      persuasive: `CRITICAL LENGTH RULES (MUST ENFORCE):
+      persuasive: `CRITICAL POV PRESERVATION RULE:
+- NEVER change the speaker's perspective
+- If original is first-person (I, me, my, we, our), output MUST be first-person
+- If original is second-person (you, your), output MUST stay second-person
+- If original is third-person (he, she, they), output MUST stay third-person
+- You are helping the AUTHOR rewrite THEIR OWN text - not commenting on someone else's text
+- Example: "I believe we can achieve this" → "I know we'll achieve this" ✅
+- Example: "I believe we can achieve this" → "You believe you can achieve this" ❌ FORBIDDEN
+
+CRITICAL LENGTH RULES (MUST ENFORCE):
 - Output must be ±10-15% of input word count (STRICT LIMIT)
 - Don't add extra sentences or fluff
 - Impact through word choice, not length
@@ -601,7 +628,16 @@ MANDATORY: Keep EVERY [PARAGRAPH_X] marker on its own line. Never merge sections
 
 Make it compelling like a human sales pitch, not an AI essay.`,
 
-      empathetic: `CRITICAL LENGTH RULES (MUST ENFORCE):
+      empathetic: `CRITICAL POV PRESERVATION RULE:
+- NEVER change the speaker's perspective
+- If original is first-person (I, me, my), output MUST be first-person
+- If original is second-person (you, your), output MUST stay second-person
+- If original is third-person (he, she, they), output MUST stay third-person
+- You are helping the AUTHOR rewrite THEIR OWN text - not commenting on someone else's text
+- Example: "I understand your concerns" → "I really understand your concerns" ✅
+- Example: "I understand your concerns" → "You understand their concerns" ❌ FORBIDDEN
+
+CRITICAL LENGTH RULES (MUST ENFORCE):
 - Output must be ±10-15% of input word count (STRICT LIMIT)
 - Maximum 20% word changes - preserve 80% of original wording
 - Don't add extra reassurances or explanations
@@ -650,7 +686,28 @@ MANDATORY: Preserve EVERY [PARAGRAPH_X] marker on its own line.
 
 Write with genuine warmth like a caring human, not a counseling AI.`,
 
-      sarcastic: `CRITICAL LENGTH RULES (MUST ENFORCE):
+      sarcastic: `CRITICAL POV PRESERVATION RULE (ABSOLUTE PRIORITY):
+- NEVER EVER change the speaker's perspective - this is the #1 rule
+- If original is first-person (I, me, my), output MUST be first-person
+- If original is second-person (you, your), output MUST stay second-person
+- If original is third-person (he, she, they), output MUST stay third-person
+- You are helping the AUTHOR add sarcasm to THEIR OWN text - NOT commenting on someone else
+- The author is STILL THE SPEAKER after sarcasm is added
+
+SARCASTIC REWRITING EXAMPLES (STUDY THESE):
+Input: "I'm thrilled to announce I got a promotion!"
+✅ CORRECT: "Oh joy, I'm 'thrilled' to announce I got a promotion. How exciting for me."
+❌ WRONG: "You're 'thrilled' to announce you got a promotion? Good for you."
+
+Input: "We achieved amazing results this quarter!"
+✅ CORRECT: "We achieved 'amazing' results this quarter. Truly groundbreaking stuff."
+❌ WRONG: "They achieved 'amazing' results. How original of them."
+
+Input: "I'm really excited about this new feature."
+✅ CORRECT: "Oh, I'm 'really excited' about this new feature. Can barely contain myself."
+❌ WRONG: "You're 'really excited' about this new feature? That's nice."
+
+CRITICAL LENGTH RULES (MUST ENFORCE):
 - Output must be ±10-15% of input word count (STRICT LIMIT)
 - DON'T add extra sarcastic commentary
 - Sarcasm through WORD CHOICE, not WORD ADDITION
@@ -682,7 +739,16 @@ MANDATORY: Keep EVERY [PARAGRAPH_X] marker separate.
 
 Write with human wit and dry humor, not AI-generated "sarcasm."`,
 
-      grammar: `CRITICAL: If input has NO grammar errors, return it EXACTLY UNCHANGED (100% identical).
+      grammar: `CRITICAL POV PRESERVATION RULE:
+- NEVER change the speaker's perspective
+- If original is first-person (I, me, my), output MUST be first-person
+- If original is second-person (you, your), output MUST stay second-person
+- If original is third-person (he, she, they), output MUST stay third-person
+- You are ONLY fixing grammar, not rewriting from a different perspective
+- Example: "I goes to store" → "I go to the store" ✅
+- Example: "I goes to store" → "You go to the store" ❌ FORBIDDEN
+
+CRITICAL: If input has NO grammar errors, return it EXACTLY UNCHANGED (100% identical).
 
 GRAMMAR FIX MODE - MINIMAL CHANGES ONLY:
 
