@@ -50,13 +50,14 @@ const TermsOfService = () => {
 
                 <h3 className="text-xl font-semibold mb-3 mt-6">5.1 No Refunds Policy</h3>
                 <p className="mb-3">
-                  <strong>All subscription purchases are final and non-refundable.</strong> Due to the nature of our AI-powered humanization service, 
-                  we incur immediate computational and server costs when processing your content. These costs cannot be recovered, which is why we 
-                  cannot offer refunds once a subscription is activated.
+                  <strong>All subscription purchases are final and non-refundable.</strong> Upon activation, your account is 
+                  immediately upgraded with premium features, allocated word credits, dedicated infrastructure resources, and 
+                  priority API access. Because these digital services are delivered instantly upon purchase — regardless of 
+                  actual usage — subscriptions cannot be partially refunded or reverted.
                 </p>
                 <p className="mb-3">
-                  <strong>Free Trial:</strong> Before purchasing, we strongly encourage you to test our platform using the complimentary 500-word trial. 
-                  This allows you to fully experience our service quality and ensure it meets your needs before making a financial commitment.
+                  <strong>Try Before You Buy:</strong> We offer a complimentary 500-word free tier so you can fully experience 
+                  our service quality before committing to a paid plan. We strongly encourage testing the platform before purchasing.
                 </p>
 
                 <h3 className="text-xl font-semibold mb-3 mt-6">5.2 Cancellation Policy</h3>
