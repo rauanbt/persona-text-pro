@@ -804,29 +804,25 @@ async function replaceSelectedText(originalText, humanizedText) {
             }).join('');
           }
           function textToLinkedInHTML(text) {
-            // LinkedIn uses <br> between lines
-            return text.split('\n').map(line => escapeHTML(line)).join('<br>');
+            // LinkedIn needs <p> tags for proper paragraph separation
+            return text.split('\n').map(line => {
+              const content = line.trim().length ? escapeHTML(line) : '&nbsp;';
+              return `<p>${content}</p>`;
+            }).join('');
           }
 
           // At this point we have a valid activeRange and selection
           const isMultiline = /\n/.test(humanizedText) || /\n/.test(lastSelection?.text || '');
           
-          // Rich editors (Gmail, LinkedIn): Always try insertHTML first for multiline preservation
-          if (isGmail || isLinkedIn) {
-            console.log('[Content] Rich editor path: trying insertHTML', { isMultiline, isGmail, isLinkedIn });
-            
-            let html;
-            if (isGmail) {
-              html = isMultiline ? textToGmailHTML(humanizedText) : escapeHTML(humanizedText);
-            } else if (isLinkedIn) {
-              html = isMultiline ? textToLinkedInHTML(humanizedText) : escapeHTML(humanizedText);
-            }
-            
+          // GMAIL ONLY: Always try insertHTML first (works reliably)
+          if (isGmail) {
+            console.log('[Content] Gmail path: trying insertHTML', { isMultiline });
+            const html = isMultiline ? textToGmailHTML(humanizedText) : escapeHTML(humanizedText);
             const htmlSuccess = document.execCommand('insertHTML', false, html);
-            console.log('[Content] Rich editor insertHTML result:', htmlSuccess);
+            console.log('[Content] Gmail insertHTML result:', htmlSuccess);
             
             if (htmlSuccess) {
-              console.log('[Content] ✓ Success: Rich editor insertHTML');
+              console.log('[Content] ✓ Success: Gmail insertHTML');
               showNotification('Text replaced!', 'success');
               
               lastReplacement = {
@@ -838,7 +834,31 @@ async function replaceSelectedText(originalText, humanizedText) {
               
               return true;
             } else {
-              console.log('[Content] Rich editor insertHTML failed, trying fallback methods');
+              console.log('[Content] Gmail insertHTML failed, trying fallback methods');
+            }
+          }
+          
+          // LINKEDIN: Separate handling with paragraph preservation using <p> tags
+          if (isLinkedIn) {
+            console.log('[Content] LinkedIn path: trying insertHTML with <p> tags', { isMultiline });
+            const html = isMultiline ? textToLinkedInHTML(humanizedText) : escapeHTML(humanizedText);
+            const htmlSuccess = document.execCommand('insertHTML', false, html);
+            console.log('[Content] LinkedIn insertHTML result:', htmlSuccess);
+            
+            if (htmlSuccess) {
+              console.log('[Content] ✓ Success: LinkedIn insertHTML');
+              showNotification('Text replaced!', 'success');
+              
+              lastReplacement = {
+                originalText: originalText,
+                humanizedText: humanizedText,
+                container: container,
+                range: activeRange
+              };
+              
+              return true;
+            } else {
+              console.log('[Content] LinkedIn insertHTML failed, trying fallback methods');
             }
           }
           
