@@ -282,7 +282,8 @@ function updatePlanBadge(plan) {
 
 // Fetch word balance using canonical usage-summary function
 async function fetchWordBalance() {
-  console.log('[Popup] Fetching fresh word balance from usage-summary...');
+  console.log('[Popup] ========= FETCHING FRESH BALANCE =========');
+  console.log('[Popup] Timestamp:', new Date().toISOString());
   
   try {
     const session = await getSession();
@@ -294,10 +295,18 @@ async function fetchWordBalance() {
       return;
     }
     
+    console.log('[Popup] Calling usage-summary API...');
     // Call the canonical usage-summary edge function
     const data = await callSupabaseFunction('usage-summary', { source: 'extension' });
     
-    console.log('[Popup] Usage summary received:', data);
+    console.log('[Popup] ========= RAW API RESPONSE =========');
+    console.log('[Popup] Full response:', JSON.stringify(data, null, 2));
+    console.log('[Popup] extension_remaining:', data.extension_remaining);
+    console.log('[Popup] remaining_shared:', data.remaining_shared);
+    console.log('[Popup] plan_limit:', data.plan_limit);
+    console.log('[Popup] extension_limit:', data.extension_limit);
+    console.log('[Popup] plan:', data.plan);
+    console.log('[Popup] =======================================');
     
     const remaining = data.extension_remaining || data.remaining_shared || 0;
     const limit = data.extension_limit || data.plan_limit || 0;
