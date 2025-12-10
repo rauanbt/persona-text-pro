@@ -1291,9 +1291,19 @@ function closeDialog() {
   if (dialog) dialog.remove();
 }
 
+// Clear fallback overlay from background.js injection
+function clearFallbackOverlay() {
+  const overlay = document.getElementById('sapienwrite-overlay-root');
+  if (overlay) {
+    console.log('[Content] Clearing fallback overlay');
+    overlay.remove();
+  }
+}
+
 function showProcessing() {
   console.log('[Content] 🎬 showProcessing() CALLED');
   
+  clearFallbackOverlay(); // Clear any fallback overlay from previous request
   closeDialog(); // Remove any existing dialog first
   
   // Create compact dark toast (LinkedIn style)
@@ -1367,6 +1377,7 @@ function showResult(originalText, humanizedText) {
     hasHumanizedText: !!humanizedText,
     textLength: humanizedText?.length 
   });
+  clearFallbackOverlay(); // Clear any fallback overlay before showing result
   closeDialog(); // Remove any existing dialog
   
   // SANITIZE humanizedText one more time before rendering (final safety)

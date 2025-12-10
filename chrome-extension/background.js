@@ -139,7 +139,8 @@ async function broadcastToAllFrames(tabId, message) {
 // Waiters for processing ACKs per tab
 const processingAckWaiters = new Map();
 
-function waitForProcessingAck(tabId, timeoutMs = 500) {
+function waitForProcessingAck(tabId, timeoutMs = 1500) {
+  // Increased from 500ms to 1500ms for production environments with more latency
   return new Promise((resolve) => {
     const timer = setTimeout(() => {
       processingAckWaiters.delete(tabId);
@@ -1099,11 +1100,19 @@ async function handleHumanizeRequest(text, tone, toneIntensity, forceRewrite, ta
   const controller = new AbortController();
   inFlight.set(key, controller);
   
-  // Hard timeout: 20 seconds
+  // Dynamic timeout based on word count - longer texts need more time
+  // Paid plans get longer timeouts for multi-pass humanization
+  const wordCount = text.split(/\s+/).filter(Boolean).length;
+  const baseTimeout = 25000; // Base 25 seconds
+  const perWordTimeout = Math.min(wordCount * 50, 35000); // +50ms per word, max 35s extra
+  const totalTimeout = baseTimeout + perWordTimeout; // Max 60 seconds for long texts
+  
+  console.log(`[Background] Timeout set to ${totalTimeout}ms for ${wordCount} words`);
+  
   const timeout = setTimeout(() => {
     console.log('[Background] Request timeout for', key);
     controller.abort(new DOMException('Request timed out', 'AbortError'));
-  }, 20000);
+  }, totalTimeout);
   
   try {
     console.log(`[Background] 📤 Calling edge function (tone: "${tone}" | intensity: "${toneIntensity}")`);
@@ -1172,6 +1181,20 @@ async function handleHumanizeRequest(text, tone, toneIntensity, forceRewrite, ta
         ? ` (server similarity: before ${(simBeforeMeta*100).toFixed(0)}% → after ${(simAfterMeta*100).toFixed(0)}%)`
         : '';
       warning = `⚠️ Text came back ${(similarity * 100).toFixed(0)}% similar.${metaLine} Try a different tone or stronger intensity.`;
+    }
+    
+    // Clear any fallback overlay before showing result
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId, allFrames: true },
+        func: () => {
+          const overlay = document.getElementById('sapienwrite-overlay-root');
+          if (overlay) overlay.remove();
+        }
+      });
+      console.log('[Background] Cleared fallback overlay before result');
+    } catch (e) {
+      console.warn('[Background] Could not clear fallback overlay:', e.message);
     }
     
     // ALWAYS show result dialog for user verification
