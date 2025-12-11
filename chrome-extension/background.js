@@ -854,8 +854,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         const forceRewrite = message.forceRewrite !== undefined ? message.forceRewrite : true;
         console.log('[Background] ✅ TONE SELECTED:', message.tone, mappedTone !== message.tone ? `→ ${mappedTone}` : '', '| intensity:', intensity, '| force_rewrite:', forceRewrite);
         
-        // Show processing spinner
-        await safeSendMessage(sender.tab.id, { action: 'showProcessing' }, { frameId: sender.frameId });
+        // NOTE: Processing spinner is already shown by context menu handler - don't show again here
         
         await handleHumanizeRequest(message.text, mappedTone, intensity, forceRewrite, sender.tab?.id, sender.frameId);
         sendResponse({ success: true });

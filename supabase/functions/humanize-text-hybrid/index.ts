@@ -54,7 +54,15 @@ async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: nu
 // Detect input language using Lovable AI (Gemini). Returns ISO 639-1 code and readable name.
 async function detectLanguageIso(sample: string): Promise<{ code: string; name: string }> {
   try {
-    const languageDetectionPrompt = 'Return ONLY the ISO 639-1 two-letter code for the language of the user text. Lowercase. Example: "en". If uncertain, return "en". No extra words.';
+    const languageDetectionPrompt = `Return ONLY the ISO 639-1 two-letter code for the PRIMARY language of the user text.
+
+CRITICAL RULES:
+- IGNORE proper nouns (people names, place names, company names) - they do NOT determine language
+- Focus on SENTENCE STRUCTURE, common words, grammar, and articles
+- If English text contains foreign names like "Maria Petrenko" or "Tokyo Corporation", return "en"
+- Lowercase only. Example: "en", "uk", "ru", "de", "es", "fr"
+- If uncertain or mixed, return "en"
+- ONLY output the 2-letter code. No explanation.`;
     const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${lovableApiKey}`, 'Content-Type': 'application/json' },
@@ -721,15 +729,25 @@ ANTI-AI-DETECTION RULES (HIGHEST PRIORITY):
 SARCASTIC HUMAN WRITING:
 1. Use contractions heavily (it's, don't, won't, can't, I'm, you're)
 2. Vary rhythm for comic effect - setup. Punchline.
-3. Add eye-rolling phrases SPARINGLY (max 1-2 total, NOT at every paragraph start): "Oh great," "Sure," "Obviously," "Naturally"
+3. Eye-rolling phrases: Use MAXIMUM 1 in the ENTIRE text (not per paragraph!)
+   - Pick ONE from: "Oh great," "Sure," "Obviously," "Naturally", "Of course"
+   - Use it ONCE or not at all - sarcasm works better through tone, not catchphrases
 4. Use italics mentally (write "really" instead of "*really*")
 5. Break grammar rules for effect - fragment sentences on purpose
 6. Casual tone always - sarcasm doesn't work formally
 
-❌ FORBIDDEN PATTERN: Starting multiple paragraphs with the same word or phrase
-❌ DON'T: "Naturally, ..." "Naturally, ..." "Naturally, ..."
-❌ DON'T: "Sure, ..." "Sure, ..." "Sure, ..."
-✅ DO: Vary your openings - use different techniques for each paragraph
+❌ STRICTLY FORBIDDEN (WILL CAUSE FAILURE):
+- Using "Oh" more than ONCE in entire output
+- Starting ANY paragraph with "Oh," "Sure," "Naturally," "Obviously" more than ONCE total
+- Repetitive sarcastic openers across paragraphs
+- Adding sarcastic commentary that wasn't in the original
+
+✅ BETTER SARCASM TECHNIQUES (use these instead of catchphrases):
+- Understatement: "This is fine." / "Nothing to see here."
+- Rhetorical questions: "What could possibly go wrong?"
+- Deadpan delivery: stating obvious things without commentary
+- Word choice: "fascinating" instead of "interesting"
+- Short punchy sentences after longer setups
 
 ⚠️ CRITICAL STRUCTURE RULE - VIOLATION = COMPLETE FAILURE ⚠️
 
