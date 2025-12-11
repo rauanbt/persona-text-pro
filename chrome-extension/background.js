@@ -157,6 +157,22 @@ function waitForProcessingAck(tabId, timeoutMs = 1500) {
 // Minimal overlay injection fallback using chrome.scripting
 async function injectOverlay(tabId, type, payload = {}, frameId) {
   try {
+    // For processing overlay, first check if content.js dialog already exists
+    if (type === 'processing') {
+      try {
+        const [result] = await chrome.scripting.executeScript({
+          target: { tabId, frameIds: Number.isInteger(frameId) ? [frameId] : [0] },
+          func: () => !!document.getElementById('sapienwrite-dialog')
+        });
+        if (result?.result) {
+          console.log('[Overlay] Content.js dialog exists, skipping fallback processing overlay');
+          return;
+        }
+      } catch (e) {
+        // Continue with overlay if check fails
+      }
+    }
+    
     const target = Number.isInteger(frameId) ? { tabId, frameIds: [frameId] } : { tabId, allFrames: true };
     await chrome.scripting.executeScript({
       target,
@@ -1202,8 +1218,12 @@ async function handleHumanizeRequest(text, tone, toneIntensity, forceRewrite, ta
     console.log('[Background] originalText length:', text.length);
     console.log('[Background] humanizedText length:', humanizedText.length);
     
-    // SANITIZE humanizedText before sending (belt-and-suspenders)
-    const cleanText = humanizedText.replace(/\[?\s*PARAGRAPH[_\s-]?\d+\s*\]?/gi, '').replace(/\n{3,}/g, '\n\n').trim();
+    // SANITIZE humanizedText before sending - CRITICAL: Replace markers WITH newlines to preserve structure
+    const cleanText = humanizedText
+      .replace(/\[?\s*PARAGRAPH[_\s-]?\d+\s*\]?\s*/gi, '\n\n')  // Replace markers with double newlines
+      .replace(/^\n+/, '')  // Remove leading newlines
+      .replace(/\n{3,}/g, '\n\n')  // Normalize multiple newlines
+      .trim();
     console.log('[Background] Sanitized text length:', cleanText.length);
     
     const resultMessage = {

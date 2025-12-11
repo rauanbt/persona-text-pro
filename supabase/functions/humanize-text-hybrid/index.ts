@@ -109,6 +109,59 @@ function removeAllParagraphMarkers(text: string): string {
     .trim();
 }
 
+// Post-processing for sarcastic tone: Remove duplicate sarcastic phrases AI tends to overuse
+function removeDuplicateSarcasm(text: string): string {
+  // Split into lines/sentences for processing
+  const lines = text.split('\n');
+  let ohCount = 0;
+  let sarcasticOpenerCount = 0;
+  
+  const sarcasticOpenerPatterns = [
+    /^(oh[,\s])/i,
+    /^(sure[,\s])/i,
+    /^(naturally[,\s])/i,
+    /^(obviously[,\s])/i,
+    /^(of course[,\s])/i
+  ];
+  
+  // Replacement synonyms for variety
+  const synonymReplacements = ['Well, ', 'Right, ', 'Look, ', 'So, ', 'Honestly, ', 'Apparently, '];
+  let synonymIndex = 0;
+  
+  const processedLines = lines.map((line, idx) => {
+    let processedLine = line;
+    
+    // Check for sarcastic openers at line start
+    for (const pattern of sarcasticOpenerPatterns) {
+      if (pattern.test(processedLine.trim())) {
+        sarcasticOpenerCount++;
+        if (sarcasticOpenerCount > 1) {
+          // Replace with synonym or remove
+          processedLine = processedLine.replace(pattern, synonymReplacements[synonymIndex % synonymReplacements.length]);
+          synonymIndex++;
+        }
+        break;
+      }
+    }
+    
+    // Specifically handle "Oh" anywhere in text (most overused)
+    const ohMatches = processedLine.match(/\boh\b/gi);
+    if (ohMatches) {
+      for (const match of ohMatches) {
+        ohCount++;
+        if (ohCount > 1) {
+          // Replace extra "Oh" with alternatives
+          processedLine = processedLine.replace(/\boh\b/i, 'well');
+        }
+      }
+    }
+    
+    return processedLine;
+  });
+  
+  return processedLines.join('\n');
+}
+
 // Grammar error detection function
 async function detectGrammarErrors(text: string, lovableApiKey: string): Promise<{ hasErrors: boolean; errorCount: number; errors: string[] }> {
   try {
@@ -1564,6 +1617,12 @@ This draft is still too similar to ORIGINAL (similarity=${sim.toFixed(3)}). Rewr
       .replace(/\bAdditionally,\s*/gi, 'Also ')
       // Fix double spaces
       .replace(/  +/g, ' ');
+
+    // Post-process sarcastic tone to remove AI's tendency to overuse "Oh" and similar phrases
+    if (tone === 'sarcastic') {
+      finalText = removeDuplicateSarcasm(finalText);
+      console.log('[HYBRID-HUMANIZE] Applied sarcastic post-processing');
+    }
 
     if (!finalText || finalText.trim().length === 0) {
       console.warn('[HYBRID-HUMANIZE] Empty output after cleanup — reverting to previous non-empty pass');
