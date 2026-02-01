@@ -175,29 +175,6 @@ export const WritingJourneyPricing = () => {
                       {journey.monthlyPrice}/month
                     </div>
                   )}
-                  {journey.name === "Ultra" && !isAnnual && (() => {
-                    const now = new Date();
-                    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-                    const daysRemaining = daysInMonth - now.getDate() + 1;
-                    const fullWords = 40000;
-                    const monthlyPrice = 39.95;
-                    const proratedWords = Math.floor(fullWords * (daysRemaining / daysInMonth));
-                    const proratedPrice = (monthlyPrice * (daysRemaining / daysInMonth)).toFixed(2);
-                    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-                    const nextMonthName = nextMonth.toLocaleString('default', { month: 'long' });
-                    const thisMonthName = now.toLocaleString('default', { month: 'short' });
-                    
-                    return (
-                      <div className="mt-3 p-2 bg-purple-500/10 rounded-md border border-purple-500/30">
-                        <p className="text-xs text-muted-foreground">
-                          <span className="font-semibold text-foreground">Today:</span> ${proratedPrice} → ~{proratedWords.toLocaleString()} words ({thisMonthName} {now.getDate()}-{daysInMonth})
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          <span className="font-semibold text-foreground">{nextMonthName} 1st:</span> ${monthlyPrice} → {fullWords.toLocaleString()} words/month
-                        </p>
-                      </div>
-                    );
-                  })()}
                 </div>
               </CardHeader>
               
