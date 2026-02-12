@@ -21,8 +21,8 @@ export const PLAN_PRICES = {
 } as const;
 
 export const PLAN_LIMITS = {
-  free: 500,
-  ultra: 5000,
+  free: 1000,
+  ultra: 15000,
 } as const;
 
 // Ultra and Pro plans share their word pool across web and extension (no separate bonus)

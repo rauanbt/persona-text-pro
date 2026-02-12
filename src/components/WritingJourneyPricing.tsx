@@ -15,20 +15,20 @@ export const WritingJourneyPricing = () => {
   const plans = [
     {
       name: "Free",
-      subtitle: "Get started for free",
+      subtitle: "Free forever",
       monthlyPrice: "Free",
       annualPrice: "Free",
       period: "",
-      description: "Try SapienWrite with no commitment",
+      description: "Free forever",
       icon: <Star className="w-8 h-8 text-amber-500" />,
       features: [
-        "500 words per month",
+        "1,000 words per month",
         "All 6 tone personalities",
-        "Basic AI humanization + Tone Generator",
-        "Right-click humanize on any website",
-        "Works on Gmail, LinkedIn, Docs, and more"
+        "Basic AI humanization",
+        "Right-click rewrite on any website",
+        "Works on Gmail, LinkedIn, Docs & more"
       ],
-      buttonText: "Get Started Free",
+      buttonText: "Start Free",
       popular: false,
       isFree: true,
       bgGradient: "from-amber-50/50 to-yellow-50/50 dark:from-amber-950/20 dark:to-yellow-950/20",
@@ -36,18 +36,19 @@ export const WritingJourneyPricing = () => {
     },
     {
       name: "Ultra",
-      subtitle: "For power users",
+      subtitle: "For creators & professionals",
       monthlyPrice: PLAN_PRICES.ultra.monthly.display,
       annualPrice: PLAN_PRICES.ultra.annual.display,
       period: isAnnual ? "per month (billed annually)" : "per month",
-      description: "Maximum humanization power",
+      description: "For creators & professionals",
       icon: <Crown className="w-8 h-8 text-purple-500" />,
       features: [
-        "5,000 words per month",
+        "15,000 words per month",
         "All 6 tone personalities",
-        "Premium dual-engine humanization (Gemini + ChatGPT) + Tone Generator",
-        "Right-click humanize on any website",
-        "Works on Gmail, LinkedIn, Docs, and more"
+        "Premium dual-engine humanization (Gemini + GPT)",
+        "Stronger rewrite refinement",
+        "Priority processing",
+        "Works everywhere"
       ],
       buttonText: "Upgrade to Ultra",
       popular: true,
@@ -145,6 +146,11 @@ export const WritingJourneyPricing = () => {
                     <div className="text-sm text-muted-foreground line-through mt-1">
                       {plan.monthlyPrice}/month
                     </div>
+                  )}
+                  {!plan.isFree && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Perfect for LinkedIn creators, founders, recruiters, and daily email pros.
+                    </p>
                   )}
                 </div>
               </CardHeader>
