@@ -291,16 +291,14 @@ const Settings = () => {
                       </div>
 
                       {/* Chrome Extension Status */}
-                      {(currentPlan === 'ultra' || currentPlan === 'extension_only') && (
+                      {currentPlan === 'ultra' && (
                         <div className="p-3 bg-muted/50 rounded-md border">
                           <div className="flex items-center gap-2 mb-1">
                             <Chrome className="h-4 w-4 text-primary" />
                             <span className="text-sm font-medium">Chrome Extension Access</span>
                           </div>
                           <p className="text-xs text-muted-foreground">
-                            {currentPlan === 'ultra' 
-                              ? 'Active - 40,000 words/month (shared pool with web)' 
-                              : 'Active - 5,000 words/month'}
+                            Active — 5,000 words/month (shared pool)
                           </p>
                         </div>
                       )}
@@ -347,15 +345,15 @@ const Settings = () => {
                               <li>All humanization requests</li>
                               <li>All extra word purchases</li>
                               <li>Your account profile</li>
-                              {(currentPlan === 'ultra' || currentPlan === 'master' || currentPlan === 'extension_only') && (
+                              {(currentPlan === 'ultra' || currentPlan === 'master') && (
                                 <li className="text-amber-600 dark:text-amber-400 font-semibold">
                                   <strong>Active Stripe subscriptions will be canceled</strong>
                                 </li>
                               )}
                             </ul>
-                            {(currentPlan === 'ultra' || currentPlan === 'master' || currentPlan === 'extension_only') && (
+                            {(currentPlan === 'ultra' || currentPlan === 'master') && (
                               <p className="text-amber-600 dark:text-amber-400 font-semibold">
-                                ⚠️ Your {currentPlan === 'extension_only' ? 'Extension' : 'Ultra'} subscription will be canceled immediately.
+                                ⚠️ Your Ultra subscription will be canceled immediately.
                               </p>
                             )}
                             <p className="text-sm">

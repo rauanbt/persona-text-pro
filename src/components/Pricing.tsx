@@ -2,53 +2,35 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, Chrome } from "lucide-react";
+import { Check } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { PLAN_PRICES, getSavingsText } from "@/lib/pricing";
 
 export const Pricing = () => {
   const [isAnnual, setIsAnnual] = useState(false);
-  const [highlightedPlan, setHighlightedPlan] = useState<string | null>(null);
-  const [fromExtension, setFromExtension] = useState(false);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const from = urlParams.get('from');
     const plan = urlParams.get('plan');
 
-    if (from === 'extension') {
-      setFromExtension(true);
-      
-      if (plan) {
-        setHighlightedPlan(plan);
-        
-        // Show welcome toast
-        toast({
-          title: "Choose Your Plan",
-          description: plan === 'ultra' 
-            ? "Ultra plan includes both web dashboard and Chrome extension access"
-            : "Extension-Only plan gives you Chrome extension access",
-          variant: "default"
-        });
+    if (from === 'extension' && plan) {
+      toast({
+        title: "Choose Your Plan",
+        description: "Ultra plan gives you premium humanization with more words",
+        variant: "default"
+      });
 
-        // Scroll to pricing section
-        setTimeout(() => {
-          const pricingSection = document.getElementById('pricing');
-          if (pricingSection) {
-            pricingSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }
-        }, 500);
-      }
+      setTimeout(() => {
+        document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 500);
     }
   }, []);
 
   const handleUpgrade = async (priceId: string) => {
-    // Check if user came from extension
     const extensionConnected = localStorage.getItem('extensionConnected') === 'true';
-    
-    // For now, redirect to sign up with extension flag
     const url = new URL('/auth', window.location.origin);
-    if (extensionConnected || fromExtension) {
+    if (extensionConnected) {
       url.searchParams.set('from', 'extension');
     }
     window.location.href = url.toString();
@@ -60,56 +42,34 @@ export const Pricing = () => {
       monthlyPrice: "Free",
       annualPrice: "Free",
       period: "",
-      description: "Perfect for trying out SapienWrite",
+      description: "Try SapienWrite with no commitment",
       features: [
         "500 words per month",
         "250 words per request",
-        "Unlimited AI detection (500 words per check)",
-        "All 4 tone options",
-        "Basic humanization",
-        "AI detection bypass"
+        "All 6 tone personalities",
+        "Basic AI humanization",
+        "Right-click humanize on any website"
       ],
       buttonText: "Get Started Free",
       popular: false,
       isFree: true
     },
     {
-      name: "Extension-Only",
-      monthlyPrice: PLAN_PRICES.extension_only.monthly.display,
-      annualPrice: PLAN_PRICES.extension_only.annual.display,
-      period: "per month",
-      description: "Chrome Extension access only",
-      features: [
-        "5,000 extension words per month",
-        "Chrome Extension access only",
-        "All 6 tone personalities",
-        "Triple-engine humanization (Gemini + ChatGPT + Claude) + Tone Generator",
-        "No web dashboard access"
-      ],
-      buttonText: "Get Extension-Only",
-      popular: false,
-      isFree: false,
-      monthlyPriceId: PLAN_PRICES.extension_only.monthly.priceId,
-      annualPriceId: PLAN_PRICES.extension_only.annual.priceId
-    },
-    {
       name: "Ultra",
       monthlyPrice: PLAN_PRICES.ultra.monthly.display,
       annualPrice: PLAN_PRICES.ultra.annual.display,
       period: isAnnual ? "per month (billed annually)" : "per month",
-      description: "For teams and heavy users",
+      description: "Maximum humanization power",
       features: [
-        "40,000 words per month",
-        "3,000 words per request",
-        "Unlimited AI detection (2,500 words per check)",
+        "5,000 words per month",
+        "1,000 words per request",
         "All 6 tone personalities",
-        "Triple-engine humanization (Gemini + ChatGPT + Claude) + Tone Generator",
-        "50+ languages supported",
-        "✅ Chrome Extension Included (40k shared pool)",
-        "Priority support"
+        "Premium triple-engine humanization (Gemini + ChatGPT + Claude)",
+        "Right-click humanize on any website",
+        "Works on Gmail, LinkedIn, Docs, and more"
       ],
-      buttonText: "Choose Ultra",
-      popular: false,
+      buttonText: "Upgrade to Ultra",
+      popular: true,
       isFree: false,
       monthlyPriceId: PLAN_PRICES.ultra.monthly.priceId,
       annualPriceId: PLAN_PRICES.ultra.annual.priceId
@@ -135,7 +95,7 @@ export const Pricing = () => {
             Simple, Transparent Pricing
           </h2>
           <p className="text-lg text-muted-foreground mb-8">
-            Choose the plan that works best for you
+            Free to start. Upgrade when you need more words.
           </p>
           
           {/* Billing Toggle */}
@@ -168,45 +128,22 @@ export const Pricing = () => {
           </div>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
-          {plans.map((plan, index) => {
-            const isHighlighted = highlightedPlan === plan.name.toLowerCase().replace('-only', '_only');
-            const showExtensionBadge = fromExtension && (plan.name === 'Extension-Only' || plan.name === 'Ultra');
-            
-            return (
-              <Card 
-                key={index} 
-                className={`relative transition-all ${
-                  isHighlighted 
-                    ? 'border-2 border-primary shadow-lg scale-105' 
-                    : plan.popular 
-                    ? 'border-primary shadow-lg scale-105' 
-                    : ''
-                }`}
-              >
-                {(plan.popular || isHighlighted) && (
-                  <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-primary text-primary-foreground">
-                    {isHighlighted && fromExtension ? 'Perfect for Extension' : 'Most Popular'}
-                  </Badge>
-                )}
-                {getPlanSavingsText(plan) && (
-                  <Badge className="absolute -top-3 right-4 bg-success text-success-foreground">
-                    {getPlanSavingsText(plan)}
-                  </Badge>
-                )}
-                {!plan.isFree && (
-                  <div className="absolute top-4 right-4">
-                    <p className="text-xs text-muted-foreground">
-                      All sales final
-                    </p>
-                  </div>
-                )}
-                <CardHeader className="text-center pb-4">
-                  <CardTitle className="text-xl font-bold flex items-center justify-center gap-2">
-                    {plan.name}
-                    {showExtensionBadge && <Chrome className="h-4 w-4 text-primary" />}
-                  </CardTitle>
-                  <CardDescription className="text-sm">{plan.description}</CardDescription>
+        <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+          {plans.map((plan, index) => (
+            <Card key={index} className={`relative transition-all ${plan.popular ? 'border-primary shadow-lg scale-105' : ''}`}>
+              {plan.popular && (
+                <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-primary text-primary-foreground">
+                  Most Popular
+                </Badge>
+              )}
+              {getPlanSavingsText(plan) && (
+                <Badge className="absolute -top-3 right-4 bg-success text-success-foreground">
+                  {getPlanSavingsText(plan)}
+                </Badge>
+              )}
+              <CardHeader className="text-center pb-4">
+                <CardTitle className="text-xl font-bold">{plan.name}</CardTitle>
+                <CardDescription className="text-sm">{plan.description}</CardDescription>
                 <div className="mt-4">
                   <span className="text-3xl font-bold text-foreground">{getPrice(plan)}</span>
                   {!plan.isFree && <span className="text-muted-foreground ml-1">/{plan.period}</span>}
@@ -244,8 +181,7 @@ export const Pricing = () => {
                 </Button>
               </CardFooter>
             </Card>
-            );
-          })}
+          ))}
         </div>
         
         {/* Prorated Pricing Notice */}
@@ -261,14 +197,11 @@ export const Pricing = () => {
               <p>
                 <strong className="text-foreground">Subscribe mid-month?</strong> You'll only pay for the days remaining in your first month.
               </p>
-              <p>
-                Your word allocation is also prorated to match. Starting the 1st of the next month, you'll receive your full monthly allowance and pay the regular price.
-              </p>
               <div className="mt-4 p-3 bg-background/60 rounded-lg border border-border">
                 <p className="text-xs font-medium mb-1">Example:</p>
                 <p className="text-xs">
-                  Subscribe to Ultra on Nov 23 → Pay $9.32 for 9,333 words (Nov 23-30)<br />
-                  Dec 1 → Pay $39.95 for full 40,000 words (Dec 1-31)<br />
+                  Subscribe to Ultra on Nov 23 → Pay ~$12 for ~1,500 words (Nov 23-30)<br />
+                  Dec 1 → Pay $39.95 for full 5,000 words (Dec 1-31)<br />
                   <span className="text-primary font-medium">All subscriptions reset on the 1st of each month</span>
                 </p>
               </div>
