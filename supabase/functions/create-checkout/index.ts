@@ -66,7 +66,7 @@ serve(async (req) => {
 
     // Plan catalog with full monthly words and prices
     const planDetails = {
-      ultra: { fullWords: 40000, monthlyPrice: 39.95 },
+      ultra: { fullWords: 20000, monthlyPrice: 39.95 },
       extension: { fullWords: 5000, monthlyPrice: 9.95 },
       pro: { fullWords: 15000, monthlyPrice: 19.95 },
     } as const;

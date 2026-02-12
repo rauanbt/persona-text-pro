@@ -14,10 +14,10 @@ const logStep = (step: string, details?: any) => {
 
 // CANONICAL PLAN LIMITS - Must match usage-summary function
 const PLAN_LIMITS = {
-  free: 500,
+  free: 1000,
   extension_only: 5000,
   pro: 15000,
-  ultra: 40000, // Updated to 40K
+  ultra: 20000,
   master: 30000, // legacy
 } as const;
 

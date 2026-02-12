@@ -335,7 +335,7 @@ function resolveEditableContainer(prevContainer, selectionText, preContext, post
     return prevContainer;
   }
 
-  // 2) Editor selectors (Gmail + Outlook + general)
+  // 2) Editor selectors (Gmail + Outlook + Twitter + Facebook + Reddit + general)
   const gmailSelector = [
     'div[aria-label="Message body"][contenteditable="true"]',
     'div[aria-label="Message Body"][contenteditable="true"]',
@@ -350,10 +350,30 @@ function resolveEditableContainer(prevContainer, selectionText, preContext, post
     '[contenteditable="true"][role="textbox"]'
   ].join(',');
 
+  const twitterSelector = [
+    'div[data-testid="tweetTextarea_0"][contenteditable="true"]',
+    'div[role="textbox"][data-testid][contenteditable="true"]',
+    'div.DraftEditor-root [contenteditable="true"]'
+  ].join(',');
+
+  const facebookSelector = [
+    'div[role="textbox"][contenteditable="true"]',
+    'div[contenteditable="true"][data-lexical-editor="true"]'
+  ].join(',');
+
+  const redditSelector = [
+    'div[contenteditable="true"].public-DraftEditor-content',
+    'div[role="textbox"][contenteditable="true"]',
+    'div[data-lexical-editor="true"][contenteditable="true"]'
+  ].join(',');
+
   // 3) Collect all candidates
   const candidates = [
     ...document.querySelectorAll(gmailSelector),
     ...document.querySelectorAll(outlookSelector),
+    ...document.querySelectorAll(twitterSelector),
+    ...document.querySelectorAll(facebookSelector),
+    ...document.querySelectorAll(redditSelector),
     ...document.querySelectorAll('[contenteditable="true"]')
   ].filter(el => {
     // Exclude our own dialog
@@ -610,7 +630,10 @@ async function replaceSelectedText(originalText, humanizedText) {
         const range = lastSelection.range;
         const isGmail = window.location.hostname.includes('mail.google.com');
         const isLinkedIn = window.location.hostname.includes('linkedin.com');
-          
+        const isTwitter = window.location.hostname.includes('twitter.com') || window.location.hostname.includes('x.com');
+        const isFacebook = window.location.hostname.includes('facebook.com');
+        const isReddit = window.location.hostname.includes('reddit.com');
+        const isGoogleDocs = window.location.hostname.includes('docs.google.com');
           // Gmail-specific: Re-focus composer and stabilize selection
           if (isGmail) {
             // Gmail uses complex editor structure - try to focus the actual contenteditable
@@ -797,18 +820,20 @@ async function replaceSelectedText(originalText, humanizedText) {
             return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
           }
           function textToGmailHTML(text) {
-            // Preserve empty lines with <div><br></div>
             return text.split('\n').map(line => {
               const content = line.trim().length ? escapeHTML(line) : '<br>';
               return `<div>${content}</div>`;
             }).join('');
           }
           function textToLinkedInHTML(text) {
-            // LinkedIn needs <p> tags for proper paragraph separation
             return text.split('\n').map(line => {
               const content = line.trim().length ? escapeHTML(line) : '&nbsp;';
               return `<p>${content}</p>`;
             }).join('');
+          }
+          function textToGenericHTML(text) {
+            // Generic rich-text: use <br> for line breaks (works for Twitter, Facebook, Reddit, etc.)
+            return text.split('\n').map(line => escapeHTML(line)).join('<br>');
           }
 
           // At this point we have a valid activeRange and selection
@@ -862,7 +887,35 @@ async function replaceSelectedText(originalText, humanizedText) {
             }
           }
           
-          // Prefer modern beforeinput path for non-Gmail
+          // TWITTER/X, FACEBOOK, REDDIT: Use insertHTML with <br> tags for line breaks
+          if (isTwitter || isFacebook || isReddit) {
+            const platformName = isTwitter ? 'Twitter/X' : isFacebook ? 'Facebook' : 'Reddit';
+            console.log(`[Content] ${platformName} path: trying insertHTML with <br> tags`, { isMultiline });
+            const html = isMultiline ? textToGenericHTML(humanizedText) : escapeHTML(humanizedText);
+            const htmlSuccess = document.execCommand('insertHTML', false, html);
+            console.log(`[Content] ${platformName} insertHTML result:`, htmlSuccess);
+            
+            if (htmlSuccess) {
+              console.log(`[Content] ✓ Success: ${platformName} insertHTML`);
+              showNotification('Text replaced!', 'success');
+              lastReplacement = { originalText, humanizedText, container, range: activeRange };
+              return true;
+            } else {
+              console.log(`[Content] ${platformName} insertHTML failed, trying fallback methods`);
+            }
+          }
+          
+          // GOOGLE DOCS: Cannot directly edit - clipboard fallback with helpful message
+          if (isGoogleDocs) {
+            console.log('[Content] Google Docs detected - using clipboard fallback');
+            try {
+              await navigator.clipboard.writeText(humanizedText);
+            } catch (e) {}
+            showNotification('📋 Copied! Google Docs requires manual paste (Ctrl+V / ⌘+V)', 'info');
+            return false;
+          }
+          
+          // Prefer modern beforeinput path for other sites
           let beforeInputHandled = false;
           try {
             const ev = new InputEvent('beforeinput', {
@@ -1067,7 +1120,7 @@ async function replaceSelectedText(originalText, humanizedText) {
     }
     
     // TIER 4: Clipboard fallback (final resort)
-    console.log('[Content] Auto-replace blocked, using clipboard fallback');
+    console.log('[Content] Auto-replace not possible, using clipboard fallback');
     try {
       await navigator.clipboard.writeText(humanizedText);
       console.log('[Content] Text copied to clipboard as fallback');
@@ -1075,7 +1128,13 @@ async function replaceSelectedText(originalText, humanizedText) {
       console.warn('[Content] Clipboard write failed:', e);
     }
     
-    // Don't close dialog or show toast here - let the caller handle UI
+    const domain = window.location.hostname;
+    const isGoogleDocs = domain.includes('docs.google.com');
+    if (isGoogleDocs) {
+      showNotification('📋 Copied! Google Docs requires manual paste (Ctrl+V / ⌘+V)', 'info');
+    } else {
+      showNotification('📋 Text copied to clipboard. Paste with Ctrl+V / ⌘+V', 'info');
+    }
     return false;
     
   } catch (error) {

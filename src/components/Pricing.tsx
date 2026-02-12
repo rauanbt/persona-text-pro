@@ -50,7 +50,6 @@ export const Pricing = () => {
         "Works on Gmail, LinkedIn, Docs & more"
       ],
       buttonText: "Start Free",
-      popular: false,
       isFree: true
     },
     {
@@ -58,7 +57,7 @@ export const Pricing = () => {
       monthlyPrice: PLAN_PRICES.ultra.monthly.display,
       annualPrice: PLAN_PRICES.ultra.annual.display,
       period: isAnnual ? "per month (billed annually)" : "per month",
-      description: "Most popular plan",
+      description: "",
       features: [
         "20,000 words per month",
         "All 6 tone personalities",
@@ -68,7 +67,6 @@ export const Pricing = () => {
         "Works on Gmail, LinkedIn, Docs & more"
       ],
       buttonText: "Upgrade to Ultra",
-      popular: true,
       isFree: false,
       monthlyPriceId: PLAN_PRICES.ultra.monthly.priceId,
       annualPriceId: PLAN_PRICES.ultra.annual.priceId
@@ -129,12 +127,7 @@ export const Pricing = () => {
 
         <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
           {plans.map((plan, index) => (
-            <Card key={index} className={`relative transition-all ${plan.popular ? 'border-primary shadow-lg scale-105' : ''}`}>
-              {plan.popular && (
-                <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-primary text-primary-foreground">
-                  Most Popular
-                </Badge>
-              )}
+            <Card key={index} className={`relative transition-all ${!plan.isFree ? 'border-primary shadow-lg' : ''}`}>
               {getPlanSavingsText(plan) && (
                 <Badge className="absolute -top-3 right-4 bg-success text-success-foreground">
                   {getPlanSavingsText(plan)}
@@ -170,8 +163,8 @@ export const Pricing = () => {
               </CardContent>
               <CardFooter>
                 <Button 
-                  className={`w-full ${plan.popular ? 'bg-primary hover:bg-primary/90' : ''}`}
-                  variant={plan.popular ? "default" : "outline"}
+                  className={`w-full ${!plan.isFree ? 'bg-primary hover:bg-primary/90' : ''}`}
+                  variant={!plan.isFree ? "default" : "outline"}
                   onClick={() => {
                     if (plan.isFree) {
                       window.location.href = '/auth';

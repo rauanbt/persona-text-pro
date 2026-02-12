@@ -196,12 +196,9 @@ const Dashboard = () => {
                 <span>{usage.requests_count} requests</span>
               </div>
 
-              {(webWordsUsed > 0 || extensionWordsUsed > 0) && (
-                <div className="p-3 bg-muted/50 rounded-md text-sm space-y-1 mb-4">
-                  <div className="font-medium text-muted-foreground mb-2">Usage Breakdown:</div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">🌐 Web:</span><span className="font-medium">{webWordsUsed.toLocaleString()}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">🧩 Extension:</span><span className="font-medium">{extensionWordsUsed.toLocaleString()}</span></div>
-                  <div className="border-t border-muted pt-1 mt-2 flex justify-between font-semibold"><span>Total:</span><span>{totalWordsUsed.toLocaleString()}</span></div>
+              {totalWordsUsed > 0 && (
+                <div className="p-3 bg-muted/50 rounded-md text-sm mb-4">
+                  <div className="flex justify-between font-medium"><span>Words used:</span><span>{totalWordsUsed.toLocaleString()}</span></div>
                 </div>
               )}
 
