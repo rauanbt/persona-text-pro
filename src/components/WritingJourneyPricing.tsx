@@ -24,7 +24,7 @@ export const WritingJourneyPricing = () => {
       features: [
         "1,000 words per month",
         "All 6 tone personalities",
-        "Basic AI humanization",
+        "Premium dual-engine humanization (Gemini + GPT) + tone generator",
         "Works on Gmail, LinkedIn, Docs & more"
       ],
       buttonText: "Start Free",
@@ -44,7 +44,7 @@ export const WritingJourneyPricing = () => {
       features: [
         "20,000 words per month",
         "All 6 tone personalities",
-        "Premium dual-engine humanization (Gemini + GPT)",
+        "Premium dual-engine humanization (Gemini + GPT) + tone generator",
         "Stronger rewrite refinement",
         "Priority processing",
         "Works on Gmail, LinkedIn, Docs & more"

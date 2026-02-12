@@ -233,12 +233,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         description: "You have successfully signed in.",
       });
       
-      // Check if opened from extension
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('from') === 'extension') {
-        // Redirect to extension auth page
-        window.location.href = '/extension-auth?from=extension';
-      }
+      // Extension redirect is handled by Auth.tsx's useEffect
     }
 
     return { error };
