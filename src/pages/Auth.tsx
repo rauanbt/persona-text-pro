@@ -57,18 +57,7 @@ const Auth = () => {
     
     setIsLoading(false);
     
-    if (!error) {
-      if (fromExtension) {
-        // Set pending handoff flag
-        sessionStorage.setItem('extension_handoff_pending', '1');
-        navigate('/extension-auth?from=extension', { replace: true });
-      } else if (redirectParam) {
-        navigate(`/${redirectParam}`, { replace: true });
-      } else {
-        const from = location.state?.from?.pathname || '/dashboard';
-        navigate(from, { replace: true });
-      }
-    }
+    // Navigation is handled by the useEffect watching user/loading state
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -85,11 +74,7 @@ const Auth = () => {
     const { error } = await signInWithGoogle();
     setIsLoading(false);
     
-    if (!error && fromExtension) {
-      // Set pending handoff flag
-      sessionStorage.setItem('extension_handoff_pending', '1');
-      navigate('/extension-auth?from=extension', { replace: true });
-    }
+    // Navigation is handled by the useEffect watching user/loading state
   };
 
   if (loading) {
