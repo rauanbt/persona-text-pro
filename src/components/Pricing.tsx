@@ -62,9 +62,8 @@ export const Pricing = () => {
       description: "Maximum humanization power",
       features: [
         "5,000 words per month",
-        "1,000 words per request",
         "All 6 tone personalities",
-        "Premium triple-engine humanization (Gemini + ChatGPT + Claude)",
+        "Premium dual-engine humanization (Gemini + ChatGPT)",
         "Right-click humanize on any website",
         "Works on Gmail, LinkedIn, Docs, and more"
       ],
@@ -184,30 +183,6 @@ export const Pricing = () => {
           ))}
         </div>
         
-        {/* Prorated Pricing Notice */}
-        <div className="mt-12 max-w-4xl mx-auto">
-          <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Badge variant="secondary">Fair Pricing</Badge>
-                Prorated First Month
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm text-muted-foreground">
-              <p>
-                <strong className="text-foreground">Subscribe mid-month?</strong> You'll only pay for the days remaining in your first month.
-              </p>
-              <div className="mt-4 p-3 bg-background/60 rounded-lg border border-border">
-                <p className="text-xs font-medium mb-1">Example:</p>
-                <p className="text-xs">
-                  Subscribe to Ultra on Nov 23 → Pay ~$12 for ~1,500 words (Nov 23-30)<br />
-                  Dec 1 → Pay $39.95 for full 5,000 words (Dec 1-31)<br />
-                  <span className="text-primary font-medium">All subscriptions reset on the 1st of each month</span>
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
       </div>
     </section>
   );
