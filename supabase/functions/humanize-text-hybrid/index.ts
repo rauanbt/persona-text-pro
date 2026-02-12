@@ -14,20 +14,20 @@ const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
 // Word limits per plan (web dashboard)
 const PLAN_LIMITS = {
-  free: 500,          // Shared pool (web + extension)
-  wordsmith: 15000,   // Web only
-  master: 30000,      // Web (+ 5k extension bonus)
+  free: 1000,          // Shared pool (web + extension)
+  wordsmith: 15000,   // Web only (legacy)
+  master: 30000,      // Legacy
   extension_only: 0,  // Extension only plan has no web access
-  pro: 15000,         // Web only
-  ultra: 40000        // Web + extension shared pool
+  pro: 15000,         // Web only (legacy)
+  ultra: 20000        // Web + extension shared pool
 };
 
 // Extension word limits
 const EXTENSION_LIMITS = {
-  free: 500,           // Shared with web pool
-  extension_only: 5000, // Extension only plan
-  ultra: 40000,         // Shared pool with web (no separate bonus)
-  master: 30000         // Shared pool with web (no separate bonus, legacy)
+  free: 1000,           // Shared with web pool
+  extension_only: 5000, // Extension only plan (legacy)
+  ultra: 20000,         // Shared pool with web
+  master: 30000         // Legacy
 };
 
 // Lightweight ISO 639-1 language name map for logs/prompts

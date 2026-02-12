@@ -15,7 +15,7 @@ export const WritingJourneyPricing = () => {
   const plans = [
     {
       name: "Free",
-      subtitle: "No credit card required",
+      subtitle: "",
       monthlyPrice: "Free",
       annualPrice: "Free",
       period: "",
@@ -35,11 +35,11 @@ export const WritingJourneyPricing = () => {
     },
     {
       name: "Ultra",
-      subtitle: "Most popular plan",
+      subtitle: "",
       monthlyPrice: PLAN_PRICES.ultra.monthly.display,
       annualPrice: PLAN_PRICES.ultra.annual.display,
       period: isAnnual ? "per month (billed annually)" : "per month",
-      description: "Most popular plan",
+      description: "",
       icon: <Crown className="w-8 h-8 text-purple-500" />,
       features: [
         "20,000 words per month",
@@ -50,7 +50,7 @@ export const WritingJourneyPricing = () => {
         "Works on Gmail, LinkedIn, Docs & more"
       ],
       buttonText: "Upgrade to Ultra",
-      popular: true,
+      popular: false,
       isFree: false,
       monthlyPriceId: PLAN_PRICES.ultra.monthly.priceId,
       annualPriceId: PLAN_PRICES.ultra.annual.priceId,
@@ -113,19 +113,14 @@ export const WritingJourneyPricing = () => {
 
         <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
           {plans.map((plan, index) => (
-            <Card key={index} className={`relative overflow-hidden transition-all duration-300 hover:shadow-2xl ${plan.popular ? 'scale-105 shadow-xl' : 'hover:scale-102'} bg-gradient-to-br ${plan.bgGradient} border-2 ${plan.borderColor} flex flex-col h-full`}>
-              {plan.popular && (
-                <Badge className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-primary text-primary-foreground px-4 py-1 z-10">
-                  Most Popular ⭐
-                </Badge>
-              )}
+            <Card key={index} className={`relative overflow-hidden transition-all duration-300 hover:shadow-2xl hover:scale-102 bg-gradient-to-br ${plan.bgGradient} border-2 ${plan.borderColor} flex flex-col h-full`}>
               {getPlanSavingsText(plan) && (
                 <Badge className="absolute top-4 right-4 bg-green-500 text-white z-10">
                   {getPlanSavingsText(plan)}
                 </Badge>
               )}
               
-              <CardHeader className="text-center pb-4 pt-12">
+              <CardHeader className="text-center pb-4 pt-8">
                 <div className="flex justify-center mb-4">
                   <div className="p-3 rounded-full bg-background/80 backdrop-blur-sm">
                     {plan.icon}
@@ -134,9 +129,11 @@ export const WritingJourneyPricing = () => {
                 <CardTitle className="text-2xl font-bold text-foreground">
                   {plan.name}
                 </CardTitle>
-                <CardDescription className="text-sm font-medium text-muted-foreground">
-                  {plan.subtitle}
-                </CardDescription>
+                {plan.subtitle && (
+                  <CardDescription className="text-sm font-medium text-muted-foreground">
+                    {plan.subtitle}
+                  </CardDescription>
+                )}
                 
                 <div className="mt-6">
                   <span className="text-4xl font-bold text-foreground">{getPrice(plan)}</span>
@@ -173,11 +170,11 @@ export const WritingJourneyPricing = () => {
               <CardFooter className="p-6 pt-4 mt-auto">
                 <Button 
                   className={`w-full py-3 font-semibold transition-all duration-300 ${
-                    plan.popular 
+                    !plan.isFree 
                       ? 'bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl' 
                       : 'border-2 border-current hover:bg-current hover:text-background'
                   }`}
-                  variant={plan.popular ? "default" : "outline"}
+                  variant={!plan.isFree ? "default" : "outline"}
                   onClick={() => {
                     if (plan.isFree) {
                       window.location.href = '/auth';

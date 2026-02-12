@@ -20,11 +20,11 @@ const PLAN_DETAILS: Record<string, {
   // Ultra Monthly
   'price_1SD81xH8HT0u8xphuqiq8xet': {
     name: 'Ultra Plan',
-    wordLimit: 40000,
+    wordLimit: 20000,
     billingPeriod: 'Monthly',
     hasExtension: true,
     features: [
-      '40,000 words per month (shared pool across web & extension)',
+      '20,000 words per month (shared pool across web & extension)',
       'Chrome Extension access included',
       'Advanced AI engines (GPT-4, Claude) + Fast engines',
       '50+ languages supported',
@@ -36,11 +36,11 @@ const PLAN_DETAILS: Record<string, {
   // Ultra Monthly - NEW PRICING
   'price_1SWYfhH8HT0u8xphzdZ9kO1A': {
     name: 'Ultra Plan',
-    wordLimit: 40000,
+    wordLimit: 20000,
     billingPeriod: 'Monthly',
     hasExtension: true,
     features: [
-      '40,000 words per month (shared pool across web & extension)',
+      '20,000 words per month (shared pool across web & extension)',
       'Chrome Extension access included',
       'Advanced AI engines (GPT-4, Claude) + Fast engines',
       '50+ languages supported',
@@ -51,11 +51,11 @@ const PLAN_DETAILS: Record<string, {
   // Ultra Annual - LEGACY PRICING
   'price_1SGMo6H8HT0u8xphytzP4SFR': {
     name: 'Ultra Plan',
-    wordLimit: 40000,
+    wordLimit: 20000,
     billingPeriod: 'Annual',
     hasExtension: true,
     features: [
-      '40,000 words per month (shared pool across web & extension)',
+      '20,000 words per month (shared pool across web & extension)',
       'Chrome Extension access included',
       'Advanced AI engines (GPT-4, Claude) + Fast engines',
       '50+ languages supported',
@@ -67,11 +67,11 @@ const PLAN_DETAILS: Record<string, {
   // Ultra Annual - NEW PRICING
   'price_1SWYfwH8HT0u8xphFTyNNhan': {
     name: 'Ultra Plan',
-    wordLimit: 40000,
+    wordLimit: 20000,
     billingPeriod: 'Annual',
     hasExtension: true,
     features: [
-      '40,000 words per month (shared pool across web & extension)',
+      '20,000 words per month (shared pool across web & extension)',
       'Chrome Extension access included',
       'Advanced AI engines (GPT-4, Claude) + Fast engines',
       '50+ languages supported',

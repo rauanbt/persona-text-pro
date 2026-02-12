@@ -87,34 +87,6 @@
       margin-top: 15px;
     }
 
-    .refresh-btn {
-      background: none;
-      border: none;
-      cursor: pointer;
-      font-size: 20px;
-      padding: 4px 8px;
-      transition: transform 0.3s;
-      opacity: 0.6;
-    }
-
-    .refresh-btn:hover {
-      opacity: 1;
-    }
-
-    .refresh-btn:disabled {
-      cursor: not-allowed;
-      opacity: 0.3;
-    }
-
-    .refresh-btn.spinning {
-      animation: refreshSpin 0.6s linear;
-    }
-
-    @keyframes refreshSpin {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
-    }
-
     .word-count {
       font-size: 32px;
       font-weight: bold;
@@ -308,9 +280,6 @@
       <button class="button button-secondary" id="connect-extension-button" style="margin-top: 5px;">
         Connect Extension (already logged in)
       </button>
-      <button class="button button-secondary" id="refresh-connection-button" style="margin-top: 5px; background: #dbeafe; color: #1e40af;">
-        🔄 Refresh Connection
-      </button>
       <div class="login-text" style="margin-top: 15px;">
         Don't have an account? 
         <a href="#" class="link" id="signup-link">Sign up free</a>
@@ -329,10 +298,7 @@
         </div>
 
         <div class="word-balance">
-          <div style="display: flex; align-items: center; justify-content: space-between;">
-            <div class="word-count" id="word-count">0</div>
-            <button id="refresh-balance-btn" class="refresh-btn" title="Refresh balance">🔄</button>
-          </div>
+          <div class="word-count" id="word-count">0</div>
           <div class="word-label">words remaining this month</div>
           <div class="progress-bar">
             <div class="progress-fill" id="progress-fill"></div>
@@ -358,9 +324,6 @@
       <button class="button button-secondary" id="manage-subscription-button">
         ⚙️ Manage Subscription
       </button>
-      <button class="button button-secondary" id="force-refresh-button" style="background: #dbeafe; color: #1e40af;">
-        🔄 Force Refresh Data
-      </button>
 
       <div class="divider"></div>
 
@@ -372,19 +335,14 @@
       <div id="upgrade-required-card" class="card hidden" style="margin-top: 15px; border: 2px solid #fbbf24; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);">
         <div style="text-align: center;">
           <div style="font-size: 32px; margin-bottom: 10px;">🔒</div>
-          <div style="font-size: 16px; font-weight: 700; color: #92400e; margin-bottom: 8px;">Extension Access Locked</div>
+          <div style="font-size: 16px; font-weight: 700; color: #92400e; margin-bottom: 8px;">Upgrade Required</div>
           <p style="font-size: 13px; color: #92400e; margin-bottom: 16px; line-height: 1.5;">
-            The Chrome Extension requires Extension-Only or Ultra plan.<br>
-            Your current plan: <span id="current-plan-name" style="font-weight: 600;"></span>
+            Your current plan: <span id="current-plan-name" style="font-weight: 600;"></span><br>
+            Upgrade to Ultra for 20,000 words/month.
           </p>
-          <div style="display: flex; flex-direction: column; gap: 8px;">
-            <button class="button button-primary" id="upgrade-extension-button" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
-              Upgrade to Extension-Only - $12.95/mo
-            </button>
-            <button class="button button-primary" id="upgrade-ultra-button" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);">
-              Upgrade to Ultra - $54.95/mo
-            </button>
-          </div>
+          <button class="button button-primary" id="upgrade-ultra-button" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);">
+            Upgrade to Ultra — $39.95/mo
+          </button>
         </div>
       </div>
 

@@ -9,18 +9,9 @@
 
   // Plan limits for Chrome Extension
   g.EXTENSION_LIMITS = g.EXTENSION_LIMITS || {
-    free: 500,           // Web only - no extension access
-    extension_only: 5000, // Extension only
-    ultra: 40000,         // Shared pool with web (no separate bonus)
-    master: 30000         // Shared pool with web (no separate bonus, legacy)
-  };
-
-  // Web dashboard limits (for reference)
-  g.WEB_LIMITS = g.WEB_LIMITS || {
-    free: 500,          // Shared with extension
-    pro: 15000,
-    ultra: 40000,
-    wordsmith: 15000,   // legacy
-    master: 30000       // legacy
+    free: 1000,           // Shared pool with web
+    extension_only: 5000, // Extension only (legacy)
+    ultra: 20000,         // Shared pool with web
+    master: 30000         // Legacy
   };
 })(typeof self !== 'undefined' ? self : window);

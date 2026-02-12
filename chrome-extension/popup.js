@@ -3,7 +3,7 @@
 // Use extension limits from config.js (loaded globally via popup.html)
 const EXT_LIMITS = (typeof EXTENSION_LIMITS !== 'undefined') 
   ? EXTENSION_LIMITS 
-  : { free: 500, extension_only: 5000, ultra: 40000, master: 30000, pro: 0, wordsmith: 0 };
+  : { free: 1000, extension_only: 5000, ultra: 20000, master: 30000 };
 
 let subscriptionData = null;
 let wordBalance = 0;
@@ -153,7 +153,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.log('[Popup] Authenticated - loading user data');
       showMainView();
       await loadUserData();
-      addCacheClearButton(); // Add cache clear button after loading
     }
   } catch (error) {
     console.error('[Popup] Initialization error:', error);
@@ -385,54 +384,7 @@ document.getElementById('connect-extension-button')?.addEventListener('click', a
   chrome.tabs.create({ url: 'https://sapienwrite.com/extension-auth?from=extension' });
 });
 
-document.getElementById('refresh-connection-button')?.addEventListener('click', async () => {
-  console.log('[Popup] Manual refresh triggered');
-  const refreshBtn = document.getElementById('refresh-connection-button');
-  const originalText = refreshBtn.textContent;
-  
-  try {
-    // Show loading state
-    refreshBtn.textContent = 'Checking...';
-    refreshBtn.disabled = true;
-    
-    // Request session from any open SapienWrite tabs
-    const response = await new Promise((resolve) => {
-      chrome.runtime.sendMessage({ action: 'requestSessionFromWebApp' }, resolve);
-    });
-    
-    console.log('[Popup] Request session response:', response);
-    
-    if (!response.success || response.tabsFound === 0) {
-      showError('No SapienWrite tabs open. Please log in at sapienwrite.com first.');
-      refreshBtn.textContent = originalText;
-      refreshBtn.disabled = false;
-      await populateDiagnostics();
-      return;
-    }
-    
-    // Wait for session to be stored (give web app time to respond)
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Check if authenticated now
-    const authenticated = await isAuthenticated();
-    if (authenticated) {
-      await loadUserData();
-      await populateDiagnostics();
-    } else {
-      showError('Not logged in. Please log in at sapienwrite.com and try again.');
-      showLoginView();
-      await populateDiagnostics();
-    }
-    
-    refreshBtn.textContent = originalText;
-    refreshBtn.disabled = false;
-  } catch (e) {
-    console.error('[Popup] Refresh failed:', e);
-    showError('Failed to refresh. Please log in at sapienwrite.com/extension-auth');
-    refreshBtn.textContent = originalText;
-    refreshBtn.disabled = false;
-  }
-});
+// Refresh connection button removed - auto-refresh on popup open is sufficient
 
 document.getElementById('signup-link')?.addEventListener('click', async (e) => {
   e.preventDefault();
@@ -456,10 +408,6 @@ document.getElementById('manage-subscription-button')?.addEventListener('click',
 
 document.getElementById('upgrade-button')?.addEventListener('click', () => {
   chrome.tabs.create({ url: `https://sapienwrite.com/pricing?from=extension` });
-});
-
-document.getElementById('upgrade-extension-button')?.addEventListener('click', () => {
-  chrome.tabs.create({ url: `https://sapienwrite.com/auth?from=extension&redirect=pricing&plan=extension` });
 });
 
 document.getElementById('upgrade-ultra-button')?.addEventListener('click', () => {
@@ -507,110 +455,11 @@ document.getElementById('logout-link')?.addEventListener('click', async (e) => {
   }
 });
 
-// Add cache clearing button to main view
-function addCacheClearButton() {
-  const mainCard = document.querySelector('.main-card');
-  if (!mainCard || document.getElementById('clear-cache-btn')) return;
-  
-  const btn = document.createElement('button');
-  btn.id = 'clear-cache-btn';
-  btn.textContent = '🔄 Refresh Data';
-  btn.className = 'secondary-button';
-  btn.style.marginTop = '12px';
-  btn.style.width = '100%';
-  btn.addEventListener('click', async () => {
-    btn.textContent = 'Clearing...';
-    btn.disabled = true;
-    
-    await chrome.storage.local.remove([
-      'lastBalanceFetch',
-      'lastKnownBalance',
-      'last_usage_summary',
-      'last_subscription_check'
-    ]);
-    
-    console.log('[Popup] Cache cleared, reloading data');
-    await loadUserData();
-    
-    btn.textContent = '✓ Refreshed!';
-    setTimeout(() => {
-      btn.textContent = '🔄 Refresh Data';
-      btn.disabled = false;
-    }, 2000);
-  });
-  
-  mainCard.appendChild(btn);
-}
+// Cache clear button removed - auto-refresh on popup open is sufficient
 
-// Wire up manual refresh button
-document.getElementById('refresh-balance-btn')?.addEventListener('click', async () => {
-  const btn = document.getElementById('refresh-balance-btn');
-  if (!btn) return;
-  
-  console.log('[Popup] Manual refresh triggered');
-  btn.classList.add('spinning');
-  btn.disabled = true;
-  
-  try {
-    await fetchWordBalance();
-  } finally {
-    btn.classList.remove('spinning');
-    btn.disabled = false;
-  }
-});
+// Refresh balance button removed - auto-refresh on popup open is sufficient
 
-// Force refresh button - Clear all cached data and force fresh fetch
-document.getElementById('force-refresh-button')?.addEventListener('click', async (e) => {
-  e.preventDefault();
-  console.log('[Popup] ========= FORCE REFRESH REQUESTED =========');
-  
-  const btn = e.target;
-  const originalText = btn.textContent;
-  btn.textContent = '🔄 Refreshing...';
-  btn.disabled = true;
-  
-  try {
-    // Verify we have a session before clearing
-    const session = await getSession();
-    if (!session) {
-      showError('Not logged in. Please log in first.');
-      btn.textContent = originalText;
-      btn.disabled = false;
-      return;
-    }
-    
-    console.log('[Popup] Clearing all cached data except auth tokens...');
-    
-    // Clear all cached data EXCEPT auth tokens
-    const authKeys = ['access_token', 'refresh_token', 'session', 'user_email', 'session_stored_at'];
-    const storage = await chrome.storage.local.get(null);
-    const keysToRemove = Object.keys(storage).filter(key => !authKeys.includes(key));
-    
-    if (keysToRemove.length > 0) {
-      await chrome.storage.local.remove(keysToRemove);
-      console.log('[Popup] Cleared cached keys:', keysToRemove);
-    }
-    
-    // Force fresh data fetch
-    console.log('[Popup] Forcing fresh data load...');
-    await loadUserData();
-    
-    btn.textContent = '✓ Refreshed!';
-    console.log('[Popup] ========= FORCE REFRESH COMPLETE =========');
-    
-    // Reset button after 2 seconds
-    setTimeout(() => {
-      btn.textContent = originalText;
-      btn.disabled = false;
-    }, 2000);
-    
-  } catch (err) {
-    console.error('[Popup] Force refresh failed:', err);
-    showError('Failed to refresh. Try logging out and back in.');
-    btn.textContent = originalText;
-    btn.disabled = false;
-  }
-});
+// Force refresh button removed - auto-refresh on popup open is sufficient
 
 // Listen for storage changes
 chrome.storage.onChanged.addListener((changes, areaName) => {
