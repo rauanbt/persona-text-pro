@@ -1,161 +1,28 @@
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
-import { Badge } from './ui/badge';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { Sparkles, Package, Zap } from 'lucide-react';
-
-const WORD_PACKAGES = [
-  {
-    id: 'price_1SGMdHH8HT0u8xphUzFMp76X',
-    name: '5,000 Extra Words',
-    words: 5000,
-    price: '$8.99',
-    description: 'Perfect for small projects',
-    icon: Package,
-    popular: false
-  },
-  {
-    id: 'price_1SGMdfH8HT0u8xphHTN0OW9z',
-    name: '10,000 Extra Words',
-    words: 10000,
-    price: '$16.99',
-    description: 'Great value for regular users',
-    icon: Sparkles,
-    popular: true
-  },
-  {
-    id: 'price_1SGMe7H8HT0u8xphkppIAPEh',
-    name: '25,000 Extra Words',
-    words: 25000,
-    price: '$41.99',
-    description: 'Best for heavy users',
-    icon: Zap,
-    popular: false
-  }
-];
+import { Package } from 'lucide-react';
 
 interface ExtraWordsPackagesProps {
   onClose?: () => void;
   currentPlan?: string;
 }
 
-export const ExtraWordsPackages: React.FC<ExtraWordsPackagesProps> = ({ onClose, currentPlan = 'free' }) => {
-  const { toast } = useToast();
-  const [loading, setLoading] = React.useState<string | null>(null);
-
-  // Prevent free users from purchasing extra words
-  if (currentPlan === 'free') {
-    return (
-      <div className="space-y-6 text-center py-8">
-        <div className="mx-auto p-4 bg-primary/10 rounded-full w-fit">
-          <Package className="w-8 h-8 text-primary" />
-        </div>
-        <div className="space-y-2">
-          <h3 className="text-2xl font-bold">Extra Words Available on Paid Plans</h3>
-          <p className="text-muted-foreground max-w-md mx-auto">
-            Purchase extra words packages once you upgrade to a Pro, Ultra, or Master plan. 
-            Extra words never expire and work across all your humanization needs.
-          </p>
-        </div>
-        {onClose && (
-          <Button onClick={onClose}>
-            Got it
-          </Button>
-        )}
-      </div>
-    );
-  }
-
-  const handlePurchase = async (priceId: string, packageName: string) => {
-    try {
-      setLoading(priceId);
-      
-      const { data, error } = await supabase.functions.invoke('purchase-extra-words', {
-        body: { priceId }
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      if (data?.url) {
-        window.open(data.url, '_blank');
-      } else {
-        throw new Error('No checkout URL received');
-      }
-    } catch (error: any) {
-      console.error('Error purchasing extra words:', error);
-      toast({
-        title: "Purchase Failed",
-        description: error.message || "Failed to initiate purchase. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(null);
-    }
-  };
-
+export const ExtraWordsPackages: React.FC<ExtraWordsPackagesProps> = ({ onClose }) => {
   return (
-    <div className="space-y-6">
-      <div className="text-center space-y-2">
-        <h3 className="text-2xl font-bold">Extra Words Packages</h3>
-        <p className="text-muted-foreground">
-          Get more words to continue humanizing your content
+    <div className="space-y-6 text-center py-8">
+      <div className="mx-auto p-4 bg-primary/10 rounded-full w-fit">
+        <Package className="w-8 h-8 text-primary" />
+      </div>
+      <div className="space-y-2">
+        <h3 className="text-2xl font-bold">Coming Soon</h3>
+        <p className="text-muted-foreground max-w-md mx-auto">
+          Extra word packages are coming soon! We're working on flexible top-up options for when you need more words. Stay tuned.
         </p>
       </div>
-
-      <div className="grid gap-4 md:grid-cols-3">
-        {WORD_PACKAGES.map((pkg) => {
-          const Icon = pkg.icon;
-          return (
-            <Card key={pkg.id} className={`relative ${pkg.popular ? 'border-primary shadow-lg' : ''}`}>
-              {pkg.popular && (
-                <Badge className="absolute -top-2 left-1/2 -translate-x-1/2 bg-primary">
-                  Most Popular
-                </Badge>
-              )}
-              
-              <CardHeader className="text-center space-y-2">
-                <div className="mx-auto p-3 bg-primary/10 rounded-full w-fit">
-                  <Icon className="w-6 h-6 text-primary" />
-                </div>
-                <CardTitle className="text-lg">{pkg.name}</CardTitle>
-                <CardDescription>{pkg.description}</CardDescription>
-                <div className="text-3xl font-bold text-primary">{pkg.price}</div>
-              </CardHeader>
-              
-              <CardContent className="space-y-4">
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground">
-                    {pkg.words.toLocaleString()} additional words
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Never expires • Use anytime
-                  </p>
-                </div>
-                
-                <Button 
-                  onClick={() => handlePurchase(pkg.id, pkg.name)}
-                  disabled={loading === pkg.id}
-                  className="w-full"
-                  variant={pkg.popular ? "default" : "outline"}
-                >
-                  {loading === pkg.id ? "Processing..." : "Purchase Now"}
-                </Button>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
       {onClose && (
-        <div className="text-center">
-          <Button variant="ghost" onClick={onClose}>
-            Maybe Later
-          </Button>
-        </div>
+        <Button onClick={onClose}>
+          Got it
+        </Button>
       )}
     </div>
   );

@@ -21,7 +21,7 @@ export const FAQ = () => {
     },
     {
       question: "How much does it cost?",
-      answer: "Free plan gives you 500 words/month. Ultra plan is $39.95/month (or $23.97/month billed annually) for 5,000 words. Both plans include all 6 tone options and work everywhere via the Chrome extension."
+      answer: "Free plan gives you 1,000 words/month. Ultra plan is $39.95/month (or $23.97/month billed annually) for 20,000 words. Both plans include all 6 tone options and work everywhere via the Chrome extension."
     },
     {
       question: "What tone options are available?",
@@ -29,11 +29,11 @@ export const FAQ = () => {
     },
     {
       question: "Can I buy extra words?",
-      answer: "Yes! Paid plan users can purchase extra word packages: 5,000 for $12.99, 10,000 for $22.99, or 25,000 for $49.99. Extra words never expire."
+      answer: "Coming soon! We're working on extra word packages for paid plan users. Stay tuned."
     },
     {
       question: "What is your refund policy?",
-      answer: "All sales are final due to immediate computational costs. We encourage testing with the free 500-word plan before upgrading."
+      answer: "All sales are final due to immediate computational costs. We encourage testing with the free 1,000-word plan before upgrading."
     },
     {
       question: "How do I cancel my subscription?",
