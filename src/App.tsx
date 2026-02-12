@@ -12,12 +12,8 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Settings from "./pages/Settings";
-import About from "./pages/About";
-import Blog from "./pages/Blog";
-import Contact from "./pages/Contact";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
-import ChromeExtension from "./pages/ChromeExtension";
 import ExtensionAuth from "./pages/ExtensionAuth";
 import NotFound from "./pages/NotFound";
 
@@ -51,12 +47,8 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
-            <Route path="/about" element={<About />} />
-            <Route path="/blog" element={<Blog />} />
-            <Route path="/contact" element={<Contact />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
-            <Route path="/chrome-extension" element={<ChromeExtension />} />
             <Route path="/extension-auth" element={<ExtensionAuth />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

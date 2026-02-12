@@ -8,53 +8,37 @@ import {
 export const FAQ = () => {
   const faqs = [
     {
-      question: "How does SapienWrite work?",
-      answer: "SapienWrite uses advanced natural language processing to rewrite AI-generated text, making it sound more human while applying your chosen tone (Regular, Casual, Formal, Funny, Sarcastic, or Smart). Our system analyzes patterns that AI detectors flag and replaces them with more natural alternatives."
+      question: "How does the Chrome Extension work?",
+      answer: "Select any text on any webpage, right-click, and choose 'Humanize with SapienWrite.' Pick your preferred tone and the text is instantly replaced with a natural, human-sounding version."
     },
     {
       question: "Does SapienWrite bypass AI detection tools?",
-      answer: "Yes! Our system is specifically designed to bypass all major AI detection tools. We use advanced multi-model AI analysis (powered by Gemini, ChatGPT, and Claude) to ensure your humanized text passes detection checks. We continuously test and update our algorithms to maintain effectiveness."
+      answer: "Yes! Our system uses advanced multi-model AI analysis (Gemini + ChatGPT + Claude) to ensure your humanized text passes detection checks from all major AI detectors."
     },
     {
-      question: "Are there limits on AI detection checks?",
-      answer: "No! We offer unlimited AI detection checks for all users. Free users can check up to 500 words per request, while paid subscribers can check up to 2,500 words per request. There's no monthly limit on the number of checks you can perform."
+      question: "Where does the extension work?",
+      answer: "Everywhere — Gmail, LinkedIn, Google Docs, ChatGPT, social media, forums, and any website where you can select text. If you can highlight it, you can humanize it."
     },
     {
-      question: "How much does SapienWrite cost?",
-      answer: "We offer three plans: Free (500 words/month), Extension-Only at $12.95/month with 5,000 words for Chrome Extension access, and Ultra at $39.95/month (or $23.97/month annually) for 40,000 words with everything included. Annual Ultra plan saves you 40% at $287.64/year. All plans include AI detection bypass and tone options."
+      question: "How much does it cost?",
+      answer: "Free plan gives you 500 words/month. Extension-Only plan is $12.95/month for 5,000 words. Ultra plan is $39.95/month (or $23.97/month billed annually) for 40,000 words. All plans include 6 tone options and AI detection bypass."
     },
     {
-      question: "What are the different tone options?",
-      answer: "We offer 6 distinct tones: Regular (professional and natural), Casual (relaxed and conversational), Formal (structured and polished), Funny (light-hearted and humorous), Sarcastic (witty and sharp), and Smart (sophisticated and intellectual). Each tone maintains the humanization while adding personality to your content."
+      question: "What tone options are available?",
+      answer: "We offer 6 tones: Regular (professional), Casual (conversational), Formal (polished), Funny (humorous), Sarcastic (witty), and Smart (sophisticated). Each is available via the right-click menu."
     },
     {
-      question: "Is there a Chrome extension?",
-      answer: "Yes! The SapienWrite Chrome Extension is available in two ways: (1) Included FREE with our Ultra plan ($39.95/month), or (2) Available as a standalone Extension-Only subscription for $12.95/month with 5,000 words. The extension lets you humanize text anywhere on the web with a simple right-click."
-    },
-    {
-      question: "What languages does SapienWrite support?",
-      answer: "SapienWrite supports over 50 languages for Pro and Ultra plans, while the free plan supports English. All tone options work across all supported languages for a truly global experience."
-    },
-    {
-      question: "I want to humanize a long essay. Is it possible?",
-      answer: "Yes! Depending on your plan, you can process from 500 words per month (free) to 40,000 words per month (Ultra). For longer documents, you can process them in chunks or upgrade to a higher plan. You can also purchase extra word packages (5,000 for $12.99, 10,000 for $22.99, or 25,000 for $49.99) that never expire."
-    },
-    {
-      question: "Can I see my previous humanizations?",
-      answer: "Yes, all paid plans include a dashboard where you can view your processing history, download previous results, and track your monthly usage across all tone options."
+      question: "Can I buy extra words?",
+      answer: "Yes! Paid plan users can purchase extra word packages: 5,000 for $12.99, 10,000 for $22.99, or 25,000 for $49.99. Extra words never expire."
     },
     {
       question: "What is your refund policy?",
-      answer: "All sales are final. Due to the nature of AI-powered services and the immediate computational costs involved, we do not offer refunds on paid subscriptions. We encourage you to fully test our platform using the free 500-word trial before upgrading."
+      answer: "All sales are final due to immediate computational costs. We encourage testing with the free 500-word plan before upgrading."
     },
     {
       question: "How do I cancel my subscription?",
-      answer: "You can cancel your subscription anytime through the Stripe Customer Portal accessible from your dashboard. There are no cancellation fees. All sales are final with no refunds. You'll retain full access to your plan features until the end of your current billing period."
+      answer: "Cancel anytime through the Stripe Customer Portal in your dashboard. No cancellation fees. You retain access until the end of your billing period."
     },
-    {
-      question: "Why does my humanized text still show some AI detection?",
-      answer: "Our humanizer dramatically reduces AI detection scores (typically 60-80% reduction), but no tool can make text 100% undetectable. Advanced AI detectors look for patterns that even humanized text may contain. For best results, we recommend: (1) Using our humanizer to get a strong baseline, (2) Adding personal touches like anecdotes or examples, (3) Breaking up uniform paragraph structures, and (4) Reading aloud and adjusting phrases that sound 'too perfect.' Think of our humanizer as a powerful first pass that gets you 80% there - the final 20% of natural voice comes from your personal editing."
-    }
   ];
 
   return (

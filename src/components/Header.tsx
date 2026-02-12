@@ -1,19 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import logo from "@/assets/logo.png";
 
 export const Header = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-
-  const handleAuthClick = () => {
-    if (user) {
-      navigate('/dashboard');
-    } else {
-      navigate('/auth');
-    }
-  };
 
   const handlePricingClick = () => {
     if (window.location.pathname === '/') {
@@ -22,7 +13,7 @@ export const Header = () => {
         pricingElement.scrollIntoView({ behavior: 'smooth' });
       }
     } else {
-      navigate('/', { replace: true });
+      navigate('/');
       setTimeout(() => {
         const pricingElement = document.getElementById('pricing');
         if (pricingElement) {
@@ -41,34 +32,10 @@ export const Header = () => {
         
         <nav className="hidden md:flex items-center space-x-6">
           <span 
-            className="text-foreground hover:text-primary transition-colors cursor-pointer"
-            onClick={() => navigate('/')}
-          >
-            AI Humanizer
-          </span>
-          <span 
-            className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-            onClick={() => navigate('/blog')}
-          >
-            Blog
-          </span>
-          <span 
-            className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-            onClick={() => navigate('/contact')}
-          >
-            Contact
-          </span>
-          <span 
             className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
             onClick={handlePricingClick}
           >
             Pricing
-          </span>
-          <span 
-            className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-            onClick={() => navigate('/chrome-extension')}
-          >
-            Chrome Extension
           </span>
         </nav>
 
