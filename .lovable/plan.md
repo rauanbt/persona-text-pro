@@ -1,64 +1,41 @@
 
 
-## Simplify Pricing: 2 Plans + Move to Footer
-
-### Overview
-Remove the Extension-Only plan (since the product IS the extension), update Ultra to 5,000 words at $39.95, rewrite features for extension context, and move the Pricing link from header to footer navigation.
+## Pricing & FAQ Cleanup
 
 ### Changes
 
-#### 1. Header (`src/components/Header.tsx`)
-- Remove the "Pricing" nav link and the `handlePricingClick` function
-- Keep only: Logo + Dashboard/Sign In buttons
+#### 1. Remove "1,000 words per request" from Ultra features
+Both `WritingJourneyPricing.tsx` and `Pricing.tsx` list this -- remove it from both.
 
-#### 2. Footer (`src/components/Footer.tsx`)
-- Add a "Pricing" link that scrolls to `#pricing` section (same scroll behavior the header had)
-- Add it alongside Privacy Policy, Terms, Contact
+#### 2. Fix engine description: "Gemini + ChatGPT + Claude" is wrong
+The backend actually uses **Gemini + ChatGPT** (OpenAI). Claude is not used at all. Update the Ultra feature to:
+- **"Premium dual-engine humanization (Gemini + ChatGPT)"**
 
-#### 3. Pricing Source of Truth (`src/lib/pricing.ts`)
-- Remove `extension_only` from `PLAN_PRICES`
-- Remove `extension_only` from `PLAN_LIMITS`
-- Change `ultra` limit from 40,000 to 5,000
+This applies to both `WritingJourneyPricing.tsx` and `Pricing.tsx`.
 
-#### 4. WritingJourneyPricing (`src/components/WritingJourneyPricing.tsx`)
-- Remove the Extension-Only plan card entirely (3rd journey)
-- Change grid from `md:grid-cols-3` to `md:grid-cols-2`
-- Update Ultra features list to be extension-focused:
-  - "5,000 words per month"
-  - "1,000 words per request"
-  - "All 6 tone personalities"
-  - "Premium triple-engine humanization (Gemini + ChatGPT + Claude)"
-  - "Right-click humanize on any website"
-  - "Works on Gmail, LinkedIn, Docs, and more"
-- Update Free features to match extension context:
-  - "500 words per month"
-  - "250 words per request"
-  - "All 6 tone personalities"
-  - "Basic AI humanization"
-  - "Right-click humanize on any website"
-- Update prorated pricing example to use 5,000 words instead of 40,000
-- Remove "writing journey" flowery language, simplify headings
+#### 3. Remove the "Prorated First Month" section entirely
+The screenshot shows this section at the bottom of pricing. Remove it from both:
+- `WritingJourneyPricing.tsx` (lines 193-219)
+- `Pricing.tsx` (lines 187-210)
 
-#### 5. Pricing Component (`src/components/Pricing.tsx`)
-- Remove Extension-Only plan
-- Change grid from `md:grid-cols-3` to `md:grid-cols-2`
-- Update Ultra features to match above
-- Update Free features to match above
-- Update prorated example to 5,000 words
+This info can be shown during checkout instead, but we won't add it there in this pass.
 
-#### 6. Dashboard (`src/pages/Dashboard.tsx`)
-- Update references: remove `extension_only` plan checks
-- Update displayed limits to reflect 5,000 for Ultra
+#### 4. Reframe FAQ to remove "bypass AI detection" language
+The product rephrases and humanizes text -- it doesn't "bypass" detection. Update:
+- **FAQ question "Does SapienWrite bypass AI detection tools?"** -- Rewrite to focus on rephrasing: "Does SapienWrite make text sound more natural?" with an answer about improving readability and tone, not bypassing detectors.
+- **FAQ answer for "How much does it cost?"** -- Update pricing info (remove Extension-Only plan reference, fix word counts, remove "AI detection bypass" phrasing).
+- **FAQ answer about the extension** -- Remove "Gemini + ChatGPT + Claude" reference, just say "advanced AI models."
 
-#### 7. Settings (`src/pages/Settings.tsx`)
-- Remove `extension_only` checks in subscription status and delete account sections
+#### 5. Clean up hero subtitle
+Currently says "rephrase, fix grammar, and humanize" -- this is fine, no "bypass" language there. No change needed.
 
-#### 8. Edge Functions (display only -- NOT changing backend logic)
-- Note: `humanize-text-hybrid/index.ts` and `usage-summary/index.ts` have `extension_only` references. These should be kept for now to handle any existing Extension-Only subscribers gracefully. No backend changes in this pass.
+### Files to Edit
+- `src/components/WritingJourneyPricing.tsx` -- Remove "1,000 words per request", fix engine names, remove prorated section
+- `src/components/Pricing.tsx` -- Same changes
+- `src/components/FAQ.tsx` -- Rewrite Q&A to remove bypass/detection language, update pricing info
 
-### What We WON'T Touch
-- Edge functions (existing subscribers may still have extension_only plan)
-- Auth, Stripe webhooks, checkout logic
-- Chrome extension code
-- Stripe price IDs (Ultra price ID stays the same -- word limit is enforced server-side)
-
+### What We Won't Touch
+- Backend edge functions (they work fine as-is)
+- Hero section (already clean)
+- Extension code
+- Pricing source of truth (`pricing.ts`)
