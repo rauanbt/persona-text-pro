@@ -12,8 +12,8 @@ export const FAQ = () => {
       answer: "Select any text on any webpage, right-click, and choose 'Humanize with SapienWrite.' Pick your preferred tone and the text is instantly replaced with a natural, human-sounding version."
     },
     {
-      question: "Does SapienWrite bypass AI detection tools?",
-      answer: "Yes! Our system uses advanced multi-model AI analysis (Gemini + ChatGPT + Claude) to ensure your humanized text passes detection checks from all major AI detectors."
+      question: "Does SapienWrite make text sound more natural?",
+      answer: "Absolutely. SapienWrite uses advanced AI models to rephrase your text so it reads naturally and fluently — improving readability, tone, and flow while keeping your original meaning intact."
     },
     {
       question: "Where does the extension work?",
@@ -21,7 +21,7 @@ export const FAQ = () => {
     },
     {
       question: "How much does it cost?",
-      answer: "Free plan gives you 500 words/month. Extension-Only plan is $12.95/month for 5,000 words. Ultra plan is $39.95/month (or $23.97/month billed annually) for 40,000 words. All plans include 6 tone options and AI detection bypass."
+      answer: "Free plan gives you 500 words/month. Ultra plan is $39.95/month (or $23.97/month billed annually) for 5,000 words. Both plans include all 6 tone options and work everywhere via the Chrome extension."
     },
     {
       question: "What tone options are available?",
