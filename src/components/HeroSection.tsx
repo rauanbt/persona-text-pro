@@ -1,206 +1,69 @@
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { ToneSelector } from "./ToneSelector";
-import { AIDetectionResults } from "./AIDetectionResults";
-import { useAuth } from "@/contexts/AuthContext";
+import { Chrome, MousePointerClick, Languages, Globe } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { Sparkles, Shield, Brain } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import caveIllustration from "@/assets/cave-writing-illustration.webp";
 
 export const HeroSection = () => {
-  const [text, setText] = useState("");
-  const [selectedTone, setSelectedTone] = useState("regular");
-  const [aiDetectionStatus, setAiDetectionStatus] = useState<'checking' | 'completed' | null>(null);
-  const { user } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
-
-  const wordCount = text.trim().split(/\s+/).filter(word => word.length > 0).length;
-  const maxWords = 500;
-  const isOverLimit = wordCount > maxWords;
-
-  const handleTryForFree = () => {
-    if (user) {
-      navigate('/dashboard');
-    } else {
-      navigate('/auth');
-    }
-  };
-
-  const handleHumanize = () => {
-    if (!user) {
-      toast({
-        title: "Sign in required",
-        description: "Please sign in to use the AI humanizer tool.",
-        variant: "destructive",
-      });
-      navigate('/auth');
-      return;
-    }
-
-    if (!text.trim()) {
-      toast({
-        title: "Please enter some text",
-        description: "Add text to humanize and apply your selected tone.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Redirect to dashboard for full functionality
-    navigate('/dashboard');
-  };
-
-  const handleCheckAI = () => {
-    if (!text.trim()) {
-      toast({
-        title: "Please enter some text",
-        description: "Add text to check for AI detection.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (isOverLimit) {
-      toast({
-        title: "Word limit exceeded",
-        description: `Please limit your text to ${maxWords} words for free AI detection.`,
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    setAiDetectionStatus('checking');
-  };
 
   return (
-    <section className="bg-hero-bg py-16 px-4">
-      <div className="container mx-auto max-w-7xl">
-        {/* Trust Badge - Centered */}
-        <div className="text-center mb-12">
-          <Badge variant="secondary" className="px-4 py-2 text-sm font-medium bg-background/80 text-success border-success/20">
-            <Shield className="w-4 h-4 mr-2" />
-            Trusted by 1,000+ users
-          </Badge>
-        </div>
-
-        {/* Hero Content Grid */}
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          {/* Left Column - Text Content */}
-          <div className="text-center lg:text-left">
-            {/* Main Headline */}
-            <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6 leading-tight">
-              Humanize AI Text
-            </h1>
-
-            {/* Subheading */}
-          <p className="text-lg md:text-xl text-muted-foreground mb-8">
-            SapienWrite converts your AI-generated content into fully humanized, undetectable writing with custom tones - ensuring it passes every AI detection tool
+    <section className="py-20 md:py-32 bg-hero-bg">
+      <div className="container mx-auto px-4">
+        <div className="max-w-4xl mx-auto text-center">
+          <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6 leading-tight">
+            Humanize AI Text{" "}
+            <span className="text-primary">Anywhere</span> on the Web
+          </h1>
+          <p className="text-xl md:text-2xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed">
+            Right-click any text to rephrase, fix grammar, and humanize — directly in Gmail, LinkedIn, Docs, and more.
           </p>
 
-            {/* Em-dash humor */}
-            <p className="text-sm md:text-base text-muted-foreground/80 mb-8 italic">
-              Fun fact: We don't use those suspiciously perfect em-dashes - like this one - that scream "AI wrote this!" We stick to good old-fashioned hyphens and the occasional comma splice, like a real human would write.
-            </p>
-
-            {/* CTA Button */}
-            <Button 
-              size="lg" 
-              className="mb-6 bg-success hover:bg-success/90 text-success-foreground px-8 py-6 text-lg font-semibold shadow-lg"
-              onClick={handleTryForFree}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
+            <Button
+              size="lg"
+              className="bg-success hover:bg-success/90 text-success-foreground px-8 py-6 text-lg font-semibold shadow-lg"
+              onClick={() => window.open('https://chromewebstore.google.com/detail/sapienwrite-ai-humanizer/khkhchbmepbipcdlbgdkjdpfjbkcpbij', '_blank')}
             >
-              <Sparkles className="w-5 h-5 mr-2" />
-              {user ? 'Go to Dashboard' : 'Try for free'}
+              <Chrome className="w-5 h-5 mr-2" />
+              Install Chrome Extension
             </Button>
-
-            <p className="text-sm text-muted-foreground">No credit card required</p>
+            <Button
+              size="lg"
+              variant="outline"
+              className="px-8 py-6 text-lg"
+              onClick={() => navigate('/auth')}
+            >
+              Sign Up Free
+            </Button>
           </div>
 
-          {/* Right Column - Cave Illustration */}
-          <div className="flex justify-center lg:justify-end">
-            <div className="relative">
-              <img 
-                src={caveIllustration} 
-                alt="Ancient cave people writing SapienWrite on stone wall - representing the return to authentic human writing"
-                className="w-full max-w-md lg:max-w-lg rounded-2xl shadow-2xl"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-background/20 to-transparent rounded-2xl"></div>
-            </div>
-          </div>
-        </div>
-
-        {/* Main Tool Interface */}
-        <div className="bg-background rounded-2xl shadow-2xl p-8 max-w-7xl mx-auto mt-16">
-          {/* Tone Selector */}
-          <ToneSelector selectedTone={selectedTone} onToneChange={setSelectedTone} />
-          
-          <div className={`grid gap-8 mt-6 transition-all duration-500 ${
-            aiDetectionStatus !== null ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'
-          }`}>
-            {/* Text Input Section */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-foreground">Your Text</h3>
-                <Badge 
-                  variant="outline" 
-                  className={`${wordCount > maxWords ? 'border-destructive text-destructive' : 'border-muted text-muted-foreground'}`}
-                >
-                  {wordCount} / {maxWords} words
-                </Badge>
+          {/* Context Menu Demo Visual */}
+          <div className="max-w-lg mx-auto bg-card border-2 border-border rounded-xl shadow-xl p-6 text-left">
+            <p className="text-sm text-muted-foreground mb-3 font-mono">
+              "The utilization of artificial intelligence in modern workflows has demonstrated significant improvements..."
+            </p>
+            <div className="bg-popover border border-border rounded-lg shadow-lg w-64 ml-auto">
+              <div className="py-1">
+                <div className="px-4 py-2 text-sm font-semibold text-foreground border-b border-border flex items-center gap-2">
+                  <img src="/favicon.png" alt="" className="w-4 h-4" />
+                  SapienWrite
+                </div>
+                <div className="px-4 py-2 text-sm text-foreground hover:bg-accent/10 cursor-default flex items-center gap-2">
+                  <MousePointerClick className="w-3.5 h-3.5 text-primary" />
+                  Humanize Selected Text
+                </div>
+                <div className="px-4 py-2 text-sm text-primary font-medium bg-accent/10 cursor-default flex items-center gap-2">
+                  <Languages className="w-3.5 h-3.5" />
+                  Casual Tone
+                </div>
+                <div className="px-4 py-2 text-sm text-foreground hover:bg-accent/10 cursor-default flex items-center gap-2">
+                  <Languages className="w-3.5 h-3.5 text-muted-foreground" />
+                  Formal Tone
+                </div>
               </div>
-              
-              <Textarea
-                placeholder="Paste your AI-generated text here to check for AI detection and humanize it..."
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                maxLength={maxWords * 6}
-                className="min-h-[400px] resize-none border-2 focus:border-primary/50 transition-colors text-base"
-              />
-
-              {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Button
-                  variant="outline"
-                  onClick={handleCheckAI}
-                  disabled={aiDetectionStatus === 'checking' || isOverLimit}
-                  className="border-2 hover:border-primary/50 transition-colors flex-1"
-                >
-                  {aiDetectionStatus === 'checking' ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
-                      Checking...
-                    </>
-                  ) : (
-                    'Check for AI'
-                  )}
-                </Button>
-                <Button
-                  onClick={handleHumanize}
-                  disabled={wordCount > maxWords}
-                  className="bg-success hover:bg-success/90 text-success-foreground px-8 flex-1"
-                >
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  Humanize
-                </Button>
-              </div>
-              
-              {!user && (
-                <p className="text-sm text-muted-foreground text-center">
-                  Sign in to access the full humanizer tool
-                </p>
-              )}
             </div>
-
-            {/* Enhanced AI Detection Results */}
-            <AIDetectionResults
-              text={text}
-              onHumanize={handleHumanize}
-              status={aiDetectionStatus}
-              onStatusChange={setAiDetectionStatus}
-            />
+            <p className="text-xs text-muted-foreground mt-4 text-center">
+              ↑ Right-click any selected text to see this menu
+            </p>
           </div>
         </div>
       </div>

@@ -1,8 +1,6 @@
 import { Header } from "@/components/Header";
-import { HeroSection } from "@/components/HeroSection"; 
-import { CaveEvolutionStory } from "@/components/CaveEvolutionStory";
-import { UseCasesDemo } from "@/components/UseCasesDemo";
-import { ChromeExtensionDemo } from "@/components/ChromeExtensionDemo";
+import { HeroSection } from "@/components/HeroSection";
+import { ExtensionFeatures } from "@/components/ExtensionFeatures";
 import { WritingJourneyPricing } from "@/components/WritingJourneyPricing";
 import { FAQ } from "@/components/FAQ";
 import { Footer } from "@/components/Footer";
@@ -13,9 +11,7 @@ const Index = () => {
       <Header />
       <main>
         <HeroSection />
-        <CaveEvolutionStory />
-        <UseCasesDemo />
-        <ChromeExtensionDemo />
+        <ExtensionFeatures />
         <WritingJourneyPricing />
         <FAQ />
       </main>
