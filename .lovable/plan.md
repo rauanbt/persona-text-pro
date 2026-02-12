@@ -1,105 +1,64 @@
 
 
-## Simplify Website to Extension-First (Flunto-style)
+## Simplify Pricing: 2 Plans + Move to Footer
 
-### What Changes
+### Overview
+Remove the Extension-Only plan (since the product IS the extension), update Ultra to 5,000 words at $39.95, rewrite features for extension context, and move the Pricing link from header to footer navigation.
 
-The website will be stripped down from a full web-app with a text humanizer tool to a clean, focused landing page + account portal, just like Flunto. The Chrome extension becomes the sole product.
+### Changes
 
-### New Site Structure
+#### 1. Header (`src/components/Header.tsx`)
+- Remove the "Pricing" nav link and the `handlePricingClick` function
+- Keep only: Logo + Dashboard/Sign In buttons
 
-**Pages to KEEP (simplified):**
-1. **Landing Page (/)** - Complete redesign, Flunto-style:
-   - Hero: Big headline like "Humanize AI Text Anywhere on the Web"
-   - Subtitle: "Right-click any text to rephrase, fix grammar, and humanize - directly in Gmail, LinkedIn, Docs, and more"
-   - Two CTAs: "Install from Chrome Web Store" + "Sign Up Free"
-   - Animated demo showing right-click context menu in action
-   - Features section (3 cards): Right-click Humanize, Multiple Tones, Works Everywhere
-   - Pricing section (simplified, 2-3 plans)
-   - Minimal footer
+#### 2. Footer (`src/components/Footer.tsx`)
+- Add a "Pricing" link that scrolls to `#pricing` section (same scroll behavior the header had)
+- Add it alongside Privacy Policy, Terms, Contact
 
-2. **Auth (/auth)** - Keep as-is (sign up / login)
+#### 3. Pricing Source of Truth (`src/lib/pricing.ts`)
+- Remove `extension_only` from `PLAN_PRICES`
+- Remove `extension_only` from `PLAN_LIMITS`
+- Change `ultra` limit from 40,000 to 5,000
 
-3. **Dashboard (/dashboard)** - Stripped down to a **usage portal**:
-   - Usage stats (words used / remaining, progress bar)
-   - Current plan + "Manage Subscription" button
-   - Extension setup instructions / download link
-   - Extra words purchase option
-   - No more text input box, no humanizer tool, no AI detection tab
+#### 4. WritingJourneyPricing (`src/components/WritingJourneyPricing.tsx`)
+- Remove the Extension-Only plan card entirely (3rd journey)
+- Change grid from `md:grid-cols-3` to `md:grid-cols-2`
+- Update Ultra features list to be extension-focused:
+  - "5,000 words per month"
+  - "1,000 words per request"
+  - "All 6 tone personalities"
+  - "Premium triple-engine humanization (Gemini + ChatGPT + Claude)"
+  - "Right-click humanize on any website"
+  - "Works on Gmail, LinkedIn, Docs, and more"
+- Update Free features to match extension context:
+  - "500 words per month"
+  - "250 words per request"
+  - "All 6 tone personalities"
+  - "Basic AI humanization"
+  - "Right-click humanize on any website"
+- Update prorated pricing example to use 5,000 words instead of 40,000
+- Remove "writing journey" flowery language, simplify headings
 
-4. **Settings (/settings)** - Keep as-is (history, account, delete)
+#### 5. Pricing Component (`src/components/Pricing.tsx`)
+- Remove Extension-Only plan
+- Change grid from `md:grid-cols-3` to `md:grid-cols-2`
+- Update Ultra features to match above
+- Update Free features to match above
+- Update prorated example to 5,000 words
 
-5. **Privacy Policy & Terms** - Keep as-is
+#### 6. Dashboard (`src/pages/Dashboard.tsx`)
+- Update references: remove `extension_only` plan checks
+- Update displayed limits to reflect 5,000 for Ultra
 
-**Pages to REMOVE:**
-- `/about` - Not needed for extension-focused product
-- `/blog` - Can be added back later
-- `/contact` - Move to a simple email link in footer
-- `/chrome-extension` - Redundant; landing page IS the extension page now
+#### 7. Settings (`src/pages/Settings.tsx`)
+- Remove `extension_only` checks in subscription status and delete account sections
 
-**Components to REMOVE:**
-- `HeroSection.tsx` - Replace with new extension-focused hero
-- `CaveEvolutionStory.tsx` - Remove storytelling section
-- `UseCasesDemo.tsx` - Remove
-- `ChromeExtensionDemo.tsx` - Fold into new hero demo
-- `SapienWriteDifference.tsx` - Remove
-- `Testimonials.tsx` - Remove (can add back later)
-- `HowItWorks.tsx` - Remove
-- `Features.tsx` - Replace with simpler version
-- `ToneSelector.tsx` on landing page - Remove (tones are in extension)
-- `AIDetectionResults.tsx` on landing page - Remove
-
-**Components to KEEP:**
-- `WritingJourneyPricing.tsx` - Simplify to 2 plans (Free + Ultra)
-- `FAQ.tsx` - Update questions for extension focus
-- `Footer.tsx` - Simplify
-- `Header.tsx` - Simplify nav links
-- All UI components, auth, Supabase integration
-
-### Detailed Changes
-
-#### 1. New Landing Page (`src/pages/Index.tsx`)
-- Header: Logo + Pricing + Sign In / Dashboard
-- Hero with extension install CTA
-- 3-card features section
-- Pricing (reuse WritingJourneyPricing)
-- Short FAQ
-- Footer with privacy/terms links
-
-#### 2. New Hero Component (`src/components/HeroSection.tsx`)
-- Rewrite entirely: big headline, subtitle, Chrome Web Store install button
-- Visual demo showing the extension context menu
-- No text input area, no AI detection
-
-#### 3. Simplified Dashboard (`src/pages/Dashboard.tsx`)
-Remove the entire humanizer tool (textarea, tone selector, result display, AI detection tab). Keep only:
-- Usage card with progress bar
-- Plan info + upgrade/manage subscription
-- Extension download/setup section
-- Extra words purchase
-
-#### 4. Simplified Header (`src/components/Header.tsx`)
-Nav links: Pricing | Sign In / Dashboard (remove Blog, Contact, Chrome Extension links)
-
-#### 5. Updated Router (`src/App.tsx`)
-Remove routes: `/about`, `/blog`, `/contact`, `/chrome-extension`
-
-#### 6. Simplified Footer (`src/components/Footer.tsx`)
-Minimal: Privacy Policy | Terms of Service | Contact email
+#### 8. Edge Functions (display only -- NOT changing backend logic)
+- Note: `humanize-text-hybrid/index.ts` and `usage-summary/index.ts` have `extension_only` references. These should be kept for now to handle any existing Extension-Only subscribers gracefully. No backend changes in this pass.
 
 ### What We WON'T Touch
-- Chrome extension code (stays as-is)
-- All Supabase edge functions (humanize, checkout, webhooks, etc.)
-- Auth system
-- Stripe integration
-- Database schema
-- Settings page
-
-### Execution Order
-1. Update Header (simplify nav)
-2. Rewrite HeroSection (extension-focused)
-3. Rebuild Index page (new sections)
-4. Strip Dashboard down to usage portal
-5. Clean up router (remove unused routes)
-6. Simplify Footer
+- Edge functions (existing subscribers may still have extension_only plan)
+- Auth, Stripe webhooks, checkout logic
+- Chrome extension code
+- Stripe price IDs (Ultra price ID stays the same -- word limit is enforced server-side)
 
