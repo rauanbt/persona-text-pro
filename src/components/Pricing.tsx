@@ -42,15 +42,15 @@ export const Pricing = () => {
       monthlyPrice: "Free",
       annualPrice: "Free",
       period: "",
-      description: "Try SapienWrite with no commitment",
+      description: "Free forever",
       features: [
-        "500 words per month",
+        "1,000 words per month",
         "All 6 tone personalities",
-        "Basic AI humanization + Tone Generator",
-        "Right-click humanize on any website",
-        "Works on Gmail, LinkedIn, Docs, and more"
+        "Basic AI humanization",
+        "Right-click rewrite on any website",
+        "Works on Gmail, LinkedIn, Docs & more"
       ],
-      buttonText: "Get Started Free",
+      buttonText: "Start Free",
       popular: false,
       isFree: true
     },
@@ -59,13 +59,14 @@ export const Pricing = () => {
       monthlyPrice: PLAN_PRICES.ultra.monthly.display,
       annualPrice: PLAN_PRICES.ultra.annual.display,
       period: isAnnual ? "per month (billed annually)" : "per month",
-      description: "Maximum humanization power",
+      description: "For creators & professionals",
       features: [
-        "5,000 words per month",
+        "15,000 words per month",
         "All 6 tone personalities",
-        "Premium dual-engine humanization (Gemini + ChatGPT) + Tone Generator",
-        "Right-click humanize on any website",
-        "Works on Gmail, LinkedIn, Docs, and more"
+        "Premium dual-engine humanization (Gemini + GPT)",
+        "Stronger rewrite refinement",
+        "Priority processing",
+        "Works everywhere"
       ],
       buttonText: "Upgrade to Ultra",
       popular: true,
@@ -150,6 +151,11 @@ export const Pricing = () => {
                     <div className="text-sm text-muted-foreground line-through mt-1">
                       {plan.monthlyPrice}/month
                     </div>
+                  )}
+                  {!plan.isFree && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Perfect for LinkedIn creators, founders, recruiters, and daily email pros.
+                    </p>
                   )}
                 </div>
               </CardHeader>
