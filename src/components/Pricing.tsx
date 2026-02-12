@@ -45,9 +45,8 @@ export const Pricing = () => {
       description: "Try SapienWrite with no commitment",
       features: [
         "500 words per month",
-        "250 words per request",
         "All 6 tone personalities",
-        "Basic AI humanization",
+        "Basic AI humanization + Tone Generator",
         "Right-click humanize on any website"
       ],
       buttonText: "Get Started Free",
@@ -63,7 +62,7 @@ export const Pricing = () => {
       features: [
         "5,000 words per month",
         "All 6 tone personalities",
-        "Premium dual-engine humanization (Gemini + ChatGPT)",
+        "Premium dual-engine humanization (Gemini + ChatGPT) + Tone Generator",
         "Right-click humanize on any website",
         "Works on Gmail, LinkedIn, Docs, and more"
       ],
