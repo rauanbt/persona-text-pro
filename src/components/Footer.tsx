@@ -23,7 +23,7 @@ export const Footer = () => {
             Install Chrome Extension
           </Button>
           <p className="text-sm text-muted-foreground mt-4">
-            500 words free. No credit card required.
+            1,000 words free. No credit card required.
           </p>
         </div>
       </section>

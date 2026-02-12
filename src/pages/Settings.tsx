@@ -298,7 +298,7 @@ const Settings = () => {
                             <span className="text-sm font-medium">Chrome Extension Access</span>
                           </div>
                           <p className="text-xs text-muted-foreground">
-                            Active — 5,000 words/month (shared pool)
+                            Active — 20,000 words/month (shared pool)
                           </p>
                         </div>
                       )}

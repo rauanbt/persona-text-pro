@@ -15,17 +15,16 @@ export const WritingJourneyPricing = () => {
   const plans = [
     {
       name: "Free",
-      subtitle: "Free forever",
+      subtitle: "No credit card required",
       monthlyPrice: "Free",
       annualPrice: "Free",
       period: "",
-      description: "Free forever",
+      description: "No credit card required",
       icon: <Star className="w-8 h-8 text-amber-500" />,
       features: [
         "1,000 words per month",
         "All 6 tone personalities",
         "Basic AI humanization",
-        "Right-click rewrite on any website",
         "Works on Gmail, LinkedIn, Docs & more"
       ],
       buttonText: "Start Free",
@@ -36,19 +35,19 @@ export const WritingJourneyPricing = () => {
     },
     {
       name: "Ultra",
-      subtitle: "For creators & professionals",
+      subtitle: "Most popular plan",
       monthlyPrice: PLAN_PRICES.ultra.monthly.display,
       annualPrice: PLAN_PRICES.ultra.annual.display,
       period: isAnnual ? "per month (billed annually)" : "per month",
-      description: "For creators & professionals",
+      description: "Most popular plan",
       icon: <Crown className="w-8 h-8 text-purple-500" />,
       features: [
-        "15,000 words per month",
+        "20,000 words per month",
         "All 6 tone personalities",
         "Premium dual-engine humanization (Gemini + GPT)",
         "Stronger rewrite refinement",
         "Priority processing",
-        "Works everywhere"
+        "Works on Gmail, LinkedIn, Docs & more"
       ],
       buttonText: "Upgrade to Ultra",
       popular: true,

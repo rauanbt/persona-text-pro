@@ -42,12 +42,11 @@ export const Pricing = () => {
       monthlyPrice: "Free",
       annualPrice: "Free",
       period: "",
-      description: "Free forever",
+      description: "No credit card required",
       features: [
         "1,000 words per month",
         "All 6 tone personalities",
         "Basic AI humanization",
-        "Right-click rewrite on any website",
         "Works on Gmail, LinkedIn, Docs & more"
       ],
       buttonText: "Start Free",
@@ -59,14 +58,14 @@ export const Pricing = () => {
       monthlyPrice: PLAN_PRICES.ultra.monthly.display,
       annualPrice: PLAN_PRICES.ultra.annual.display,
       period: isAnnual ? "per month (billed annually)" : "per month",
-      description: "For creators & professionals",
+      description: "Most popular plan",
       features: [
-        "15,000 words per month",
+        "20,000 words per month",
         "All 6 tone personalities",
         "Premium dual-engine humanization (Gemini + GPT)",
         "Stronger rewrite refinement",
         "Priority processing",
-        "Works everywhere"
+        "Works on Gmail, LinkedIn, Docs & more"
       ],
       buttonText: "Upgrade to Ultra",
       popular: true,

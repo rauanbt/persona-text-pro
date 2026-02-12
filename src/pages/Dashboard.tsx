@@ -274,7 +274,7 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent className="space-y-3">
                 <Button className="w-full" onClick={() => handleUpgrade(PLAN_PRICES.ultra.monthly.priceId)}>
-                  Ultra — {PLAN_PRICES.ultra.monthly.display}/mo (5,000 words)
+                  Ultra — {PLAN_PRICES.ultra.monthly.display}/mo (20,000 words)
                 </Button>
               </CardContent>
             </Card>
