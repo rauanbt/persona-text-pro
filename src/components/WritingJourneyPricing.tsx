@@ -25,7 +25,8 @@ export const WritingJourneyPricing = () => {
         "500 words per month",
         "All 6 tone personalities",
         "Basic AI humanization + Tone Generator",
-        "Right-click humanize on any website"
+        "Right-click humanize on any website",
+        "Works on Gmail, LinkedIn, Docs, and more"
       ],
       buttonText: "Get Started Free",
       popular: false,
