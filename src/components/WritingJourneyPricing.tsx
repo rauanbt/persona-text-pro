@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, Star, Crown, Zap, Chrome } from "lucide-react";
+import { Check, Star, Crown } from "lucide-react";
 import { PLAN_PRICES, getSavingsText } from "@/lib/pricing";
 
 export const WritingJourneyPricing = () => {
@@ -12,24 +12,23 @@ export const WritingJourneyPricing = () => {
     window.location.href = '/auth';
   };
 
-  const journeys = [
+  const plans = [
     {
-      name: "Explorer",
-      subtitle: "Perfect for curious writers",
+      name: "Free",
+      subtitle: "Get started for free",
       monthlyPrice: "Free",
       annualPrice: "Free",
       period: "",
-      description: "Discover the power of human-like AI writing",
+      description: "Try SapienWrite with no commitment",
       icon: <Star className="w-8 h-8 text-amber-500" />,
       features: [
         "500 words per month",
         "250 words per request",
-        "Unlimited AI detection (500 words per check)",
         "All 6 tone personalities",
-        "Basic AI humanization (Gemini engine)",
-        "English language only"
+        "Basic AI humanization",
+        "Right-click humanize on any website"
       ],
-      buttonText: "Begin Your Journey",
+      buttonText: "Get Started Free",
       popular: false,
       isFree: true,
       bgGradient: "from-amber-50/50 to-yellow-50/50 dark:from-amber-950/20 dark:to-yellow-950/20",
@@ -37,61 +36,38 @@ export const WritingJourneyPricing = () => {
     },
     {
       name: "Ultra",
-      subtitle: "For content powerhouses",
+      subtitle: "For power users",
       monthlyPrice: PLAN_PRICES.ultra.monthly.display,
       annualPrice: PLAN_PRICES.ultra.annual.display,
       period: isAnnual ? "per month (billed annually)" : "per month",
-      description: "Unlimited creativity with our most advanced tools",
+      description: "Maximum humanization power",
       icon: <Crown className="w-8 h-8 text-purple-500" />,
       features: [
-        "40,000 words per month",
-        "3,000 words per request",
-        "Unlimited AI detection (2,500 words per check)",
+        "5,000 words per month",
+        "1,000 words per request",
         "All 6 tone personalities",
-        "Premium triple-engine humanization (Gemini + ChatGPT + Claude) + Tone Generator",
-        "50+ languages supported",
-        "✅ Chrome Extension Included (40k shared pool)"
+        "Premium triple-engine humanization (Gemini + ChatGPT + Claude)",
+        "Right-click humanize on any website",
+        "Works on Gmail, LinkedIn, Docs, and more"
       ],
-      buttonText: "Become an Ultra",
+      buttonText: "Upgrade to Ultra",
       popular: true,
       isFree: false,
       monthlyPriceId: PLAN_PRICES.ultra.monthly.priceId,
       annualPriceId: PLAN_PRICES.ultra.annual.priceId,
       bgGradient: "from-purple-50/50 to-indigo-50/50 dark:from-purple-950/20 dark:to-indigo-950/20",
       borderColor: "border-purple-200 dark:border-purple-800"
-    },
-    {
-      name: "Extension-Only",
-      subtitle: "Browser convenience",
-      monthlyPrice: PLAN_PRICES.extension_only.monthly.display,
-      annualPrice: PLAN_PRICES.extension_only.annual.display,
-      period: "per month",
-      description: "Humanize text anywhere on the web",
-      icon: <Chrome className="w-8 h-8 text-green-500" />,
-      features: [
-        "5,000 words per month",
-        "Chrome Extension access only",
-        "All 6 tone personalities",
-        "Premium triple-engine humanization (Gemini + ChatGPT + Claude) + Tone Generator",
-        "No web platform access"
-      ],
-      buttonText: "Get Extension",
-      popular: false,
-      isFree: false,
-      monthlyPriceId: PLAN_PRICES.extension_only.monthly.priceId,
-      bgGradient: "from-green-50/50 to-emerald-50/50 dark:from-green-950/20 dark:to-emerald-950/20",
-      borderColor: "border-green-200 dark:border-green-800"
     }
   ];
 
-  const getPrice = (journey: typeof journeys[0]) => {
-    return isAnnual ? journey.annualPrice : journey.monthlyPrice;
+  const getPrice = (plan: typeof plans[0]) => {
+    return isAnnual ? plan.annualPrice : plan.monthlyPrice;
   };
 
-  const getJourneySavingsText = (journey: typeof journeys[0]) => {
-    if (!isAnnual || journey.isFree || journey.monthlyPrice === journey.annualPrice) return null;
-    const monthlyVal = parseFloat(journey.monthlyPrice.replace('$', ''));
-    const annualVal = parseFloat(journey.annualPrice.replace('$', ''));
+  const getPlanSavingsText = (plan: typeof plans[0]) => {
+    if (!isAnnual || plan.isFree || plan.monthlyPrice === plan.annualPrice) return null;
+    const monthlyVal = parseFloat(plan.monthlyPrice.replace('$', ''));
+    const annualVal = parseFloat(plan.annualPrice.replace('$', ''));
     return getSavingsText(monthlyVal, annualVal);
   };
 
@@ -100,17 +76,16 @@ export const WritingJourneyPricing = () => {
       <div className="container mx-auto px-4">
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-6" style={{ color: '#8B4513' }}>
-            Choose Your Writing Journey
+            Simple Pricing
           </h2>
-          <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto">
-            Every great writer has a unique path. Whether you're exploring the craft or mastering your voice, 
-            we have the perfect journey for your creative adventure.
+          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+            Free to start. Upgrade when you need more words.
           </p>
           
           {/* Billing Toggle */}
           <div className="flex items-center justify-center space-x-4 mb-8">
             <span className={`text-sm font-medium transition-colors ${!isAnnual ? 'text-foreground' : 'text-muted-foreground'}`}>
-              Monthly Adventure
+              Monthly
             </span>
             <button
               onClick={() => setIsAnnual(!isAnnual)}
@@ -127,52 +102,49 @@ export const WritingJourneyPricing = () => {
               />
             </button>
             <span className={`text-sm font-medium transition-colors ${isAnnual ? 'text-foreground' : 'text-muted-foreground'}`}>
-              Annual Journey
+              Annual
             </span>
             {isAnnual && (
               <Badge className="bg-green-500 text-white ml-2">
-                Save 40% ✨
+                Save 40%
               </Badge>
             )}
           </div>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          {journeys.map((journey, index) => (
-            <Card key={index} className={`relative overflow-hidden transition-all duration-300 hover:shadow-2xl ${journey.popular ? 'scale-105 shadow-xl' : 'hover:scale-102'} bg-gradient-to-br ${journey.bgGradient} border-2 ${journey.borderColor} flex flex-col h-full`}>
-              {journey.popular && (
+        <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          {plans.map((plan, index) => (
+            <Card key={index} className={`relative overflow-hidden transition-all duration-300 hover:shadow-2xl ${plan.popular ? 'scale-105 shadow-xl' : 'hover:scale-102'} bg-gradient-to-br ${plan.bgGradient} border-2 ${plan.borderColor} flex flex-col h-full`}>
+              {plan.popular && (
                 <Badge className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-primary text-primary-foreground px-4 py-1 z-10">
-                  Most Popular Journey ⭐
+                  Most Popular ⭐
                 </Badge>
               )}
-              {getJourneySavingsText(journey) && (
+              {getPlanSavingsText(plan) && (
                 <Badge className="absolute top-4 right-4 bg-green-500 text-white z-10">
-                  {getJourneySavingsText(journey)}
+                  {getPlanSavingsText(plan)}
                 </Badge>
               )}
               
               <CardHeader className="text-center pb-4 pt-12">
                 <div className="flex justify-center mb-4">
                   <div className="p-3 rounded-full bg-background/80 backdrop-blur-sm">
-                    {journey.icon}
+                    {plan.icon}
                   </div>
                 </div>
                 <CardTitle className="text-2xl font-bold text-foreground">
-                  {journey.name}
+                  {plan.name}
                 </CardTitle>
                 <CardDescription className="text-sm font-medium text-muted-foreground">
-                  {journey.subtitle}
+                  {plan.subtitle}
                 </CardDescription>
-                <p className="text-xs text-muted-foreground mt-2">
-                  {journey.description}
-                </p>
                 
                 <div className="mt-6">
-                  <span className="text-4xl font-bold text-foreground">{getPrice(journey)}</span>
-                  {!journey.isFree && <span className="text-muted-foreground ml-1 text-sm">/{journey.period}</span>}
-                  {isAnnual && !journey.isFree && journey.monthlyPrice !== journey.annualPrice && (
+                  <span className="text-4xl font-bold text-foreground">{getPrice(plan)}</span>
+                  {!plan.isFree && <span className="text-muted-foreground ml-1 text-sm">/{plan.period}</span>}
+                  {isAnnual && !plan.isFree && plan.monthlyPrice !== plan.annualPrice && (
                     <div className="text-sm text-muted-foreground line-through mt-1">
-                      {journey.monthlyPrice}/month
+                      {plan.monthlyPrice}/month
                     </div>
                   )}
                 </div>
@@ -180,16 +152,12 @@ export const WritingJourneyPricing = () => {
               
               <CardContent className="px-6 flex-grow">
                 <ul className="space-y-3">
-                  {journey.features.map((feature, featureIndex) => {
-                    // Check if this is an engine feature that should be highlighted
-                    const isDualEngine = feature.includes('dual-engine');
+                  {plan.features.map((feature, featureIndex) => {
                     const isTripleEngine = feature.includes('triple-engine');
-                    const shouldHighlight = isDualEngine || isTripleEngine;
-                    
                     return (
                       <li key={featureIndex} className="flex items-start text-sm">
                         <Check className="w-4 h-4 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
-                        <span className={`text-foreground ${shouldHighlight ? 'font-bold' : ''} ${isDualEngine ? 'text-blue-700 dark:text-blue-400' : ''} ${isTripleEngine ? 'text-purple-700 dark:text-purple-400' : ''}`}>
+                        <span className={`text-foreground ${isTripleEngine ? 'font-bold text-purple-700 dark:text-purple-400' : ''}`}>
                           {feature}
                         </span>
                       </li>
@@ -201,21 +169,21 @@ export const WritingJourneyPricing = () => {
               <CardFooter className="p-6 pt-4 mt-auto">
                 <Button 
                   className={`w-full py-3 font-semibold transition-all duration-300 ${
-                    journey.popular 
+                    plan.popular 
                       ? 'bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl' 
                       : 'border-2 border-current hover:bg-current hover:text-background'
                   }`}
-                  variant={journey.popular ? "default" : "outline"}
+                  variant={plan.popular ? "default" : "outline"}
                   onClick={() => {
-                    if (journey.isFree) {
+                    if (plan.isFree) {
                       window.location.href = '/auth';
                     } else {
-                      const priceId = isAnnual ? journey.annualPriceId : journey.monthlyPriceId;
+                      const priceId = isAnnual ? plan.annualPriceId : plan.monthlyPriceId;
                       handleUpgrade(priceId!);
                     }
                   }}
                 >
-                  {journey.buttonText}
+                  {plan.buttonText}
                 </Button>
               </CardFooter>
             </Card>
@@ -241,33 +209,13 @@ export const WritingJourneyPricing = () => {
               <div className="mt-4 p-3 bg-background/60 rounded-lg border border-border">
                 <p className="text-xs font-medium mb-1">Example:</p>
                 <p className="text-xs">
-                  Subscribe to Ultra on Nov 23 → Pay $9.32 for 9,333 words (Nov 23-30)<br />
-                  Dec 1 → Pay $39.95 for full 40,000 words (Dec 1-31)<br />
+                  Subscribe to Ultra on Nov 23 → Pay ~$12 for ~1,500 words (Nov 23-30)<br />
+                  Dec 1 → Pay $39.95 for full 5,000 words (Dec 1-31)<br />
                   <span className="text-primary font-medium">All subscriptions reset on the 1st of each month</span>
                 </p>
               </div>
             </CardContent>
           </Card>
-        </div>
-
-        <div className="text-center mt-16 bg-background/80 backdrop-blur-sm rounded-2xl p-8 border border-amber-200/30 dark:border-amber-800/30 shadow-lg">
-          <h3 className="text-2xl font-bold text-foreground mb-4">
-            Every Journey Includes Our Full Toolkit
-          </h3>
-          <div className="grid md:grid-cols-3 gap-6 text-sm text-muted-foreground max-w-2xl mx-auto">
-            <div className="flex items-center justify-center gap-2">
-              <Check className="w-4 h-4 text-green-500" />
-              <span>Bypass all AI detectors</span>
-            </div>
-            <div className="flex items-center justify-center gap-2">
-              <Check className="w-4 h-4 text-green-500" />
-              <span>6 distinct tone personalities</span>
-            </div>
-            <div className="flex items-center justify-center gap-2">
-              <Check className="w-4 h-4 text-green-500" />
-              <span>Lightning-fast processing</span>
-            </div>
-          </div>
         </div>
       </div>
     </section>

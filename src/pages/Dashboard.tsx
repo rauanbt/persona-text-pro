@@ -25,25 +25,19 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   const currentPlan = subscriptionData.plan;
-  const isExtensionOnlyPlan = currentPlan === 'extension_only';
-  const hasExtensionBonus = currentPlan === 'extension_only';
   
-  const webPlanLimit = usageSummary?.plan_limit || PLAN_LIMITS[currentPlan as keyof typeof PLAN_LIMITS];
-  const extensionLimit = hasExtensionBonus ? 5000 : 0;
+  const webPlanLimit = usageSummary?.plan_limit || PLAN_LIMITS[currentPlan as keyof typeof PLAN_LIMITS] || 500;
   
   const webWordsUsed = usage.words_used || 0;
   const extensionWordsUsed = usage.extension_words_used || 0;
   
-  const isSharedPool = currentPlan === 'ultra' || currentPlan === 'master';
-  const totalWordsUsed = isSharedPool ? webWordsUsed + extensionWordsUsed : webWordsUsed;
+  const totalWordsUsed = webWordsUsed + extensionWordsUsed;
   
   const remainingWords = usageSummary?.remaining_shared !== undefined 
     ? usageSummary.remaining_shared 
     : Math.max(0, webPlanLimit - totalWordsUsed);
-  const extensionRemainingWords = hasExtensionBonus ? Math.max(0, extensionLimit - extensionWordsUsed) : 0;
   const totalAvailableWords = remainingWords + extraWords;
   const usagePercentage = Math.min((totalWordsUsed / webPlanLimit) * 100, 100);
-  const extensionUsagePercentage = hasExtensionBonus ? Math.min((extensionWordsUsed / extensionLimit) * 100, 100) : 0;
 
   useEffect(() => {
     fetchUsage();
@@ -154,7 +148,7 @@ const Dashboard = () => {
           <div className="flex items-center space-x-4">
             <h1 className="text-xl font-bold cursor-pointer" onClick={() => navigate('/')}>SapienWrite</h1>
             <Badge variant={currentPlan === 'free' ? 'secondary' : 'default'} className="flex items-center gap-1">
-              {(currentPlan === 'ultra' || currentPlan === 'extension_only') && <Chrome className="h-3 w-3" />}
+              {currentPlan === 'ultra' && <Chrome className="h-3 w-3" />}
               {currentPlan.toUpperCase()}
             </Badge>
             {authLoading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
@@ -202,22 +196,12 @@ const Dashboard = () => {
                 <span>{usage.requests_count} requests</span>
               </div>
 
-              {isSharedPool && (webWordsUsed > 0 || extensionWordsUsed > 0) && (
+              {(webWordsUsed > 0 || extensionWordsUsed > 0) && (
                 <div className="p-3 bg-muted/50 rounded-md text-sm space-y-1 mb-4">
                   <div className="font-medium text-muted-foreground mb-2">Usage Breakdown:</div>
                   <div className="flex justify-between"><span className="text-muted-foreground">🌐 Web:</span><span className="font-medium">{webWordsUsed.toLocaleString()}</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">🧩 Extension:</span><span className="font-medium">{extensionWordsUsed.toLocaleString()}</span></div>
                   <div className="border-t border-muted pt-1 mt-2 flex justify-between font-semibold"><span>Total:</span><span>{totalWordsUsed.toLocaleString()}</span></div>
-                </div>
-              )}
-
-              {hasExtensionBonus && (
-                <div className="pt-4 border-t">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2"><Chrome className="w-4 h-4 text-primary" /><span className="text-sm font-medium">Extension Words</span></div>
-                    <Badge variant="secondary">{extensionRemainingWords.toLocaleString()} / 5,000</Badge>
-                  </div>
-                  <Progress value={extensionUsagePercentage} className="mb-2" />
                 </div>
               )}
 
@@ -290,10 +274,7 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent className="space-y-3">
                 <Button className="w-full" onClick={() => handleUpgrade(PLAN_PRICES.ultra.monthly.priceId)}>
-                  Ultra — {PLAN_PRICES.ultra.monthly.display}/mo (40,000 words)
-                </Button>
-                <Button variant="outline" className="w-full" onClick={() => handleUpgrade(PLAN_PRICES.extension_only.monthly.priceId)}>
-                  Extension Only — {PLAN_PRICES.extension_only.monthly.display}/mo (5,000 words)
+                  Ultra — {PLAN_PRICES.ultra.monthly.display}/mo (5,000 words)
                 </Button>
               </CardContent>
             </Card>

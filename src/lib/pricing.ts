@@ -18,24 +18,11 @@ export const PLAN_PRICES = {
       priceId: "price_1SWYfwH8HT0u8xphFTyNNhan"
     }
   },
-  extension_only: {
-    monthly: { 
-      price: 12.95, 
-      display: "$12.95",
-      priceId: "price_1SGNtsH8HT0u8xphEd7pG9Po" 
-    },
-    annual: { 
-      price: 12.95, 
-      display: "$12.95",
-      priceId: "price_1SGNtsH8HT0u8xphEd7pG9Po" 
-    }
-  }
 } as const;
 
 export const PLAN_LIMITS = {
   free: 500,
-  ultra: 40000,
-  extension_only: 5000
+  ultra: 5000,
 } as const;
 
 // Ultra and Pro plans share their word pool across web and extension (no separate bonus)

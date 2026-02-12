@@ -33,6 +33,18 @@ export const Footer = () => {
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <span className="text-lg font-bold" style={{ color: '#8B4513' }}>SapienWrite</span>
           <div className="flex items-center gap-6 text-sm text-muted-foreground">
+            <span 
+              className="hover:text-foreground transition-colors cursor-pointer"
+              onClick={() => {
+                if (window.location.pathname === '/') {
+                  document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' });
+                } else {
+                  window.location.href = '/#pricing';
+                }
+              }}
+            >
+              Pricing
+            </span>
             <Link to="/privacy-policy" className="hover:text-foreground transition-colors">Privacy Policy</Link>
             <Link to="/terms-of-service" className="hover:text-foreground transition-colors">Terms of Service</Link>
             <a href="mailto:support@sapienwrite.com" className="hover:text-foreground transition-colors">Contact</a>
