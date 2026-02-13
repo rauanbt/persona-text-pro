@@ -1,38 +1,38 @@
 
 
-## Two Changes: Pricing Text Updates + Login Loop Fix
+## Fix Login Loop + Remove "Most Popular" Text
 
-### 1. Pricing text updates
+### 1. Fix the login deadlock (Root Cause)
 
-**In `src/components/Pricing.tsx`:**
-- Line 49: Change `"Basic AI humanization"` to `"Premium dual-engine humanization (Gemini + GPT) + tone generator"`
-- Line 64: Change `"Premium dual-engine humanization (Gemini + GPT)"` to `"Premium dual-engine humanization (Gemini + GPT) + tone generator"`
+**File:** `src/contexts/AuthContext.tsx`
 
-**In `src/components/WritingJourneyPricing.tsx`:**
-- Line 27: Change `"Basic AI humanization"` to `"Premium dual-engine humanization (Gemini + GPT) + tone generator"`
-- Line 47: Change `"Premium dual-engine humanization (Gemini + GPT)"` to `"Premium dual-engine humanization (Gemini + GPT) + tone generator"`
+**The bug:** Inside the `onAuthStateChange` callback (line 174), the code awaits `checkSubscription(sess)` which internally calls `supabase.functions.invoke()` and `supabase.from('profiles').select()`. Supabase's auth state change callback holds an internal lock -- calling other Supabase methods inside it causes a deadlock, hanging the app on a white page forever.
 
----
+**The fix:** Restructure the auth initialization to:
+- Use `setTimeout(() => ..., 0)` to defer `checkSubscription` calls out of the `onAuthStateChange` callback, avoiding the deadlock
+- Only control `loading` state from the initial `getSession()` call (not from `onAuthStateChange`)
+- The `onAuthStateChange` listener should only update `user` and `session` state synchronously, then defer any async work
 
-### 2. Fix login loop
+```text
+Before (deadlocks):
+  onAuthStateChange -> await checkSubscription() -> supabase calls -> DEADLOCK
 
-**Root cause:** After a successful sign-in, the `handleSignIn` function in `Auth.tsx` immediately navigates to `/dashboard`. However, the Supabase `onAuthStateChange` listener in `AuthContext.tsx` hasn't fired yet, so the `user` state is still `null`. When the `ProtectedRoute` on `/dashboard` checks the auth state, it sees `user = null` and `loading = false`, so it redirects back to `/auth`. Then `onAuthStateChange` fires, setting the user, and the Auth page's `useEffect` navigates to `/dashboard` again -- creating a loop.
+After (works):
+  onAuthStateChange -> setUser/setSession -> setTimeout -> checkSubscription()
+  getSession() -> checkSubscription() -> setLoading(false)  (initial load only)
+```
 
-**Fix in `src/pages/Auth.tsx`:**
-- Remove the manual navigation from `handleSignIn` and `handleGoogleSignIn`. Let the existing `useEffect` (which watches `user` and `loading`) handle all post-login redirects. This ensures navigation only happens after the auth state has fully propagated.
+### 2. Remove "Most popular plan" description text
 
-Specifically:
-- In `handleSignIn`: remove the `if (!error) { navigate(...) }` block (lines 60-71). The `useEffect` on line 30 already handles this.
-- In `handleGoogleSignIn`: remove the `if (!error && fromExtension) { navigate(...) }` block (lines 88-91). Google OAuth redirects via the provider anyway, so this code never actually runs.
+**Files:** `src/components/Pricing.tsx`, `src/components/WritingJourneyPricing.tsx`
 
-Also remove the duplicate extension redirect in `AuthContext.tsx`'s `signIn` function (lines 237-241) since Auth.tsx's useEffect already handles the extension redirect.
+- Change the Ultra plan `description` from `"Most popular plan"` to an empty string `""` (or remove the field)
 
 ### Technical details
 
 | File | Change |
 |------|--------|
-| `src/components/Pricing.tsx` | Update 2 feature strings to add "+ tone generator" |
-| `src/components/WritingJourneyPricing.tsx` | Same 2 feature string updates |
-| `src/pages/Auth.tsx` | Remove manual navigation from handleSignIn and handleGoogleSignIn |
-| `src/contexts/AuthContext.tsx` | Remove duplicate extension redirect from signIn function |
+| `src/contexts/AuthContext.tsx` | Defer checkSubscription out of onAuthStateChange using setTimeout; only set loading=false from initial getSession |
+| `src/components/Pricing.tsx` | Remove "Most popular plan" from Ultra description |
+| `src/components/WritingJourneyPricing.tsx` | Remove "Most popular plan" from Ultra subtitle/description |
 
