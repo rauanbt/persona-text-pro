@@ -169,27 +169,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   useEffect(() => {
     // Set up auth state listener
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, sess) => {
-      setSession(sess);
-      setUser(sess?.user ?? null);
-
-      // After auth changes, check subscription immediately with the session
-      if (sess?.user) {
-        checkSubscription(sess).finally(() => setLoading(false));
-      } else {
-        setSubscriptionData({
-          subscribed: false,
-          plan: 'free',
-          product_id: null,
-          subscription_end: null,
-        });
-        setLoading(false);
-      }
-    });
-
-    // Check for existing session
+    // Check for existing session FIRST (controls loading state)
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
@@ -198,6 +178,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         checkSubscription(currentSession).finally(() => setLoading(false));
       } else {
         setLoading(false);
+      }
+    });
+
+    // Set up auth state listener AFTER getSession
+    // IMPORTANT: Do NOT await async work inside onAuthStateChange — it holds an internal lock
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, sess) => {
+      setSession(sess);
+      setUser(sess?.user ?? null);
+
+      if (sess?.user) {
+        // Defer subscription check to avoid deadlocking the auth lock
+        setTimeout(() => {
+          checkSubscription(sess);
+        }, 0);
+      } else {
+        setSubscriptionData({
+          subscribed: false,
+          plan: 'free',
+          product_id: null,
+          subscription_end: null,
+        });
       }
     });
 
